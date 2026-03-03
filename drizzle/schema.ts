@@ -1,4 +1,4 @@
-import { int, mysqlTable, text, timestamp, varchar, decimal, mysqlEnum } from "drizzle-orm/mysql-core";
+import { int, mysqlTable, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -10,9 +10,6 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
-
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
 
 export const categories = mysqlTable("categories", {
   id: int("id").autoincrement().primaryKey(),
