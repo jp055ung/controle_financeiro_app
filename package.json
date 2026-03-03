@@ -1,0 +1,37 @@
+{
+  "name": "fincontrol",
+  "version": "1.0.0",
+  "description": "Controle Financeiro Pessoal",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch server/index.ts",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "start": "node dist/server/index.js",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.0",
+    "mysql2": "^3.11.0",
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "zod": "^3.23.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/express": "^5.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/node": "^22.0.0",
+    "@types/cors": "^2.8.17",
+    "tsx": "^4.19.0",
+    "vite": "^5.4.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "drizzle-kit": "^0.27.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
