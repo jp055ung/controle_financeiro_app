@@ -4,11 +4,12 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "outDir": "./dist/server",
-    "rootDir": "./server",
+    "rootDir": "./",
     "strict": false,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noEmitOnError": false
   },
-  "include": ["server/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["server/**/*", "drizzle/**/*"],
+  "exclude": ["node_modules", "client"]
 }
