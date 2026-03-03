@@ -173,24 +173,20 @@ app.get("/api/users/:userId/categories", async (req, res) => {
 });
 
 // ─── DB INIT ───────────────────────────────────────────────────────────────
-app.post("/api/admin/init-db", async (req, res) => {
+app.get("/api/admin/init-db", async (_req, res) => {
   try {
-    const database = await getDb();
-    if (!database) return res.status(500).json({ error: "DB indisponível" });
-
-    const pool = (database as any).session.client;
-    const conn = await pool.getConnection();
-
-    await conn.execute(`CREATE TABLE IF NOT EXISTS users (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(255),
-      email VARCHAR(320) UNIQUE,
-      password VARCHAR(255),
-      salaryBase DECIMAL(10,2) DEFAULT 2300.00,
-      reserveMeta DECIMAL(10,2) DEFAULT 500.00,
-      createdAt TIMESTAMP DEFAULT NOW(),
-      updatedAt TIMESTAMP DEFAULT NOW() ON UPDATE NOW()
-    )`);
+    const pool = mysql.createPool(process.env.DATABASE_URL!);
+    await pool.execute(`CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), email VARCHAR(320) UNIQUE, password VARCHAR(255), salaryBase DECIMAL(10,2) DEFAULT 2300.00, reserveMeta DECIMAL(10,2) DEFAULT 500.00, createdAt TIMESTAMP DEFAULT NOW(), updatedAt TIMESTAMP DEFAULT NOW() ON UPDATE NOW())`);
+    await pool.execute(`CREATE TABLE IF NOT EXISTS categories (id INT AUTO_INCREMENT PRIMARY KEY, userId INT NOT NULL, name VARCHAR(100) NOT NULL, emoji VARCHAR(10), color VARCHAR(7), budgetAmount DECIMAL(10,2), createdAt TIMESTAMP DEFAULT NOW())`);
+    await pool.execute(`CREATE TABLE IF NOT EXISTS expenses (id INT AUTO_INCREMENT PRIMARY KEY, userId INT NOT NULL, categoryId INT NOT NULL, name VARCHAR(255) NOT NULL, amount DECIMAL(10,2) NOT NULL, subcategory VARCHAR(100), paid INT DEFAULT 0, dueDate TIMESTAMP NULL, createdAt TIMESTAMP DEFAULT NOW(), updatedAt TIMESTAMP DEFAULT NOW() ON UPDATE NOW())`);
+    await pool.execute(`CREATE TABLE IF NOT EXISTS creditCardExpenses (id INT AUTO_INCREMENT PRIMARY KEY, userId INT NOT NULL, description VARCHAR(255) NOT NULL, amount DECIMAL(10,2) NOT NULL, subcategory VARCHAR(100), createdAt TIMESTAMP DEFAULT NOW(), updatedAt TIMESTAMP DEFAULT NOW() ON UPDATE NOW())`);
+    await pool.execute(`CREATE TABLE IF NOT EXISTS extraIncomes (id INT AUTO_INCREMENT PRIMARY KEY, userId INT NOT NULL, description VARCHAR(255) NOT NULL, amount DECIMAL(10,2) NOT NULL, date TIMESTAMP DEFAULT NOW(), createdAt TIMESTAMP DEFAULT NOW())`);
+    await pool.end();
+    res.json({ success: true, message: "Tabelas criadas com sucesso!" });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
     await conn.execute(`CREATE TABLE IF NOT EXISTS categories (
       id INT AUTO_INCREMENT PRIMARY KEY,
