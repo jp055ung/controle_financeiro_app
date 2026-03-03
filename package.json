@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch server/index.ts",
     "build": "vite build && tsc -p tsconfig.server.json || true",
-    "start": "node dist/server/index.js",
+    "start": "node dist/server/server/index.js",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
