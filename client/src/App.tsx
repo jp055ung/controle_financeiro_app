@@ -104,13 +104,13 @@ function Toast({ msg, onDone }: { msg:string; onDone:()=>void }) {
   return <div className="toast">{msg}</div>;
 }
 
-function Modal({ title, onClose, children }: any) {
+function Modal({ title, onClose, children }: { title:string; onClose?:()=>void; children:React.ReactNode }) {
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.78)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:"16px" }} onClick={onClose}>
       <div style={{ background:"var(--bg2)", borderRadius:20, width:"100%", maxWidth:480, maxHeight:"88vh", overflowY:"auto", padding:"20px 20px 28px" }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
           <h3 style={{ fontSize:17, fontWeight:800 }}>{title}</h3>
-          <button onClick={onClose} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:32, height:32, borderRadius:8, fontSize:16 }}>✕</button>
+          {onClose && <button onClick={onClose} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:32, height:32, borderRadius:8, fontSize:16 }}>✕</button>}
         </div>
         {children}
       </div>
@@ -143,18 +143,32 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
   };
 
   const handleClaim = async () => {
-    if (claimed || loading || claimed===null) return;
+    if (loading) return;
+    if (claimed === true) return; // já resgatou
     setLoading(true);
     try {
-      const res = await fetch(`${API}/users/${user.id}/streak/checkin`, { method:"POST" });
+      const res = await fetch(`${API}/users/${user.id}/streak/checkin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
       const data = await res.json();
       if (res.ok) {
-        setClaimed(true); setClaimResult(data);
-        setStreakData(s => s ? {...s, streakDays:data.streakDays, claimedToday:true} : s);
+        setClaimed(true);
+        setClaimResult(data);
+        setStreakData(s => s ? {...s, streakDays: data.streakDays, claimedToday: true} : s);
         setPhrase(getStreakPhrase(data.streakDays));
-        triggerAnim(); onClaim(data);
-      } else { setClaimed(true); }
-    } catch {}
+        triggerAnim();
+        onClaim(data);
+      } else if (data?.error?.toLowerCase().includes("hoje") || data?.error?.toLowerCase().includes("realizado")) {
+        // Já resgatou hoje — corrige o estado
+        setClaimed(true);
+      } else {
+        // Outro erro — mostra no console e libera botão
+        console.error("Streak error:", data);
+      }
+    } catch(e) {
+      console.error("Streak fetch error:", e);
+    }
     setLoading(false);
   };
 
@@ -236,13 +250,17 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
         {claimed===null ? (
           <div style={{ width:"100%", padding:"15px", borderRadius:14, background:"var(--bg3)", textAlign:"center", color:"var(--text2)", fontSize:14 }}>Carregando...</div>
         ) : claimed ? (
-          <div style={{ width:"100%", padding:"16px", borderRadius:14, background:"linear-gradient(135deg,rgba(0,214,143,0.15),rgba(0,214,143,0.08))", border:"1px solid rgba(0,214,143,0.35)", textAlign:"center", animation:animPhase!=="idle"?"popIn 0.5s ease":"none" }}>
+          <div style={{ width:"100%", padding:"16px", borderRadius:14, background:"linear-gradient(135deg,rgba(0,214,143,0.15),rgba(0,214,143,0.08))", border:"1px solid rgba(0,214,143,0.35)", textAlign:"center" }}>
             <div style={{ fontSize:22, marginBottom:4 }}>✅</div>
             <div style={{ fontSize:16, fontWeight:800, color:"var(--green)" }}>Resgatado hoje{claimResult?` · +${claimResult.xpGained} XP`:""}</div>
             <div style={{ fontSize:12, color:"var(--text2)", marginTop:3 }}>Volte amanhã para o dia {days+1} 🔥</div>
           </div>
         ) : (
-          <button onClick={handleClaim} disabled={loading} style={{ width:"100%", padding:"16px", border:"none", borderRadius:14, background:loading?"var(--bg3)":"linear-gradient(135deg,#6c63ff,#b44fff)", color:loading?"var(--text2)":"white", fontSize:16, fontWeight:800, cursor:loading?"default":"pointer", letterSpacing:0.5, boxShadow:loading?"none":"0 4px 24px rgba(108,99,255,0.45)" }}>
+          <button
+            onClick={handleClaim}
+            disabled={loading}
+            style={{ width:"100%", padding:"16px", border:"none", borderRadius:14, background:loading?"var(--bg3)":"linear-gradient(135deg,#6c63ff,#b44fff)", color:loading?"var(--text2)":"white", fontSize:16, fontWeight:800, cursor:loading?"default":"pointer", letterSpacing:0.5, boxShadow:loading?"none":"0 4px 24px rgba(108,99,255,0.45)" }}
+          >
             {loading ? "⏳ Salvando..." : "🎁 Resgatar bônus"}
           </button>
         )}
@@ -693,14 +711,24 @@ export default function App() {
 
   // FIX #2: reset-month não zera XP — atualiza state após reset
   const handleReset = async () => {
-    const res = await fetch(`${API}/users/${user.id}/reset-month`,{method:"POST"});
-    const data = await res.json();
-    if (res.ok && data.user) {
-      // Preserva XP, só recarrega despesas
-      setXp(data.user.xp||xp); setLevelNum(data.user.levelNum||levelNum);
+    try {
+      const res = await fetch(`${API}/users/${user.id}/reset-month`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(`❌ Erro ao arquivar: ${data.error || "tente novamente"}`);
+        return;
+      }
+      // XP preservado — só atualiza se o servidor retornar dados do usuário
+      if (data.user) {
+        if (data.user.xp !== undefined) setXp(data.user.xp);
+        if (data.user.levelNum !== undefined) setLevelNum(data.user.levelNum);
+      }
+      setShowReset(false);
+      await load();
+      showToast("✅ Mês arquivado! Começando do zero.");
+    } catch(e) {
+      showToast("❌ Erro de conexão. Tente novamente.");
     }
-    setShowReset(false); load();
-    showToast("✅ Mês arquivado com sucesso!");
   };
 
   const sharedModals = (
@@ -1250,9 +1278,14 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
 
 function ResetModal({ onClose, onConfirm }: any) {
   const [loading, setLoading] = useState(false);
-  const confirm = async () => { setLoading(true); await onConfirm(); setLoading(false); };
+  const confirm = async () => {
+    setLoading(true);
+    await onConfirm();
+    // onConfirm já fecha o modal via setShowReset(false)
+    // setLoading(false) pode não executar se o componente desmontar — tudo bem
+  };
   return (
-    <Modal title="🔄 Virar o Mês" onClose={onClose}>
+    <Modal title="🔄 Virar o Mês" onClose={loading ? undefined : onClose}>
       <p style={{ color:"var(--text2)", fontSize:14, marginBottom:8, lineHeight:1.6 }}>
         Os dados serão <strong style={{ color:"var(--green)" }}>arquivados</strong> e você começa o mês limpo.
       </p>
@@ -1260,8 +1293,10 @@ function ResetModal({ onClose, onConfirm }: any) {
         Seu XP e nível <strong style={{ color:"var(--primary)" }}>não são zerados</strong> — apenas despesas, cartão e renda extra.
       </p>
       <div style={{ display:"flex", gap:8 }}>
-        <button className="btn-ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</button>
-        <button onClick={confirm} disabled={loading} style={{ flex:1, background:"var(--primary)", color:"white", padding:"12px", borderRadius:12, fontSize:14, fontWeight:700 }}>{loading?"Arquivando...":"Confirmar"}</button>
+        <button className="btn-ghost" onClick={onClose} disabled={loading} style={{ flex:1, opacity:loading?0.5:1 }}>Cancelar</button>
+        <button onClick={confirm} disabled={loading} style={{ flex:1, background:loading?"var(--bg3)":"var(--primary)", color:loading?"var(--text2)":"white", padding:"12px", borderRadius:12, fontSize:14, fontWeight:700, border:"none", cursor:loading?"default":"pointer" }}>
+          {loading ? "⏳ Arquivando..." : "✅ Confirmar"}
+        </button>
       </div>
     </Modal>
   );
