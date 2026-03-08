@@ -143,17 +143,26 @@ app.post("/api/users/:userId/expenses", async (req, res) => {
     const p = getPool();
     if (!p) return res.status(500).json({ error: "DB indisponivel" });
     const { categoryId, name, amount, subcategory, dueDate, recurring, recurringMonths, recurringGoal } = req.body;
-    if (!categoryId || !name || !amount) return res.status(400).json({ error: "Campos obrigatorios: categoria, nome e valor" });
     const parsedAmount = parseFloat(amount);
+    const parsedCatId = parseInt(categoryId);
+    if (!categoryId || isNaN(parsedCatId)) return res.status(400).json({ error: "categoryId invalido" });
+    if (!name || String(name).trim() === '') return res.status(400).json({ error: "name obrigatorio" });
+    if (isNaN(parsedAmount) || parsedAmount <= 0) return res.status(400).json({ error: "amount invalido: " + amount });
     const parsedGoal = recurringGoal ? parseFloat(recurringGoal) : null;
     const parsedMonths = recurringMonths ? parseInt(recurringMonths) : null;
+    const parsedRecurring = recurring ? 1 : 0;
+    let parsedDueDate: Date | null = null;
+    if (dueDate) { try { parsedDueDate = new Date(dueDate); } catch {} }
     await p.execute(
       "INSERT INTO expenses (userId, categoryId, name, amount, subcategory, dueDate, paid, recurring, recurringMonths, recurringGoal) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)",
-      [req.params.userId, parseInt(categoryId), name, parsedAmount, subcategory || null, dueDate ? new Date(dueDate) : null, recurring ? 1 : 0, parsedMonths, parsedGoal]
+      [req.params.userId, parsedCatId, name.trim(), parsedAmount, subcategory || null, parsedDueDate, parsedRecurring, parsedMonths, parsedGoal]
     );
     const [rows] = await p.execute("SELECT * FROM expenses WHERE userId = ? ORDER BY categoryId, createdAt", [req.params.userId]) as any;
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) {
+    console.error("POST expenses error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.patch("/api/expenses/:id/paid", async (req, res) => {
