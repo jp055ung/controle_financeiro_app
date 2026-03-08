@@ -253,10 +253,12 @@ app.post("/api/users/:userId/reset-month", async (req, res) => {
          incomesJson=VALUES(incomesJson)`,
       [req.params.userId, month, req.params.userId, req.params.userId, req.params.userId]
     );
-    // Limpa dados do mês — XP NÃO é zerado (fica no users)
-    await p.execute("DELETE FROM expenses WHERE userId = ?", [req.params.userId]);
+    // Limpa dados do mês — preserva despesas recorrentes (recurring=1), XP não é zerado
+    await p.execute("DELETE FROM expenses WHERE userId = ? AND recurring = 0", [req.params.userId]);
     await p.execute("DELETE FROM creditCardExpenses WHERE userId = ?", [req.params.userId]);
     await p.execute("DELETE FROM extraIncomes WHERE userId = ?", [req.params.userId]);
+    // Zera flag paid nas despesas recorrentes para o novo mês
+    await p.execute("UPDATE expenses SET paid = 0 WHERE userId = ? AND recurring = 1", [req.params.userId]);
     // Retorna dados do usuário pós-reset (sem tocar XP)
     const [uRows] = await p.execute("SELECT xp, levelNum, level, salaryBase FROM users WHERE id = ?", [req.params.userId]) as any;
     res.json({ success: true, month, user: uRows[0] });
