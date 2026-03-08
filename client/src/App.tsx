@@ -129,10 +129,24 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
   const [particles, setParticles] = useState<{id:number;x:number;y:number;color:string;angle:number}[]>([]);
 
   useEffect(() => {
-    fetch(`${API}/users/${user.id}/streak`).then(r=>r.json()).then(d=>{
-      setStreakData(d); setClaimed(!!d.claimedToday);
-      setPhrase(getStreakPhrase(d.claimedToday ? d.streakDays : d.streakDays+1));
-    });
+    fetch(`${API}/users/${user.id}/streak`)
+      .then(r => r.json())
+      .then(d => {
+        if (d && typeof d.claimedToday !== 'undefined') {
+          setStreakData(d);
+          setClaimed(!!d.claimedToday);
+          setPhrase(getStreakPhrase(d.claimedToday ? d.streakDays : d.streakDays + 1));
+        } else {
+          // Resposta inesperada — libera o botão para tentar
+          setClaimed(false);
+          setPhrase(getStreakPhrase(1));
+        }
+      })
+      .catch(() => {
+        // Erro de rede — libera o botão com estado padrão
+        setClaimed(false);
+        setPhrase(getStreakPhrase(1));
+      });
   }, []);
 
   const triggerAnim = () => {
@@ -1115,32 +1129,49 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
   const isSonho = parseInt(form.categoryId)===SONHO_ID;
 
   const submit = async () => {
-    // Sonho com meta: amount pode ser calculado automaticamente
+    if (!form.name.trim()) return;
     const sonhoAutoCalc = isSonho && form.recurring && form.recurringGoal && form.recurringMonths;
-    if (!form.name) return;
-    if (!sonhoAutoCalc && !form.amount) return;
+
+    // Calcula amount com segurança — nunca NaN
+    let computedAmount: number;
+    if (sonhoAutoCalc) {
+      const manual = parseFloat(form.amount);
+      computedAmount = (!isNaN(manual) && manual > 0)
+        ? manual
+        : parseFloat(form.recurringGoal) / parseInt(form.recurringMonths);
+    } else {
+      computedAmount = parseFloat(form.amount);
+    }
+
+    if (isNaN(computedAmount) || computedAmount <= 0) return; // guard final
+
     setLoading(true);
     try {
-      // Calcula amount: se Sonho com meta, divide automaticamente
-      const computedAmount = sonhoAutoCalc && (!form.amount || parseFloat(form.amount) <= 0)
-        ? parseFloat(form.recurringGoal) / parseInt(form.recurringMonths)
-        : parseFloat(form.amount);
       const payload: any = {
         categoryId: parseInt(form.categoryId),
-        name: form.name,
+        name: form.name.trim(),
         amount: computedAmount,
-        subcategory: form.subcategory || undefined,
-        dueDate: form.dueDate || undefined,
+        subcategory: form.subcategory || null,
+        dueDate: form.dueDate || null,
         recurring: form.recurring ? 1 : 0,
+        recurringGoal: sonhoAutoCalc ? parseFloat(form.recurringGoal) : null,
+        recurringMonths: sonhoAutoCalc ? parseInt(form.recurringMonths) : null,
       };
-      if (sonhoAutoCalc) {
-        payload.recurringGoal = parseFloat(form.recurringGoal);
-        payload.recurringMonths = parseInt(form.recurringMonths);
+      const res = await fetch(`${API}/users/${userId}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        onXp(calcXpExpense(computedAmount));
+        onClose();
+      } else {
+        const err = await res.json();
+        alert("Erro: " + (err.error || "tente novamente"));
       }
-      const res = await fetch(`${API}/users/${userId}/expenses`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      if (res.ok) { onXp(calcXpExpense(computedAmount)); onClose(); }
-      else { const err = await res.json(); console.error("Erro ao salvar despesa:", err); }
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      alert("Erro de conexão. Verifique sua internet.");
+    }
     setLoading(false);
   };
 
@@ -1178,7 +1209,15 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
 
         <div style={{ display:"flex", gap:8, marginTop:2 }}>
           <button className="btn-ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</button>
-          <button className="btn-primary" onClick={submit} disabled={loading||!form.name||(!(isSonho&&form.recurring&&form.recurringGoal&&form.recurringMonths)&&!form.amount)} style={{ flex:1 }}>{loading?"...":"Adicionar"}</button>
+          <button
+            className="btn-primary"
+            onClick={submit}
+            disabled={loading || !form.name.trim() || (
+              !(isSonho && form.recurring && form.recurringGoal && form.recurringMonths) &&
+              (!form.amount || parseFloat(form.amount) <= 0)
+            )}
+            style={{ flex:1 }}
+          >{loading ? "⏳ Salvando..." : "Adicionar"}</button>
         </div>
       </div>
     </Modal>
