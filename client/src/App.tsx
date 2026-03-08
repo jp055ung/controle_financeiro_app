@@ -40,18 +40,18 @@ const XP_PAY_BILL = 15;
 
 // ── SAÚDE FINANCEIRA ──────────────────────────────────────────────────────────
 function calcHealthScore(salary: number, totalExp: number, totalIncome: number, totalPaid: number, totalAll: number, streakDays: number): number {
-  if (salary <= 0) return 0;
+  // Receita total = salário base + renda extra
   const receita = salary + totalIncome;
-  // Componente 1: saldo (40pts) — proporção receita vs despesa
-  const balanceRatio = receita > 0 ? Math.max(0, (receita - totalAll) / receita) : 0;
-  const scoreBalance = Math.min(40, Math.round(balanceRatio * 60));
+  if (receita <= 0) return 0;
+  // Componente 1: saldo (50pts) — (receita - despesas) / receita
+  // Mesmo que despesas > salário, renda extra pode cobrir → pontuação justa
+  const balanceRatio = Math.max(0, (receita - totalAll) / receita);
+  const scoreBalance = Math.min(50, Math.round(balanceRatio * 70));
   // Componente 2: pagamento (30pts) — % contas pagas
-  const scorePaid = totalAll > 0 ? Math.min(30, Math.round((totalPaid / totalAll) * 30)) : 15;
+  const scorePaid = totalAll > 0 ? Math.min(30, Math.round((totalPaid / totalAll) * 30)) : 20;
   // Componente 3: streak (20pts)
   const scoreStreak = Math.min(20, Math.round((Math.min(streakDays, 30) / 30) * 20));
-  // Componente 4: renda extra (10pts)
-  const scoreExtra = totalIncome > 0 ? Math.min(10, Math.round((totalIncome / (salary * 0.3)) * 10)) : 0;
-  return Math.min(100, scoreBalance + scorePaid + scoreStreak + scoreExtra);
+  return Math.min(100, scoreBalance + scorePaid + scoreStreak);
 }
 
 function getHealthBand(score: number): { label: string; color: string; bg: string; desc: string } {
@@ -106,8 +106,8 @@ function Toast({ msg, onDone }: { msg:string; onDone:()=>void }) {
 
 function Modal({ title, onClose, children }: any) {
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.78)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:100 }} onClick={onClose}>
-      <div style={{ background:"var(--bg2)", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, maxHeight:"90vh", overflowY:"auto", padding:"20px 20px 40px" }} onClick={e=>e.stopPropagation()}>
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.78)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:"16px" }} onClick={onClose}>
+      <div style={{ background:"var(--bg2)", borderRadius:20, width:"100%", maxWidth:480, maxHeight:"88vh", overflowY:"auto", padding:"20px 20px 28px" }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
           <h3 style={{ fontSize:17, fontWeight:800 }}>{title}</h3>
           <button onClick={onClose} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:32, height:32, borderRadius:8, fontSize:16 }}>✕</button>
@@ -165,8 +165,8 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
   const MILESTONES = [1,2,3,5,7,14,30];
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:100 }} onClick={onClose}>
-      <div style={{ background:"linear-gradient(180deg,#13162a 0%,var(--bg2) 100%)", borderRadius:"24px 24px 0 0", width:"100%", maxWidth:440, padding:"24px 20px 40px", position:"relative", overflow:"hidden", border:"1px solid rgba(108,99,255,0.2)", borderBottom:"none" }} onClick={e=>e.stopPropagation()}>
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:16 }} onClick={onClose}>
+      <div style={{ background:"linear-gradient(180deg,#13162a 0%,var(--bg2) 100%)", borderRadius:24, width:"100%", maxWidth:440, maxHeight:"90vh", overflowY:"auto", padding:"24px 20px 32px", position:"relative", border:"1px solid rgba(108,99,255,0.2)" }} onClick={e=>e.stopPropagation()}>
         <style>{`
           @keyframes floatUp{from{opacity:1;transform:translateX(-50%) translateY(0)}to{opacity:0;transform:translateX(-50%) translateY(-55px)}}
           @keyframes burstP{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(var(--tx),var(--ty))}}
@@ -622,7 +622,7 @@ export default function App() {
     if (u.xp) setXp(u.xp);
     if (u.levelNum) setLevelNum(u.levelNum);
     if (u.level) setLevel(u.level);
-    if (u.streakDays) setStreakDays(u.streakDays);
+    setStreakDays(u.streakDays || 0);
     if (u.isNewUser) setShowOnboarding(true);
     if (u.lastCheckin) {
       const today=new Date(); today.setHours(0,0,0,0);
@@ -641,10 +641,20 @@ export default function App() {
       fetch(`${API}/users/${user.id}/extra-income`).then(r=>r.json()).catch(()=>[]),
     ]);
     setExpenses(Array.isArray(e)?e:[]); setCC(Array.isArray(c)?c:[]); setIncomes(Array.isArray(i)?i:[]);
-    // FIX #3: recarrega salário do servidor a cada load
+    // Recarrega usuário (salário + streak) sempre do servidor
     try {
       const uRes = await fetch(`${API}/auth/me/${user.id}`);
-      if (uRes.ok) { const uData = await uRes.json(); if (uData.salaryBase !== undefined) setSalary(num(uData.salaryBase)); }
+      if (uRes.ok) {
+        const uData = await uRes.json();
+        if (uData.salaryBase !== undefined) setSalary(num(uData.salaryBase));
+        if (uData.streakDays !== undefined) setStreakDays(uData.streakDays || 0);
+        if (uData.lastCheckin !== undefined) {
+          const today = new Date(); today.setHours(0,0,0,0);
+          const last = uData.lastCheckin ? new Date(uData.lastCheckin) : null;
+          if (last) { last.setHours(0,0,0,0); setStreakClaimed(last.getTime()===today.getTime()); }
+          else { setStreakClaimed(false); }
+        }
+      }
     } catch {}
   },[user]);
 
@@ -679,7 +689,7 @@ export default function App() {
 
   const NAV = [{id:"dashboard",icon:"📊",label:"Dashboard"},{id:"expenses",icon:"💸",label:"Despesas"},{id:"credit",icon:"💳",label:"Cartão"},{id:"income",icon:"💵",label:"Renda Extra"},{id:"reports",icon:"📈",label:"Relatórios"}];
 
-  const onStreakClaim = (data:any) => { setXp(data.xp); setLevelNum(data.levelNum); setLevel(data.level); setStreakDays(data.streakDays); setStreakClaimed(true); showToast(`+${data.xpGained} XP 🔥 ${data.streakDays} dias!`); };
+  const onStreakClaim = (data:any) => { setXp(data.xp); setLevelNum(data.levelNum); setLevel(data.level); setStreakDays(data.streakDays); setStreakClaimed(true); showToast(`+${data.xpGained} XP 🔥 ${data.streakDays} dias!`); load(); };
 
   // FIX #2: reset-month não zera XP — atualiza state após reset
   const handleReset = async () => {
@@ -1258,6 +1268,7 @@ function ResetModal({ onClose, onConfirm }: any) {
 }
 
 function MethodologyModal({ onClose }: any) {
+  const [tab, setTab] = useState<"potes"|"saude">("potes");
   const POTES = [
     { cat:"Pagar-se",  pct:"5-10%",  color:"#6c63ff", emoji:"💆", desc:"Invista em você mesmo. Um presente, um passeio, um momento de prazer." },
     { cat:"Doar",      pct:"5-10%",  color:"#ff6b9d", emoji:"💝", desc:"Generosidade quebra a mentalidade de escassez e cria energia de abundância." },
@@ -1266,25 +1277,67 @@ function MethodologyModal({ onClose }: any) {
     { cat:"Sonho",     pct:"5-10%",  color:"#8b5cf6", emoji:"✨", desc:"Seu objetivo motivador. Transforma controle financeiro em aventura." },
     { cat:"Abundar",   pct:"5-10%",  color:"#f97316", emoji:"🌟", desc:"Os luxos da vida. Restaurante melhor, hobby, experiências." },
   ];
+  const SAUDE_BANDS = [
+    { range:"83 a 100", label:"Ótima",       color:"#00d68f", bg:"rgba(0,214,143,0.12)",  desc:"Vida financeira sem estresse. Finanças proporcionam segurança e liberdade." },
+    { range:"69 a 82",  label:"Muito Boa",   color:"#4ade80", bg:"rgba(74,222,128,0.1)",  desc:"Domínio do dia a dia, mas precisa dar o salto do patrimônio." },
+    { range:"61 a 68",  label:"Boa",         color:"#a3e635", bg:"rgba(163,230,53,0.08)", desc:"Básico bem feito." },
+    { range:"57 a 60",  label:"Ok",          color:"#facc15", bg:"rgba(250,204,21,0.08)", desc:"Equilíbrio financeiro no limite — com pouco espaço para erro." },
+    { range:"50 a 56",  label:"Baixa",       color:"#fb923c", bg:"rgba(251,146,60,0.08)", desc:"Primeiros sinais de desequilíbrio e risco de alto estresse financeiro." },
+    { range:"37 a 49",  label:"Muito Baixa", color:"#f97316", bg:"rgba(249,115,22,0.08)", desc:"Risco de atingir uma situação crítica." },
+    { range:"0 a 36",   label:"Ruim",        color:"#ff4d6a", bg:"rgba(255,77,106,0.12)", desc:"Círculo de fragilidade, estresse e desorganização financeira." },
+  ];
   return (
-    <Modal title="📚 Metodologia dos 6 Potes" onClose={onClose}>
-      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-        <div style={{ background:"var(--bg3)", borderRadius:12, padding:12, fontSize:13, color:"var(--text2)", lineHeight:1.6 }}>
-          A metodologia dos 6 Potes propõe que riqueza é um estado mental baseado em inteligência emocional. A chave está em como você distribui o que ganha.
-        </div>
-        {POTES.map((p,i)=>(
-          <div key={i} style={{ display:"flex", gap:12, padding:"10px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${p.color}` }}>
-            <span style={{ fontSize:20, flexShrink:0 }}>{p.emoji}</span>
-            <div>
-              <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:3 }}>
-                <span style={{ fontWeight:700, fontSize:13 }}>{p.cat}</span>
-                <span style={{ fontSize:11, color:p.color, fontWeight:700 }}>{p.pct}</span>
-              </div>
-              <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>{p.desc}</div>
-            </div>
-          </div>
+    <Modal title="📚 Metodologia do App" onClose={onClose}>
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+        {([{id:"potes",label:"🏺 6 Potes"},{id:"saude",label:"💚 Saúde Financeira"}] as const).map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{ flex:1, padding:"9px", borderRadius:10, fontWeight:700, fontSize:12, background:tab===t.id?"var(--primary)":"var(--bg3)", color:tab===t.id?"white":"var(--text2)", border:`1.5px solid ${tab===t.id?"var(--primary)":"var(--border)"}` }}>{t.label}</button>
         ))}
       </div>
+
+      {tab==="potes" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", fontSize:13, color:"var(--text2)", lineHeight:1.6 }}>
+            A metodologia dos 6 Potes propõe que riqueza é um estado mental baseado em inteligência emocional. A chave está em como você distribui o que ganha.
+          </div>
+          {POTES.map((p,i)=>(
+            <div key={i} style={{ display:"flex", gap:12, padding:"10px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${p.color}` }}>
+              <span style={{ fontSize:20, flexShrink:0 }}>{p.emoji}</span>
+              <div>
+                <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:3 }}>
+                  <span style={{ fontWeight:700, fontSize:13 }}>{p.cat}</span>
+                  <span style={{ fontSize:11, color:p.color, fontWeight:700 }}>{p.pct}</span>
+                </div>
+                <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>{p.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab==="saude" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", fontSize:13, color:"var(--text2)", lineHeight:1.6 }}>
+            A Saúde Financeira mede o equilíbrio entre sua receita total (salário + renda extra) e suas despesas (contas + cartão). Mesmo que suas despesas superem seu salário base, renda extra complementar é considerada — o que importa é a relação entre o que entra e o que sai.
+          </div>
+          <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 12px", fontSize:12, color:"var(--text2)", lineHeight:1.6 }}>
+            <div style={{ fontWeight:700, color:"#a78bfa", marginBottom:4, fontSize:12 }}>📐 Como é calculada</div>
+            <div>Receita = Salário Base + Renda Extra</div>
+            <div>Saldo = Receita − (Despesas + Cartão)</div>
+            <div style={{ marginTop:6, color:"var(--text)" }}>Quanto maior o saldo proporcional à receita, melhor o score. Contas pagas e streak diária também contribuem.</div>
+          </div>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginTop:4, marginBottom:2, letterSpacing:1, textTransform:"uppercase" }}>Faixas de Pontuação</div>
+          {SAUDE_BANDS.map((b,i)=>(
+            <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"9px 12px", background:b.bg, borderRadius:10, border:`1px solid ${b.color}33` }}>
+              <div style={{ minWidth:60, fontSize:11, fontWeight:700, color:b.color, flexShrink:0 }}>{b.range}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:13, color:b.color }}>{b.label}</div>
+                <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{b.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </Modal>
   );
 }
