@@ -234,35 +234,48 @@ app.delete("/api/extra-income/:id", async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ── RESET MENSAL — FIX: não zera XP, arquiva tudo corretamente ───────────────
+// ── RESET MENSAL ──────────────────────────────────────────────────────────────
 app.post("/api/users/:userId/reset-month", async (req, res) => {
   try {
     const p = getPool();
     if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const userId = req.params.userId;
     const month = new Date().toISOString().slice(0, 7);
-    // Arquiva snapshot do mês antes de limpar
+
+    // 1. Busca dados antes de deletar
+    const [expRows] = await p.execute("SELECT name, CAST(amount AS CHAR) as amount, categoryId, paid FROM expenses WHERE userId = ?", [userId]) as any;
+    const [ccRows]  = await p.execute("SELECT description, CAST(amount AS CHAR) as amount FROM creditCardExpenses WHERE userId = ?", [userId]) as any;
+    const [incRows] = await p.execute("SELECT description, CAST(amount AS CHAR) as amount FROM extraIncomes WHERE userId = ?", [userId]) as any;
+
+    const expJson = JSON.stringify(expRows || []);
+    const ccJson  = JSON.stringify(ccRows  || []);
+    const incJson = JSON.stringify(incRows || []);
+
+    // 2. Arquiva o mês (upsert)
     await p.execute(
       `INSERT INTO monthArchive (userId, month, expensesJson, creditCardJson, incomesJson)
-       SELECT ?, ?,
-         IFNULL((SELECT JSON_ARRAYAGG(JSON_OBJECT('name',name,'amount',CAST(amount AS CHAR),'categoryId',categoryId,'paid',paid)) FROM expenses WHERE userId = ?),'[]'),
-         IFNULL((SELECT JSON_ARRAYAGG(JSON_OBJECT('description',description,'amount',CAST(amount AS CHAR))) FROM creditCardExpenses WHERE userId = ?),'[]'),
-         IFNULL((SELECT JSON_ARRAYAGG(JSON_OBJECT('description',description,'amount',CAST(amount AS CHAR))) FROM extraIncomes WHERE userId = ?),'[]')
+       VALUES (?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
-         expensesJson=VALUES(expensesJson),
-         creditCardJson=VALUES(creditCardJson),
-         incomesJson=VALUES(incomesJson)`,
-      [req.params.userId, month, req.params.userId, req.params.userId, req.params.userId]
+         expensesJson = VALUES(expensesJson),
+         creditCardJson = VALUES(creditCardJson),
+         incomesJson = VALUES(incomesJson)`,
+      [userId, month, expJson, ccJson, incJson]
     );
-    // Limpa dados do mês — preserva despesas recorrentes (recurring=1), XP não é zerado
-    await p.execute("DELETE FROM expenses WHERE userId = ? AND recurring = 0", [req.params.userId]);
-    await p.execute("DELETE FROM creditCardExpenses WHERE userId = ?", [req.params.userId]);
-    await p.execute("DELETE FROM extraIncomes WHERE userId = ?", [req.params.userId]);
-    // Zera flag paid nas despesas recorrentes para o novo mês
-    await p.execute("UPDATE expenses SET paid = 0 WHERE userId = ? AND recurring = 1", [req.params.userId]);
-    // Retorna dados do usuário pós-reset (sem tocar XP)
-    const [uRows] = await p.execute("SELECT xp, levelNum, level, salaryBase FROM users WHERE id = ?", [req.params.userId]) as any;
-    res.json({ success: true, month, user: uRows[0] });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+
+    // 3. Limpa tabelas — despesas não-recorrentes e transacionais
+    await p.execute("DELETE FROM expenses WHERE userId = ? AND (recurring = 0 OR recurring IS NULL)", [userId]);
+    await p.execute("DELETE FROM creditCardExpenses WHERE userId = ?", [userId]);
+    await p.execute("DELETE FROM extraIncomes WHERE userId = ?", [userId]);
+    // Zera flag paid nas recorrentes para o novo mês
+    await p.execute("UPDATE expenses SET paid = 0 WHERE userId = ? AND recurring = 1", [userId]);
+
+    // 4. Retorna usuário com XP intacto
+    const [uRows] = await p.execute("SELECT xp, levelNum, level, salaryBase FROM users WHERE id = ?", [userId]) as any;
+    res.json({ success: true, month, user: uRows[0] || {} });
+  } catch (e: any) {
+    console.error("reset-month error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── HISTÓRICO DE MESES ────────────────────────────────────────────────────────
