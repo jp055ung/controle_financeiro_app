@@ -17,90 +17,52 @@ interface Expense {
   name: string;
   amount: number;
   paid: number;
-  createdAt: string;
 }
 
 interface CreditCardExpense {
   id: number;
   description: string;
   amount: number;
-  subcategory: string;
-  createdAt: string;
+  subcategory?: string;
 }
 
-interface ExtraIncome {
+interface Income {
   id: number;
   description: string;
   amount: number;
-  date: string;
 }
 
-const CATEGORIES = [
-  { id: 1, name: "Pagar-se", emoji: "💅" },
-  { id: 2, name: "Doar/Ajudar", emoji: "🤝" },
-  { id: 3, name: "Investir", emoji: "📈" },
-  { id: 4, name: "Contas", emoji: "📋" },
-  { id: 5, name: "Objetivo Atual", emoji: "🎯" },
-  { id: 6, name: "Sonho", emoji: "🏠" },
-  { id: 7, name: "Abundar", emoji: "✨" },
-];
-
-const SUBCATEGORIES = [
-  "Comida",
-  "Roupas",
-  "Gasolina",
-  "Transporte",
-  "Saúde",
-  "Streaming",
-  "Outros",
-];
-
-function App() {
+export default function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [page, setPage] = useState<"dashboard" | "expenses" | "creditcard" | "income">("dashboard");
+
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [creditCard, setCreditCard] = useState<CreditCardExpense[]>([]);
-  const [income, setIncome] = useState<ExtraIncome[]>([]);
-  const [currentTab, setCurrentTab] = useState("dashboard");
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [newExpense, setNewExpense] = useState({
-    categoryId: 1,
-    name: "",
-    amount: "",
-  });
-  const [newCreditCard, setNewCreditCard] = useState({
-    description: "",
-    amount: "",
-    subcategory: "Outros",
-  });
+  const [income, setIncome] = useState<Income[]>([]);
+
+  const [newExpense, setNewExpense] = useState({ categoryId: 1, name: "", amount: "" });
+  const [newCreditCard, setNewCreditCard] = useState({ description: "", amount: "", subcategory: "" });
   const [newIncome, setNewIncome] = useState({ description: "", amount: "" });
 
-  // ── LOGIN ──────────────────────────────────────────────────────────────
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-      });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isRegister, setIsRegister] = useState(false);
+  const [name, setName] = useState("");
 
-      const data = await res.json();
-      if (res.ok) {
-        setUser(data.user);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        setMessage("✅ Login realizado com sucesso!");
-        loadData(data.user.id);
-      } else {
-        setMessage("❌ " + data.error);
-      }
-    } catch (error) {
-      setMessage("❌ Erro ao fazer login");
+  // ── LOAD USER DATA ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      loadData(parsedUser.id);
     }
-  };
+    setLoading(false);
+  }, []);
 
-  // ── LOAD DATA ──────────────────────────────────────────────────────────
+  // ── LOAD DATA ─────────────────────────────────────────────────────────────
   const loadData = async (userId: number) => {
     try {
       const [expRes, ccRes, incRes] = await Promise.all([
@@ -109,34 +71,76 @@ function App() {
         fetch(`/api/users/${userId}/income`),
       ]);
 
-      const [expData, ccData, incData] = await Promise.all([
-        expRes.json(),
-        ccRes.json(),
-        incRes.json(),
-      ]);
-
-      setExpenses(expData);
-      setCreditCard(ccData);
-      setIncome(incData);
+      if (expRes.ok) setExpenses(await expRes.json());
+      if (ccRes.ok) setCreditCard(await ccRes.json());
+      if (incRes.ok) setIncome(await incRes.json());
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      console.error("Error loading data:", error);
     }
   };
 
-  // ── ADD EXPENSE ────────────────────────────────────────────────────────
-  const handleAddExpense = async (e: React.FormEvent) => {
+  // ── LOGIN / REGISTER ──────────────────────────────────────────────────────
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !newExpense.name || !newExpense.amount) {
-      setMessage("❌ Preencha todos os campos");
+
+    if (!email || !password) {
+      setMessage("Preencha todos os campos");
       return;
     }
 
     try {
-      const res = await fetch(`/api/users/${user.id}/expenses`, {
+      const endpoint = isRegister ? "/api/auth/register" : "/api/auth/login";
+      const body = isRegister ? { name, email, password } : { email, password };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.error || "Erro na autenticação");
+        return;
+      }
+
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user);
+      setEmail("");
+      setPassword("");
+      setName("");
+      setMessage("");
+      loadData(data.user.id);
+    } catch (error) {
+      setMessage("Erro ao conectar com o servidor");
+      console.error(error);
+    }
+  };
+
+  // ── LOGOUT ────────────────────────────────────────────────────────────────
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    setExpenses([]);
+    setCreditCard([]);
+    setIncome([]);
+    setMessage("");
+  };
+
+  // ── ADD EXPENSE ───────────────────────────────────────────────────────────
+  const addExpense = async () => {
+    if (!newExpense.name || !newExpense.amount) {
+      setMessage("Preencha todos os campos");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users/${user?.id}/expenses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          categoryId: newExpense.categoryId,
+          categoryId: parseInt(newExpense.categoryId.toString()),
           name: newExpense.name,
           amount: parseFloat(newExpense.amount),
         }),
@@ -146,26 +150,48 @@ function App() {
         const data = await res.json();
         setExpenses(data);
         setNewExpense({ categoryId: 1, name: "", amount: "" });
+
+        // Add XP
+        const xpGain = Math.max(1, Math.round(parseFloat(newExpense.amount) * 0.1));
+        addXP(xpGain);
+
         setMessage("✅ Despesa adicionada!");
-        addXP(user.id, 10);
-      } else {
-        setMessage("❌ Erro ao adicionar despesa");
+        setTimeout(() => setMessage(""), 3000);
       }
     } catch (error) {
-      setMessage("❌ Erro ao adicionar despesa");
+      setMessage("Erro ao adicionar despesa");
+      console.error(error);
     }
   };
 
-  // ── ADD CREDIT CARD ────────────────────────────────────────────────────
-  const handleAddCreditCard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !newCreditCard.description || !newCreditCard.amount) {
-      setMessage("❌ Preencha todos os campos");
+  // ── DELETE EXPENSE ────────────────────────────────────────────────────────
+  const deleteExpense = async (id: number) => {
+    try {
+      const res = await fetch(`/api/users/${user?.id}/expenses/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setExpenses(data);
+        setMessage("✅ Despesa deletada!");
+        setTimeout(() => setMessage(""), 3000);
+      }
+    } catch (error) {
+      setMessage("Erro ao deletar despesa");
+      console.error(error);
+    }
+  };
+
+  // ── ADD CREDIT CARD ───────────────────────────────────────────────────────
+  const addCreditCard = async () => {
+    if (!newCreditCard.description || !newCreditCard.amount) {
+      setMessage("Preencha todos os campos");
       return;
     }
 
     try {
-      const res = await fetch(`/api/users/${user.id}/creditcard`, {
+      const res = await fetch(`/api/users/${user?.id}/creditcard`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -178,27 +204,49 @@ function App() {
       if (res.ok) {
         const data = await res.json();
         setCreditCard(data);
-        setNewCreditCard({ description: "", amount: "", subcategory: "Outros" });
-        setMessage("✅ Adicionado ao cartão!");
-        addXP(user.id, 10);
-      } else {
-        setMessage("❌ Erro ao adicionar ao cartão");
+        setNewCreditCard({ description: "", amount: "", subcategory: "" });
+
+        // Add XP
+        const xpGain = Math.max(1, Math.round(parseFloat(newCreditCard.amount) * 0.1));
+        addXP(xpGain);
+
+        setMessage("✅ Cartão atualizado!");
+        setTimeout(() => setMessage(""), 3000);
       }
     } catch (error) {
-      setMessage("❌ Erro ao adicionar ao cartão");
+      setMessage("Erro ao adicionar ao cartão");
+      console.error(error);
     }
   };
 
-  // ── ADD INCOME ─────────────────────────────────────────────────────────
-  const handleAddIncome = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !newIncome.description || !newIncome.amount) {
-      setMessage("❌ Preencha todos os campos");
+  // ── DELETE CREDIT CARD ────────────────────────────────────────────────────
+  const deleteCreditCard = async (id: number) => {
+    try {
+      const res = await fetch(`/api/users/${user?.id}/creditcard/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCreditCard(data);
+        setMessage("✅ Item deletado!");
+        setTimeout(() => setMessage(""), 3000);
+      }
+    } catch (error) {
+      setMessage("Erro ao deletar");
+      console.error(error);
+    }
+  };
+
+  // ── ADD INCOME ────────────────────────────────────────────────────────────
+  const addIncome = async () => {
+    if (!newIncome.description || !newIncome.amount) {
+      setMessage("Preencha todos os campos");
       return;
     }
 
     try {
-      const res = await fetch(`/api/users/${user.id}/income`, {
+      const res = await fetch(`/api/users/${user?.id}/income`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -211,60 +259,24 @@ function App() {
         const data = await res.json();
         setIncome(data);
         setNewIncome({ description: "", amount: "" });
+
+        // Add XP
+        const xpGain = Math.max(1, Math.round(parseFloat(newIncome.amount)));
+        addXP(xpGain);
+
         setMessage("✅ Renda adicionada!");
-        addXP(user.id, Math.round(parseFloat(newIncome.amount)));
-      } else {
-        setMessage("❌ Erro ao adicionar renda");
+        setTimeout(() => setMessage(""), 3000);
       }
     } catch (error) {
-      setMessage("❌ Erro ao adicionar renda");
+      setMessage("Erro ao adicionar renda");
+      console.error(error);
     }
   };
 
-  // ── DELETE EXPENSE ─────────────────────────────────────────────────────
-  const handleDeleteExpense = async (expenseId: number) => {
-    if (!user) return;
-
+  // ── DELETE INCOME ─────────────────────────────────────────────────────────
+  const deleteIncome = async (id: number) => {
     try {
-      const res = await fetch(`/api/users/${user.id}/expenses/${expenseId}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setExpenses(data);
-        setMessage("✅ Despesa deletada!");
-      }
-    } catch (error) {
-      setMessage("❌ Erro ao deletar despesa");
-    }
-  };
-
-  // ── DELETE CREDIT CARD ─────────────────────────────────────────────────
-  const handleDeleteCreditCard = async (ccId: number) => {
-    if (!user) return;
-
-    try {
-      const res = await fetch(`/api/users/${user.id}/creditcard/${ccId}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setCreditCard(data);
-        setMessage("✅ Deletado do cartão!");
-      }
-    } catch (error) {
-      setMessage("❌ Erro ao deletar");
-    }
-  };
-
-  // ── DELETE INCOME ──────────────────────────────────────────────────────
-  const handleDeleteIncome = async (incomeId: number) => {
-    if (!user) return;
-
-    try {
-      const res = await fetch(`/api/users/${user.id}/income/${incomeId}`, {
+      const res = await fetch(`/api/users/${user?.id}/income/${id}`, {
         method: "DELETE",
       });
 
@@ -272,16 +284,18 @@ function App() {
         const data = await res.json();
         setIncome(data);
         setMessage("✅ Renda deletada!");
+        setTimeout(() => setMessage(""), 3000);
       }
     } catch (error) {
-      setMessage("❌ Erro ao deletar");
+      setMessage("Erro ao deletar renda");
+      console.error(error);
     }
   };
 
-  // ── ADD XP ─────────────────────────────────────────────────────────────
-  const addXP = async (userId: number, xpGain: number) => {
+  // ── ADD XP ────────────────────────────────────────────────────────────────
+  const addXP = async (xpGain: number) => {
     try {
-      const res = await fetch(`/api/users/${userId}/xp`, {
+      const res = await fetch(`/api/users/${user?.id}/xp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ xpGain }),
@@ -289,366 +303,297 @@ function App() {
 
       if (res.ok) {
         const data = await res.json();
-        setUser((prev) =>
-          prev
-            ? {
-                ...prev,
-                xp: data.xp,
-                level: data.level,
-                levelNum: data.levelNum,
-              }
-            : null
-        );
+        setUser((prev) => (prev ? { ...prev, xp: data.xp, level: data.level, levelNum: data.levelNum } : null));
       }
     } catch (error) {
-      console.error("Erro ao adicionar XP:", error);
+      console.error("Error adding XP:", error);
     }
   };
 
-  // ── CLAIM STREAK ───────────────────────────────────────────────────────
-  const handleClaimStreak = async () => {
-    if (!user) return;
-
+  // ── CLAIM STREAK ──────────────────────────────────────────────────────────
+  const claimStreak = async () => {
     try {
-      const res = await fetch(`/api/users/${user.id}/streak/checkin`, {
+      const res = await fetch(`/api/users/${user?.id}/streak/checkin`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
       });
 
       const data = await res.json();
-      if (res.ok) {
-        setUser((prev) =>
-          prev
-            ? {
-                ...prev,
-                streakDays: data.streakDays,
-                xp: data.xp,
-                level: data.level,
-                levelNum: data.levelNum,
-              }
-            : null
-        );
-        setMessage(`✅ Streak reivindicado! +${data.xpGained} XP`);
-      } else {
-        setMessage("❌ " + data.error);
+
+      if (!res.ok) {
+        setMessage(data.error || "Erro ao reivindicar streak");
+        return;
       }
+
+      setUser((prev) =>
+        prev ? { ...prev, streakDays: data.streakDays, xp: data.xp, level: data.level, levelNum: data.levelNum } : null
+      );
+
+      setMessage(`🔥 +${data.xpGained} XP! Streak: ${data.streakDays} dias!`);
+      setTimeout(() => setMessage(""), 3000);
     } catch (error) {
-      setMessage("❌ Erro ao reivindicar streak");
+      setMessage("Erro ao reivindicar streak");
+      console.error(error);
     }
   };
 
-  // ── LOGOUT ─────────────────────────────────────────────────────────────
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem("user");
-    setExpenses([]);
-    setCreditCard([]);
-    setIncome([]);
-    setMessage("✅ Logout realizado");
-  };
+  // ── CALCULATIONS ──────────────────────────────────────────────────────────
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalCreditCard = creditCard.reduce((sum, c) => sum + c.amount, 0);
+  const totalIncome = income.reduce((sum, i) => sum + i.amount, 0);
+  const baseSalary = 2300;
+  const totalIncome_all = baseSalary + totalIncome;
+  const totalExpenses_all = totalExpenses + totalCreditCard;
+  const balance = totalIncome_all - totalExpenses_all;
 
-  // ── LOAD USER FROM STORAGE ────────────────────────────────────────────
-  useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-      setUser(user);
-      loadData(user.id);
-    }
-  }, []);
+  const xpForNextLevel = (user?.levelNum || 1) * 100;
+  const currentXp = user?.xp || 0;
+  const xpProgress = (currentXp % 100) / 100;
 
-  // ── CLEAR MESSAGE ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(""), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
-
-  // ── RENDER ─────────────────────────────────────────────────────────────
-
+  // ── RENDER LOGIN ──────────────────────────────────────────────────────────
   if (!user) {
+    if (loading) return <div className="login-container"><div className="login-box">Carregando...</div></div>;
+
     return (
       <div className="login-container">
         <div className="login-box">
-          <h1>🎮 FinControl</h1>
-          <form onSubmit={handleLogin}>
+          <h1>💰 FinControl</h1>
+          <form onSubmit={handleAuth}>
+            {isRegister && (
+              <input
+                type="text"
+                placeholder="Nome"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            )}
             <input
               type="email"
               placeholder="Email"
-              value={loginEmail}
-              onChange={(e) => setLoginEmail(e.target.value)}
-              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
             <input
               type="password"
               placeholder="Senha"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
-            <button type="submit">Entrar</button>
+            <button type="submit">{isRegister ? "Registrar" : "Entrar"}</button>
           </form>
-          {message && <p className="message">{message}</p>}
+          {message && <div className="message">{message}</div>}
+          <div style={{ marginTop: "1rem", textAlign: "center" }}>
+            <button
+              onClick={() => setIsRegister(!isRegister)}
+              style={{ background: "transparent", color: "#3b82f6", border: "none", cursor: "pointer" }}
+            >
+              {isRegister ? "Já tem conta? Entrar" : "Criar nova conta"}
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const totalCreditCard = creditCard.reduce((sum, c) => sum + c.amount, 0);
-  const totalIncome = income.reduce((sum, i) => sum + i.amount, 0);
-  const salaryBase = 2300;
-  const balance = salaryBase + totalIncome - totalExpenses - totalCreditCard;
-  const xpProgress = (user.xp % 100) / 100;
-
+  // ── RENDER APP ────────────────────────────────────────────────────────────
   return (
     <div className="app">
-      <header className="header">
-        <h1>🎮 FinControl</h1>
+      {message && <div className="message-banner">{message}</div>}
+
+      <div className="header">
+        <h1>💰 FinControl</h1>
         <div className="user-info">
-          <span>{user.name}</span>
+          <span>Olá, {user.name}!</span>
           <button onClick={handleLogout}>Sair</button>
         </div>
-      </header>
-
-      {message && <div className="message-banner">{message}</div>}
+      </div>
 
       <div className="container">
         <nav className="nav">
-          <button
-            className={currentTab === "dashboard" ? "active" : ""}
-            onClick={() => setCurrentTab("dashboard")}
-          >
+          <button className={page === "dashboard" ? "active" : ""} onClick={() => setPage("dashboard")}>
             📊 Dashboard
           </button>
-          <button
-            className={currentTab === "expenses" ? "active" : ""}
-            onClick={() => setCurrentTab("expenses")}
-          >
-            📋 Despesas
+          <button className={page === "expenses" ? "active" : ""} onClick={() => setPage("expenses")}>
+            💸 Despesas
           </button>
-          <button
-            className={currentTab === "creditcard" ? "active" : ""}
-            onClick={() => setCurrentTab("creditcard")}
-          >
+          <button className={page === "creditcard" ? "active" : ""} onClick={() => setPage("creditcard")}>
             💳 Cartão
           </button>
-          <button
-            className={currentTab === "income" ? "active" : ""}
-            onClick={() => setCurrentTab("income")}
-          >
-            💰 Renda
+          <button className={page === "income" ? "active" : ""} onClick={() => setPage("income")}>
+            💵 Renda
           </button>
         </nav>
 
-        <main className="content">
-          {/* ── DASHBOARD ─────────────────────────────────────────────── */}
-          {currentTab === "dashboard" && (
+        <div className="content">
+          {page === "dashboard" && (
             <div className="dashboard">
               <div className="xp-bar">
                 <div className="xp-label">
-                  <span>{user.level.toUpperCase()}</span>
-                  <span>Nível {user.levelNum}</span>
+                  <span>
+                    {user.level === "avancado" ? "🚀 AVANÇADO" : "🎮 INICIANTE"} - Nível {user.levelNum}
+                  </span>
+                  <span>{currentXp} XP</span>
                 </div>
                 <div className="xp-progress">
-                  <div
-                    className="xp-fill"
-                    style={{ width: `${xpProgress * 100}%` }}
-                  ></div>
+                  <div className="xp-fill" style={{ width: `${xpProgress * 100}%` }}></div>
                 </div>
                 <div className="xp-text">
-                  {user.xp} XP ({user.xp % 100}/100)
+                  {currentXp % 100} / 100 XP para o próximo nível
                 </div>
               </div>
 
               <div className="stats">
                 <div className="stat-card salary">
-                  <h3>💵 Salário Base</h3>
-                  <p>R$ {salaryBase.toFixed(2)}</p>
+                  <h3>💼 Salário Base</h3>
+                  <p>R$ {baseSalary.toFixed(2)}</p>
                 </div>
+
                 <div className="stat-card expenses">
-                  <h3>📊 Despesas</h3>
-                  <p>R$ {totalExpenses.toFixed(2)}</p>
+                  <h3>💸 Total Despesas</h3>
+                  <p>R$ {totalExpenses_all.toFixed(2)}</p>
                 </div>
-                <div className="stat-card creditcard">
-                  <h3>💳 Cartão</h3>
-                  <p>R$ {totalCreditCard.toFixed(2)}</p>
-                </div>
+
                 <div className="stat-card income">
-                  <h3>💰 Renda Extra</h3>
+                  <h3>💵 Renda Extra</h3>
                   <p>R$ {totalIncome.toFixed(2)}</p>
                 </div>
+
                 <div className={`stat-card balance ${balance >= 0 ? "positive" : "negative"}`}>
-                  <h3>💎 Saldo</h3>
+                  <h3>💰 Saldo</h3>
                   <p>R$ {balance.toFixed(2)}</p>
                 </div>
+
                 <div className="stat-card streak">
                   <h3>🔥 Streak</h3>
                   <p>{user.streakDays} dias</p>
-                  <button onClick={handleClaimStreak}>Reivindicar</button>
+                  <button onClick={claimStreak}>Reivindicar</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── EXPENSES ───────────────────────────────────────────────── */}
-          {currentTab === "expenses" && (
-            <div className="expenses">
-              <form onSubmit={handleAddExpense} className="form">
+          {page === "expenses" && (
+            <div>
+              <h2>💸 Despesas</h2>
+              <div className="form">
                 <select
                   value={newExpense.categoryId}
-                  onChange={(e) =>
-                    setNewExpense({
-                      ...newExpense,
-                      categoryId: parseInt(e.target.value),
-                    })
-                  }
+                  onChange={(e) => setNewExpense({ ...newExpense, categoryId: parseInt(e.target.value) })}
                 >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.emoji} {cat.name}
-                    </option>
-                  ))}
+                  <option value={1}>Pagar-se</option>
+                  <option value={2}>Doar</option>
+                  <option value={3}>Investir</option>
+                  <option value={4}>Contas</option>
+                  <option value={5}>Sonho</option>
+                  <option value={6}>Abundar</option>
                 </select>
                 <input
                   type="text"
                   placeholder="Descrição"
                   value={newExpense.name}
-                  onChange={(e) =>
-                    setNewExpense({ ...newExpense, name: e.target.value })
-                  }
+                  onChange={(e) => setNewExpense({ ...newExpense, name: e.target.value })}
                 />
                 <input
                   type="number"
                   placeholder="Valor"
-                  step="0.01"
                   value={newExpense.amount}
-                  onChange={(e) =>
-                    setNewExpense({ ...newExpense, amount: e.target.value })
-                  }
+                  onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
                 />
-                <button type="submit">Adicionar</button>
-              </form>
+                <button onClick={addExpense}>Adicionar</button>
+              </div>
 
               <div className="list">
                 {expenses.map((exp) => (
                   <div key={exp.id} className="item">
                     <span>
-                      {CATEGORIES.find((c) => c.id === exp.categoryId)?.emoji}{" "}
                       {exp.name} - R$ {exp.amount.toFixed(2)}
                     </span>
-                    <button onClick={() => handleDeleteExpense(exp.id)}>
-                      ❌
-                    </button>
+                    <button onClick={() => deleteExpense(exp.id)}>❌</button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* ── CREDIT CARD ────────────────────────────────────────────── */}
-          {currentTab === "creditcard" && (
-            <div className="creditcard">
-              <form onSubmit={handleAddCreditCard} className="form">
+          {page === "creditcard" && (
+            <div>
+              <h2>💳 Cartão de Crédito</h2>
+              <div className="form">
                 <input
                   type="text"
                   placeholder="Descrição"
                   value={newCreditCard.description}
-                  onChange={(e) =>
-                    setNewCreditCard({
-                      ...newCreditCard,
-                      description: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setNewCreditCard({ ...newCreditCard, description: e.target.value })}
                 />
                 <input
                   type="number"
                   placeholder="Valor"
-                  step="0.01"
                   value={newCreditCard.amount}
-                  onChange={(e) =>
-                    setNewCreditCard({
-                      ...newCreditCard,
-                      amount: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setNewCreditCard({ ...newCreditCard, amount: e.target.value })}
                 />
                 <select
                   value={newCreditCard.subcategory}
-                  onChange={(e) =>
-                    setNewCreditCard({
-                      ...newCreditCard,
-                      subcategory: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setNewCreditCard({ ...newCreditCard, subcategory: e.target.value })}
                 >
-                  {SUBCATEGORIES.map((sub) => (
-                    <option key={sub} value={sub}>
-                      {sub}
-                    </option>
-                  ))}
+                  <option value="">Selecione categoria</option>
+                  <option value="Comida">Comida</option>
+                  <option value="Roupas">Roupas</option>
+                  <option value="Streaming">Streaming</option>
+                  <option value="Outros">Outros</option>
                 </select>
-                <button type="submit">Adicionar</button>
-              </form>
+                <button onClick={addCreditCard}>Adicionar</button>
+              </div>
 
               <div className="list">
                 {creditCard.map((cc) => (
                   <div key={cc.id} className="item">
                     <span>
-                      💳 {cc.description} ({cc.subcategory}) - R${" "}
-                      {cc.amount.toFixed(2)}
+                      {cc.description} ({cc.subcategory || "Sem categoria"}) - R$ {cc.amount.toFixed(2)}
                     </span>
-                    <button onClick={() => handleDeleteCreditCard(cc.id)}>
-                      ❌
-                    </button>
+                    <button onClick={() => deleteCreditCard(cc.id)}>❌</button>
                   </div>
                 ))}
+              </div>
+
+              <div style={{ marginTop: "2rem", padding: "1rem", background: "#1e293b", borderRadius: "8px" }}>
+                <h3>Total Cartão: R$ {totalCreditCard.toFixed(2)}</h3>
               </div>
             </div>
           )}
 
-          {/* ── INCOME ────────────────────────────────────────────────── */}
-          {currentTab === "income" && (
-            <div className="income">
-              <form onSubmit={handleAddIncome} className="form">
+          {page === "income" && (
+            <div>
+              <h2>💵 Renda Extra</h2>
+              <div className="form">
                 <input
                   type="text"
                   placeholder="Descrição"
                   value={newIncome.description}
-                  onChange={(e) =>
-                    setNewIncome({ ...newIncome, description: e.target.value })
-                  }
+                  onChange={(e) => setNewIncome({ ...newIncome, description: e.target.value })}
                 />
                 <input
                   type="number"
                   placeholder="Valor"
-                  step="0.01"
                   value={newIncome.amount}
-                  onChange={(e) =>
-                    setNewIncome({ ...newIncome, amount: e.target.value })
-                  }
+                  onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
                 />
-                <button type="submit">Adicionar</button>
-              </form>
+                <button onClick={addIncome}>Adicionar</button>
+              </div>
 
               <div className="list">
                 {income.map((inc) => (
                   <div key={inc.id} className="item">
                     <span>
-                      💰 {inc.description} - R$ {inc.amount.toFixed(2)}
+                      {inc.description} - R$ {inc.amount.toFixed(2)}
                     </span>
-                    <button onClick={() => handleDeleteIncome(inc.id)}>
-                      ❌
-                    </button>
+                    <button onClick={() => deleteIncome(inc.id)}>❌</button>
                   </div>
                 ))}
               </div>
             </div>
           )}
-        </main>
+        </div>
       </div>
     </div>
   );
 }
-
-export default App;
