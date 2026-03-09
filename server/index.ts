@@ -8,10 +8,10 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(express.json());
 app.use(cors());
-
-// Servir arquivos estáticos do frontend
 app.use(express.static(path.join(__dirname, "../client/dist")));
 
 // ── DATABASE CONNECTION ───────────────────────────────────────────────────
@@ -25,31 +25,88 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
+// ── INITIALIZE DATABASE ───────────────────────────────────────────────────
+async function initDB() {
+  try {
+    const connection = await pool.getConnection();
+
+    // Users table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        xp INT DEFAULT 0,
+        level VARCHAR(20) DEFAULT 'iniciante',
+        levelNum INT DEFAULT 1,
+        streakDays INT DEFAULT 0,
+        lastCheckin DATE,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Expenses table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS expenses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        userId INT NOT NULL,
+        categoryId INT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        paid INT DEFAULT 0,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX (userId)
+      )
+    `);
+
+    // Credit card expenses table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS creditCardExpenses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        userId INT NOT NULL,
+        description VARCHAR(255) NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        subcategory VARCHAR(100),
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX (userId)
+      )
+    `);
+
+    // Extra incomes table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS extraIncomes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        userId INT NOT NULL,
+        description VARCHAR(255) NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        date DATE DEFAULT CURDATE(),
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX (userId)
+      )
+    `);
+
+    connection.release();
+    console.log("✅ Database initialized successfully");
+  } catch (error: any) {
+    if (!error.message.includes("already exists")) {
+      console.error("❌ Database initialization error:", error.message);
+    }
+  }
+}
+
+initDB();
+
 // ── VALIDATION FUNCTIONS ──────────────────────────────────────────────────
 function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function validatePassword(password: string): boolean {
-  return password.length >= 6;
-}
-
-// ── XP CALCULATION ────────────────────────────────────────────────────────
-const calcXpExpense = (a: number) => Math.max(1, Math.round(a * 0.1));
-const calcXpIncome = (a: number) => Math.max(1, Math.round(a));
-const XP_PAY_BILL = 15;
-
-// ── LEVEL CALCULATION ────────────────────────────────────────────────────
-function calcLevel(xp: number): { levelNum: number; level: string } {
-  const levelNum = Math.floor(xp / 100) + 1;
-  const level = levelNum >= 5 ? "avancado" : "iniciante";
-  return { levelNum, level };
-}
-
-// ── STREAK CALCULATION ────────────────────────────────────────────────────
-function getStreakXP(days: number): number {
-  const map: Record<number, number> = { 1: 5, 2: 15, 3: 25, 4: 35, 5: 50, 6: 65, 7: 100, 14: 150, 30: 300 };
-  return map[days] ?? 65;
+  return password.length >= 4;
 }
 
 // ── AUTH ENDPOINTS ────────────────────────────────────────────────────────
@@ -58,37 +115,45 @@ app.post("/api/auth/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || name.trim().length < 2) {
-      return res.status(400).json({ error: "Nome deve ter pelo menos 2 caracteres" });
+    // Validation
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Preencha todos os campos" });
     }
+
     if (!validateEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
     }
+
     if (!validatePassword(password)) {
-      return res.status(400).json({ error: "Senha deve ter pelo menos 6 caracteres" });
+      return res.status(400).json({ error: "Senha deve ter pelo menos 4 caracteres" });
     }
 
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    const [rows] = await conn.execute("SELECT id FROM users WHERE email = ?", [email]);
-    if ((rows as any[]).length > 0) {
-      conn.release();
-      return res.status(400).json({ error: "Email já registrado" });
+    try {
+      // Check if user exists
+      const [users]: any = await connection.execute("SELECT id FROM users WHERE email = ?", [email]);
+
+      if (users.length > 0) {
+        return res.status(400).json({ error: "Email já cadastrado" });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user
+      await connection.execute(
+        "INSERT INTO users (name, email, password, xp, level, levelNum, streakDays) VALUES (?, ?, ?, 0, 'iniciante', 1, 0)",
+        [name, email, hashedPassword]
+      );
+
+      // Get created user
+      const [newUsers]: any = await connection.execute("SELECT id, name, email, xp, level, levelNum, streakDays FROM users WHERE email = ?", [email]);
+
+      res.json({ user: newUsers[0], message: "Usuário criado com sucesso" });
+    } finally {
+      connection.release();
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await conn.execute(
-      "INSERT INTO users (name, email, password, xp, level, levelNum, streakDays, lastCheckin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      [name, email, hashedPassword, 0, "iniciante", 1, 0, new Date()]
-    );
-
-    const [userRows] = await conn.execute("SELECT id, name, email, xp, level, levelNum, streakDays FROM users WHERE email = ?", [email]);
-    const user = (userRows as any[])[0];
-
-    conn.release();
-
-    res.json({ user });
   } catch (error: any) {
     console.error("Register error:", error);
     res.status(500).json({ error: "Erro ao registrar" });
@@ -99,47 +164,64 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+
     if (!validateEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
     }
 
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    const [rows] = await conn.execute("SELECT id, name, email, password, xp, level, levelNum, streakDays FROM users WHERE email = ?", [email]);
-    const user = (rows as any[])[0];
+    try {
+      const [users]: any = await connection.execute(
+        "SELECT id, name, email, password, xp, level, levelNum, streakDays FROM users WHERE email = ?",
+        [email]
+      );
 
-    if (!user) {
-      conn.release();
-      return res.status(401).json({ error: "Credenciais inválidas" });
+      if (users.length === 0) {
+        return res.status(401).json({ error: "Email ou senha incorretos" });
+      }
+
+      const user = users[0];
+      const passwordMatch = await bcrypt.compare(password, user.password);
+
+      if (!passwordMatch) {
+        return res.status(401).json({ error: "Email ou senha incorretos" });
+      }
+
+      const userData = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        xp: user.xp || 0,
+        level: user.level || "iniciante",
+        levelNum: user.levelNum || 1,
+        streakDays: user.streakDays || 0,
+      };
+
+      res.json({ user: userData });
+    } finally {
+      connection.release();
     }
-
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
-      conn.release();
-      return res.status(401).json({ error: "Credenciais inválidas" });
-    }
-
-    conn.release();
-
-    const { password: _, ...userWithoutPassword } = user;
-    res.json({ user: userWithoutPassword });
   } catch (error: any) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Erro ao fazer login" });
   }
 });
 
-// ── EXPENSE ENDPOINTS ─────────────────────────────────────────────────────
+// ── EXPENSES ENDPOINTS ────────────────────────────────────────────────────
 
 app.get("/api/users/:userId/expenses", async (req, res) => {
   try {
     const { userId } = req.params;
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    const [rows] = await conn.execute("SELECT * FROM expenses WHERE userId = ? ORDER BY id DESC", [userId]);
+    const [expenses]: any = await connection.execute("SELECT * FROM expenses WHERE userId = ? ORDER BY id DESC", [userId]);
 
-    conn.release();
-    res.json(rows);
+    connection.release();
+    res.json(expenses || []);
   } catch (error: any) {
     console.error("Get expenses error:", error);
     res.status(500).json({ error: "Erro ao buscar despesas" });
@@ -155,17 +237,20 @@ app.post("/api/users/:userId/expenses", async (req, res) => {
       return res.status(400).json({ error: "Dados inválidos" });
     }
 
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    await conn.execute(
-      "INSERT INTO expenses (userId, categoryId, name, amount, paid, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
-      [userId, categoryId, name, amount, 0, new Date()]
-    );
+    try {
+      await connection.execute(
+        "INSERT INTO expenses (userId, categoryId, name, amount, paid, createdAt) VALUES (?, ?, ?, ?, 0, NOW())",
+        [userId, categoryId, name, parseFloat(amount)]
+      );
 
-    const [rows] = await conn.execute("SELECT * FROM expenses WHERE userId = ? ORDER BY id DESC", [userId]);
+      const [expenses]: any = await connection.execute("SELECT * FROM expenses WHERE userId = ? ORDER BY id DESC", [userId]);
 
-    conn.release();
-    res.json(rows);
+      res.json(expenses);
+    } finally {
+      connection.release();
+    }
   } catch (error: any) {
     console.error("Add expense error:", error);
     res.status(500).json({ error: "Erro ao adicionar despesa" });
@@ -175,14 +260,17 @@ app.post("/api/users/:userId/expenses", async (req, res) => {
 app.delete("/api/users/:userId/expenses/:expenseId", async (req, res) => {
   try {
     const { userId, expenseId } = req.params;
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    await conn.execute("DELETE FROM expenses WHERE id = ? AND userId = ?", [expenseId, userId]);
+    try {
+      await connection.execute("DELETE FROM expenses WHERE id = ? AND userId = ?", [expenseId, userId]);
 
-    const [rows] = await conn.execute("SELECT * FROM expenses WHERE userId = ? ORDER BY id DESC", [userId]);
+      const [expenses]: any = await connection.execute("SELECT * FROM expenses WHERE userId = ? ORDER BY id DESC", [userId]);
 
-    conn.release();
-    res.json(rows);
+      res.json(expenses);
+    } finally {
+      connection.release();
+    }
   } catch (error: any) {
     console.error("Delete expense error:", error);
     res.status(500).json({ error: "Erro ao deletar despesa" });
@@ -192,23 +280,24 @@ app.delete("/api/users/:userId/expenses/:expenseId", async (req, res) => {
 app.put("/api/users/:userId/expenses/:expenseId/toggle", async (req, res) => {
   try {
     const { userId, expenseId } = req.params;
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    const [rows] = await conn.execute("SELECT paid FROM expenses WHERE id = ? AND userId = ?", [expenseId, userId]);
-    const expense = (rows as any[])[0];
+    try {
+      const [expenses]: any = await connection.execute("SELECT paid FROM expenses WHERE id = ? AND userId = ?", [expenseId, userId]);
 
-    if (!expense) {
-      conn.release();
-      return res.status(404).json({ error: "Despesa não encontrada" });
+      if (expenses.length === 0) {
+        return res.status(404).json({ error: "Despesa não encontrada" });
+      }
+
+      const newPaid = expenses[0].paid === 1 ? 0 : 1;
+      await connection.execute("UPDATE expenses SET paid = ? WHERE id = ? AND userId = ?", [newPaid, expenseId, userId]);
+
+      const [updatedExpenses]: any = await connection.execute("SELECT * FROM expenses WHERE userId = ? ORDER BY id DESC", [userId]);
+
+      res.json(updatedExpenses);
+    } finally {
+      connection.release();
     }
-
-    const newPaid = expense.paid === 1 ? 0 : 1;
-    await conn.execute("UPDATE expenses SET paid = ? WHERE id = ? AND userId = ?", [newPaid, expenseId, userId]);
-
-    const [updatedRows] = await conn.execute("SELECT * FROM expenses WHERE userId = ? ORDER BY id DESC", [userId]);
-
-    conn.release();
-    res.json(updatedRows);
   } catch (error: any) {
     console.error("Toggle expense error:", error);
     res.status(500).json({ error: "Erro ao atualizar despesa" });
@@ -220,12 +309,12 @@ app.put("/api/users/:userId/expenses/:expenseId/toggle", async (req, res) => {
 app.get("/api/users/:userId/creditcard", async (req, res) => {
   try {
     const { userId } = req.params;
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    const [rows] = await conn.execute("SELECT * FROM creditCardExpenses WHERE userId = ? ORDER BY id DESC", [userId]);
+    const [creditcard]: any = await connection.execute("SELECT * FROM creditCardExpenses WHERE userId = ? ORDER BY id DESC", [userId]);
 
-    conn.release();
-    res.json(rows);
+    connection.release();
+    res.json(creditcard || []);
   } catch (error: any) {
     console.error("Get credit card error:", error);
     res.status(500).json({ error: "Erro ao buscar cartão" });
@@ -241,17 +330,20 @@ app.post("/api/users/:userId/creditcard", async (req, res) => {
       return res.status(400).json({ error: "Dados inválidos" });
     }
 
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    await conn.execute(
-      "INSERT INTO creditCardExpenses (userId, description, amount, subcategory, createdAt) VALUES (?, ?, ?, ?, ?)",
-      [userId, description, amount, subcategory || null, new Date()]
-    );
+    try {
+      await connection.execute(
+        "INSERT INTO creditCardExpenses (userId, description, amount, subcategory, createdAt) VALUES (?, ?, ?, ?, NOW())",
+        [userId, description, parseFloat(amount), subcategory || null]
+      );
 
-    const [rows] = await conn.execute("SELECT * FROM creditCardExpenses WHERE userId = ? ORDER BY id DESC", [userId]);
+      const [creditcard]: any = await connection.execute("SELECT * FROM creditCardExpenses WHERE userId = ? ORDER BY id DESC", [userId]);
 
-    conn.release();
-    res.json(rows);
+      res.json(creditcard);
+    } finally {
+      connection.release();
+    }
   } catch (error: any) {
     console.error("Add credit card error:", error);
     res.status(500).json({ error: "Erro ao adicionar ao cartão" });
@@ -261,14 +353,17 @@ app.post("/api/users/:userId/creditcard", async (req, res) => {
 app.delete("/api/users/:userId/creditcard/:ccId", async (req, res) => {
   try {
     const { userId, ccId } = req.params;
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    await conn.execute("DELETE FROM creditCardExpenses WHERE id = ? AND userId = ?", [ccId, userId]);
+    try {
+      await connection.execute("DELETE FROM creditCardExpenses WHERE id = ? AND userId = ?", [ccId, userId]);
 
-    const [rows] = await conn.execute("SELECT * FROM creditCardExpenses WHERE userId = ? ORDER BY id DESC", [userId]);
+      const [creditcard]: any = await connection.execute("SELECT * FROM creditCardExpenses WHERE userId = ? ORDER BY id DESC", [userId]);
 
-    conn.release();
-    res.json(rows);
+      res.json(creditcard);
+    } finally {
+      connection.release();
+    }
   } catch (error: any) {
     console.error("Delete credit card error:", error);
     res.status(500).json({ error: "Erro ao deletar" });
@@ -280,12 +375,12 @@ app.delete("/api/users/:userId/creditcard/:ccId", async (req, res) => {
 app.get("/api/users/:userId/income", async (req, res) => {
   try {
     const { userId } = req.params;
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    const [rows] = await conn.execute("SELECT * FROM extraIncomes WHERE userId = ? ORDER BY id DESC", [userId]);
+    const [income]: any = await connection.execute("SELECT * FROM extraIncomes WHERE userId = ? ORDER BY id DESC", [userId]);
 
-    conn.release();
-    res.json(rows);
+    connection.release();
+    res.json(income || []);
   } catch (error: any) {
     console.error("Get income error:", error);
     res.status(500).json({ error: "Erro ao buscar renda" });
@@ -301,17 +396,21 @@ app.post("/api/users/:userId/income", async (req, res) => {
       return res.status(400).json({ error: "Dados inválidos" });
     }
 
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    await conn.execute(
-      "INSERT INTO extraIncomes (userId, description, amount, date) VALUES (?, ?, ?, ?)",
-      [userId, description, amount, new Date()]
-    );
+    try {
+      await connection.execute("INSERT INTO extraIncomes (userId, description, amount, date) VALUES (?, ?, ?, CURDATE())", [
+        userId,
+        description,
+        parseFloat(amount),
+      ]);
 
-    const [rows] = await conn.execute("SELECT * FROM extraIncomes WHERE userId = ? ORDER BY id DESC", [userId]);
+      const [income]: any = await connection.execute("SELECT * FROM extraIncomes WHERE userId = ? ORDER BY id DESC", [userId]);
 
-    conn.release();
-    res.json(rows);
+      res.json(income);
+    } finally {
+      connection.release();
+    }
   } catch (error: any) {
     console.error("Add income error:", error);
     res.status(500).json({ error: "Erro ao adicionar renda" });
@@ -321,17 +420,20 @@ app.post("/api/users/:userId/income", async (req, res) => {
 app.delete("/api/users/:userId/income/:incomeId", async (req, res) => {
   try {
     const { userId, incomeId } = req.params;
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    await conn.execute("DELETE FROM extraIncomes WHERE id = ? AND userId = ?", [incomeId, userId]);
+    try {
+      await connection.execute("DELETE FROM extraIncomes WHERE id = ? AND userId = ?", [incomeId, userId]);
 
-    const [rows] = await conn.execute("SELECT * FROM extraIncomes WHERE userId = ? ORDER BY id DESC", [userId]);
+      const [income]: any = await connection.execute("SELECT * FROM extraIncomes WHERE userId = ? ORDER BY id DESC", [userId]);
 
-    conn.release();
-    res.json(rows);
+      res.json(income);
+    } finally {
+      connection.release();
+    }
   } catch (error: any) {
     console.error("Delete income error:", error);
-    res.status(500).json({ error: "Erro ao deletar" });
+    res.status(500).json({ error: "Erro ao deletar renda" });
   }
 });
 
@@ -346,24 +448,26 @@ app.post("/api/users/:userId/xp", async (req, res) => {
       return res.status(400).json({ error: "XP inválido" });
     }
 
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    const [rows] = await conn.execute("SELECT xp FROM users WHERE id = ?", [userId]);
-    const user = (rows as any[])[0];
+    try {
+      const [users]: any = await connection.execute("SELECT xp, levelNum FROM users WHERE id = ?", [userId]);
 
-    if (!user) {
-      conn.release();
-      return res.status(404).json({ error: "Usuário não encontrado" });
+      if (users.length === 0) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      const user = users[0];
+      const newXp = (user.xp || 0) + xpGain;
+      const newLevelNum = Math.floor(newXp / 100) + 1;
+      const level = newLevelNum > 5 ? "avancado" : "iniciante";
+
+      await connection.execute("UPDATE users SET xp = ?, levelNum = ?, level = ? WHERE id = ?", [newXp, newLevelNum, level, userId]);
+
+      res.json({ xp: newXp, level, levelNum: newLevelNum });
+    } finally {
+      connection.release();
     }
-
-    const newXp = (user.xp || 0) + xpGain;
-    const { levelNum, level } = calcLevel(newXp);
-
-    await conn.execute("UPDATE users SET xp = ?, level = ?, levelNum = ? WHERE id = ?", [newXp, level, levelNum, userId]);
-
-    conn.release();
-
-    res.json({ xp: newXp, level, levelNum, xpGained: xpGain });
   } catch (error: any) {
     console.error("Add XP error:", error);
     res.status(500).json({ error: "Erro ao adicionar XP" });
@@ -375,64 +479,45 @@ app.post("/api/users/:userId/xp", async (req, res) => {
 app.post("/api/users/:userId/streak/checkin", async (req, res) => {
   try {
     const { userId } = req.params;
-    const conn = await pool.getConnection();
+    const connection = await pool.getConnection();
 
-    const [rows] = await conn.execute("SELECT streakDays, lastCheckin, xp FROM users WHERE id = ?", [userId]);
-    const user = (rows as any[])[0];
+    try {
+      const [users]: any = await connection.execute("SELECT streakDays, lastCheckin, xp, levelNum FROM users WHERE id = ?", [userId]);
 
-    if (!user) {
-      conn.release();
-      return res.status(404).json({ error: "Usuário não encontrado" });
+      if (users.length === 0) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      const user = users[0];
+      const today = new Date().toISOString().split("T")[0];
+      const lastCheckin = user.lastCheckin ? new Date(user.lastCheckin).toISOString().split("T")[0] : null;
+
+      if (lastCheckin === today) {
+        return res.status(400).json({ error: "Você já reivindicou o streak hoje" });
+      }
+
+      const xpGain = 50;
+      const newXp = (user.xp || 0) + xpGain;
+      const newLevelNum = Math.floor(newXp / 100) + 1;
+      const level = newLevelNum > 5 ? "avancado" : "iniciante";
+      const newStreakDays = (user.streakDays || 0) + 1;
+
+      await connection.execute(
+        "UPDATE users SET streakDays = ?, lastCheckin = ?, xp = ?, levelNum = ?, level = ? WHERE id = ?",
+        [newStreakDays, today, newXp, newLevelNum, level, userId]
+      );
+
+      res.json({ streakDays: newStreakDays, xp: newXp, level, levelNum: newLevelNum, xpGained: xpGain });
+    } finally {
+      connection.release();
     }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const lastCheckin = user.lastCheckin ? new Date(user.lastCheckin) : null;
-    if (lastCheckin) {
-      lastCheckin.setHours(0, 0, 0, 0);
-    }
-
-    if (lastCheckin && lastCheckin.getTime() === today.getTime()) {
-      conn.release();
-      return res.status(400).json({ error: "Você já reivindicou o streak hoje" });
-    }
-
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    let newStreakDays = user.streakDays || 0;
-    if (lastCheckin && lastCheckin.getTime() !== yesterday.getTime()) {
-      newStreakDays = 1;
-    } else {
-      newStreakDays += 1;
-    }
-
-    const xpGain = getStreakXP(newStreakDays);
-    const newXp = (user.xp || 0) + xpGain;
-    const { levelNum, level } = calcLevel(newXp);
-
-    await conn.execute(
-      "UPDATE users SET streakDays = ?, lastCheckin = ?, xp = ?, level = ?, levelNum = ? WHERE id = ?",
-      [newStreakDays, today, newXp, level, levelNum, userId]
-    );
-
-    conn.release();
-
-    res.json({ streakDays: newStreakDays, xp: newXp, level, levelNum, xpGained: xpGain });
   } catch (error: any) {
-    console.error("Checkin error:", error);
+    console.error("Claim streak error:", error);
     res.status(500).json({ error: "Erro ao reivindicar streak" });
   }
 });
 
-// ── HEALTH CHECK ──────────────────────────────────────────────────────────
-
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
-});
-
-// ── SERVE FRONTEND ────────────────────────────────────────────────────────
+// ── FALLBACK ROUTE ────────────────────────────────────────────────────────
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../client/dist/index.html"));
@@ -440,7 +525,6 @@ app.get("*", (req, res) => {
 
 // ── START SERVER ──────────────────────────────────────────────────────────
 
-const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ Server running on http://localhost:${PORT}`);
 });
