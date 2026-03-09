@@ -2,11 +2,13 @@ import express from "express";
 import cors from "cors";
 import mysql from "mysql2/promise";
 import "dotenv/config";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static("dist/client"));
+app.use(express.static(path.join(process.cwd(), "dist", "client")));
 
 let pool: mysql.Pool | null = null;
 function getPool() {
@@ -389,10 +391,20 @@ app.get("/api/admin/init-db", async (_req, res) => {
   catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get("*", (_req, res) => { res.sendFile("index.html", { root: "dist/client" }); });
+app.get("*", (_req, res) => {
+  const indexPath = path.join(process.cwd(), "dist", "client", "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>MoneyGame</title></head><body><div id="root"></div></body></html>`);
+  });
+});
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
+const PORT = parseInt(String(process.env.PORT || "3000"), 10);
+app.listen(PORT, "0.0.0.0", async () => {
   console.log(`🪙 MoneyGame porta ${PORT}`);
-  await runMigrations(); // ← migra automaticamente ao subir
+  try {
+    await runMigrations();
+  } catch (e: any) {
+    console.error("⚠️  Migrations warning:", e.message);
+    // Não crasha o servidor se migrations falharem
+  }
 });
