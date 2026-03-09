@@ -128,18 +128,33 @@ app.put("/api/users/:id/settings", async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+
+// ── HELPERS DE NÍVEL ─────────────────────────────────────────────────────────
+const XP_PER_LEVEL = 1000;
+const MAX_LEVEL    = 100;
+const TIER_BREAK   = 50;
+
+function calcLevel(xpTotal: number) {
+  const rawLevel = Math.floor(xpTotal / XP_PER_LEVEL) + 1;
+  const levelNum  = Math.min(rawLevel, MAX_LEVEL);
+  let tier = "iniciante";
+  if (levelNum >= MAX_LEVEL) tier = "avancado";
+  else if (levelNum >= TIER_BREAK) tier = "investidor";
+  return { levelNum, tier };
+}
+
 // ── XP ────────────────────────────────────────────────────────────────────────
 app.post("/api/users/:id/xp", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
     const xpGain = Math.round(parseFloat(req.body.xpGain));
     if (isNaN(xpGain) || xpGain <= 0) return res.status(400).json({ error: "xpGain invalido" });
-    const [rows] = await p.execute("SELECT xp, level FROM users WHERE id=?", [req.params.id]) as any;
+    const [rows] = await p.execute("SELECT xp FROM users WHERE id=?", [req.params.id]) as any;
     if (!rows.length) return res.status(404).json({ error: "Nao encontrado" });
     const newXp = (rows[0].xp || 0) + xpGain;
-    const newLevelNum = Math.min(Math.floor(newXp / 100) + 1, 50);
-    await p.execute("UPDATE users SET xp=?, levelNum=? WHERE id=?", [newXp, newLevelNum, req.params.id]);
-    res.json({ xp:newXp, levelNum:newLevelNum, level:rows[0].level||'iniciante', xpGained:xpGain });
+    const { levelNum, tier } = calcLevel(newXp);
+    await p.execute("UPDATE users SET xp=?, levelNum=?, level=? WHERE id=?", [newXp, levelNum, tier, req.params.id]);
+    res.json({ xp:newXp, levelNum, level:tier, xpGained:xpGain });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -199,12 +214,12 @@ app.post("/api/users/:id/streak/checkin", async (req, res) => {
     // XP = dia * 10 (dia 1 = 10xp, dia 2 = 20xp, ... dia 30 = 300xp)
     const xpGain = newStreak * 10;
     const newXp = (xp || 0) + xpGain;
-    const newLevelNum = Math.min(Math.floor(newXp / 100) + 1, 50);
+    const { levelNum: newLevelNum, tier: newTier } = calcLevel(newXp);
 
-    await p.execute("UPDATE users SET streakDays=?, lastCheckin=NOW(), xp=?, levelNum=? WHERE id=?",
-      [newStreak, newXp, newLevelNum, req.params.id]);
+    await p.execute("UPDATE users SET streakDays=?, lastCheckin=NOW(), xp=?, levelNum=?, level=? WHERE id=?",
+      [newStreak, newXp, newLevelNum, newTier, req.params.id]);
 
-    res.json({ streakDays:newStreak, xpGained:xpGain, xp:newXp, levelNum:newLevelNum, level:level||'iniciante' });
+    res.json({ streakDays:newStreak, xpGained:xpGain, xp:newXp, levelNum:newLevelNum, level:newTier });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
