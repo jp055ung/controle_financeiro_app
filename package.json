@@ -1,29 +1,30 @@
 {
-  "name": "fincontrol",
+  "name": "moneygame",
   "version": "1.0.0",
-  "type": "module",
-  "main": "dist/server/index.js",
+  "description": "MoneyGame - Gamifique suas financas",
   "scripts": {
-    "dev": "node server/index.ts",
-    "build": "tsc && vite build",
-    "start": "node dist/server/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx server/index.ts",
+    "build": "vite build",
+    "start": "npx tsx server/index.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "express": "^4.21.2",
-    "mysql2": "^3.15.0",
-    "bcrypt": "^5.1.1",
-    "cors": "^2.8.5"
+    "mysql2": "^3.11.0",
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "tsx": "^4.19.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.0.0",
-    "@types/bcrypt": "^5.0.2",
-    "typescript": "^5.3.3",
-    "vite": "^5.0.0",
-    "@vitejs/plugin-react": "^4.2.0"
-  }
+    "typescript": "^5.6.0",
+    "@types/express": "^5.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/node": "^22.0.0",
+    "@types/cors": "^2.8.17",
+    "vite": "^5.4.0",
+    "@vitejs/plugin-react": "^4.3.0"
+  },
+  "engines": { "node": ">=18.0.0" }
 }
