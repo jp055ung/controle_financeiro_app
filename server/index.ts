@@ -76,6 +76,10 @@ async function runMigrations() {
     "ALTER TABLE expenses ADD COLUMN subcategory VARCHAR(100)",
     "ALTER TABLE creditCardExpenses ADD COLUMN paid INT DEFAULT 0",
     "ALTER TABLE creditCardExpenses ADD COLUMN subcategory VARCHAR(100)",
+    "ALTER TABLE creditCardExpenses ADD COLUMN totalAmount DECIMAL(10,2) NULL",
+    "ALTER TABLE creditCardExpenses ADD COLUMN installments INT DEFAULT 1",
+    "ALTER TABLE creditCardExpenses ADD COLUMN installmentCurrent INT DEFAULT 1",
+    "ALTER TABLE creditCardExpenses ADD COLUMN dueDay INT NULL",
     "ALTER TABLE monthArchive ADD COLUMN totalExpenses DECIMAL(10,2) DEFAULT 0",
     "ALTER TABLE monthArchive ADD COLUMN totalIncome DECIMAL(10,2) DEFAULT 0",
   ];
@@ -283,20 +287,26 @@ app.get("/api/users/:userId/credit-card", async (req, res) => {
 app.post("/api/users/:userId/credit-card", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const amt = parseFloat(req.body.amount);
-    if (isNaN(amt) || amt <= 0) return res.status(400).json({ error: "amount invalido" });
-    await p.execute("INSERT INTO creditCardExpenses (userId,description,amount,subcategory,paid) VALUES (?,?,?,?,0)",
-      [req.params.userId, req.body.description, amt, req.body.subcategory||null]);
+    const { description, subcategory, amount, installments, dueDay } = req.body;
+    const inst = Math.max(1, parseInt(installments) || 1);
+    const totalAmt = parseFloat(amount);
+    if (isNaN(totalAmt) || totalAmt <= 0) return res.status(400).json({ error: "amount invalido" });
+    const parcelAmt = Math.round(totalAmt / inst * 100) / 100;
+    // amount salvo = valor da parcela; totalAmount = valor total da compra
+    await p.execute(
+      "INSERT INTO creditCardExpenses (userId,description,amount,totalAmount,installments,installmentCurrent,subcategory,paid,dueDay) VALUES (?,?,?,?,?,1,?,0,?)",
+      [req.params.userId, description, parcelAmt, inst > 1 ? totalAmt : null, inst, subcategory||null, dueDay||null]
+    );
     const [rows] = await p.execute("SELECT * FROM creditCardExpenses WHERE userId=? ORDER BY createdAt", [req.params.userId]) as any;
     res.json(rows);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// PATCH — pagar/editar item do cartão
+// PATCH — pagar/editar/avançar parcela do cartão
 app.patch("/api/credit-card/:id", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const { paid, amount, description } = req.body;
+    const { paid, amount, description, dueDay, advanceInstallment } = req.body;
     if (paid !== undefined) {
       await p.execute("UPDATE creditCardExpenses SET paid=? WHERE id=?", [paid ? 1 : 0, req.params.id]);
     }
@@ -306,6 +316,22 @@ app.patch("/api/credit-card/:id", async (req, res) => {
     }
     if (description !== undefined) {
       await p.execute("UPDATE creditCardExpenses SET description=? WHERE id=?", [description, req.params.id]);
+    }
+    if (dueDay !== undefined) {
+      await p.execute("UPDATE creditCardExpenses SET dueDay=? WHERE id=?", [dueDay||null, req.params.id]);
+    }
+    if (advanceInstallment) {
+      // Avança parcela atual — usado ao virar mês manualmente
+      const [rows] = await p.execute("SELECT installments, installmentCurrent FROM creditCardExpenses WHERE id=?", [req.params.id]) as any;
+      if (rows.length) {
+        const { installments, installmentCurrent } = rows[0];
+        if (installmentCurrent < installments) {
+          await p.execute("UPDATE creditCardExpenses SET installmentCurrent=installmentCurrent+1, paid=0 WHERE id=?", [req.params.id]);
+        } else {
+          // Última parcela paga — remove
+          await p.execute("DELETE FROM creditCardExpenses WHERE id=?", [req.params.id]);
+        }
+      }
     }
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
