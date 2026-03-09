@@ -85,41 +85,93 @@ function getStreakXP(d: number) { return d * 10; } // dia 1=10xp, dia 2=20xp, ..
 
 const INVESTIR_ID = 3;
 
-// Nível: Iniciante (0-99 XP) → Investidor (100-499 XP) → Avançado (500+ XP)
-function getLevelInfo(xp: number): { label: string; color: string; tier: "iniciante"|"investidor"|"avancado" } {
-  if (xp >= 500) return { label:"AVANÇADO",    color:"#ffd700",  tier:"avancado"   };
-  if (xp >= 100) return { label:"INVESTIDOR",  color:"#00d68f",  tier:"investidor" };
-  return          { label:"INICIANTE",   color:"#6c63ff",  tier:"iniciante"  };
+// ── SISTEMA DE NÍVEIS ─────────────────────────────────────────────────────────
+// Iniciante NV.1–49   → 1.000 XP por nível → 49.000 XP total para sair
+// Investidor NV.50–99 → 1.000 XP por nível → 50.000 XP total para sair
+// Avançado NV.100     → FIM DE JOGO (zerou!)
+const XP_PER_LEVEL = 1000;
+const TIER_BREAK = 50;   // NV.50 = vira Investidor
+const MAX_LEVEL  = 100;  // NV.100 = Avançado, fim de jogo
+
+function getLevelInfo(xpTotal: number): { label:string; color:string; tier:"iniciante"|"investidor"|"avancado"; levelNum:number; xpInLevel:number; pctInLevel:number } {
+  const rawLevel = Math.floor(xpTotal / XP_PER_LEVEL) + 1;
+  const levelNum  = Math.min(rawLevel, MAX_LEVEL);
+  const xpInLevel = levelNum < MAX_LEVEL ? xpTotal % XP_PER_LEVEL : XP_PER_LEVEL;
+  const pctInLevel = levelNum < MAX_LEVEL ? Math.round(xpInLevel / XP_PER_LEVEL * 100) : 100;
+
+  if (levelNum >= MAX_LEVEL) return { label:"AVANÇADO",   color:"#ffd700", tier:"avancado",   levelNum, xpInLevel, pctInLevel };
+  if (levelNum >= TIER_BREAK) return { label:"INVESTIDOR", color:"#00d68f", tier:"investidor", levelNum, xpInLevel, pctInLevel };
+  return                              { label:"INICIANTE",  color:"#6c63ff", tier:"iniciante",  levelNum, xpInLevel, pctInLevel };
 }
 
-// % recomendadas por nível — muda ao virar Investidor
+// % recomendadas por tier
 function getTargetPct(tier: string) {
-  if (tier === "investidor" || tier === "avancado") {
-    return { pagar:10, doar:5, investir:15, contas:55, sonho:10, abundar:5 }; // mais investimento
-  }
-  return { pagar:5, doar:5, investir:5, contas:70, sonho:10, abundar:5 }; // conservador padrão
+  if (tier === "avancado")   return { pagar:10, doar:10, investir:25, contas:45, sonho:5,  abundar:5 };
+  if (tier === "investidor") return { pagar:10, doar:5,  investir:15, contas:55, sonho:10, abundar:5 };
+  return                            { pagar:5,  doar:5,  investir:5,  contas:70, sonho:10, abundar:5 };
+}
+
+// ── MODAL LEVEL UP / CONQUISTA ────────────────────────────────────────────────
+function LevelUpModal({ levelNum, tier, onClose }: { levelNum:number; tier:string; onClose:()=>void }) {
+  const isMax = levelNum >= MAX_LEVEL;
+  const isNewTier = levelNum === TIER_BREAK || isMax;
+  const info = isMax
+    ? { emoji:"👑", title:"Missão Cumprida.", color:"#ffd700",
+        msg:"Você fez o que menos de 1% das pessoas conseguem: transformou disciplina em liberdade.\nO MoneyGame foi seu treino — a vida real é o seu campo agora.\nVocê superou o app." }
+    : levelNum === TIER_BREAK
+    ? { emoji:"📈", title:"Você é Investidor!", color:"#00d68f",
+        msg:"Disciplina comprovada. Agora seu foco muda: mais capital para os investimentos, menos para Contas. Os juros compostos já estão trabalhando por você." }
+    : { emoji:"⚔️", title:`Nível ${levelNum}!`, color:"#a78bfa",
+        msg:`+1 nível conquistado. Continue registrando, continue crescendo.` };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:20 }} onClick={onClose}>
+      <div style={{ background:"var(--bg2)", borderRadius:24, padding:"32px 24px", maxWidth:380, width:"100%", textAlign:"center", border:`2px solid ${info.color}44` }} onClick={e=>e.stopPropagation()}>
+        <div style={{ fontSize:64, marginBottom:12 }}>{info.emoji}</div>
+        <div style={{ fontSize:22, fontWeight:900, color:info.color, marginBottom:10 }}>{info.title}</div>
+        {isMax && <div style={{ fontSize:13, color:"#ffd700", fontWeight:700, letterSpacing:2, marginBottom:10, textTransform:"uppercase" }}>🏆 TOP 1% • NV.100</div>}
+        <div style={{ fontSize:14, color:"var(--text2)", lineHeight:1.7, whiteSpace:"pre-line", marginBottom:24 }}>{info.msg}</div>
+        {isMax && (
+          <div style={{ background:"rgba(255,215,0,0.08)", border:"1px solid rgba(255,215,0,0.3)", borderRadius:14, padding:"12px 16px", marginBottom:20, fontSize:13, color:"#ffd700", lineHeight:1.6 }}>
+            ✨ Continue usando o app para manter seus registros e inspirar novos investidores!
+          </div>
+        )}
+        <button onClick={onClose} style={{ background:info.color, color:"#000", border:"none", borderRadius:14, padding:"14px 32px", fontSize:15, fontWeight:800, cursor:"pointer", width:"100%" }}>
+          {isMax ? "🎉 Eu superei o app!" : isNewTier ? "🚀 Vamos nessa!" : "⚔️ Continuar!"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ── XP BAR ────────────────────────────────────────────────────────────────────
-function XPLevel({ xp, level, levelNum }: { xp:number; level:string; levelNum:number }) {
+function XPLevel({ xp }: { xp:number; level?:string; levelNum?:number }) {
   const info = getLevelInfo(xp);
-  const cur = xp % 100, pct = Math.round(cur);
-  const nextMilestone = xp < 100 ? 100 : xp < 500 ? 500 : null;
-  const toNext = nextMilestone ? nextMilestone - xp : 0;
+  const isMax = info.levelNum >= MAX_LEVEL;
+  // XP até o próximo nível
+  const xpToNext = isMax ? 0 : XP_PER_LEVEL - info.xpInLevel;
+  // NV que destrava o próximo tier
+  const nextTierLv = info.tier === "iniciante" ? TIER_BREAK : info.tier === "investidor" ? MAX_LEVEL : null;
+
   return (
-    <div style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 16px", marginBottom:14, border:"1px solid var(--border)" }}>
+    <div style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 16px", marginBottom:14, border:`1px solid ${isMax?"rgba(255,215,0,0.3)":"var(--border)"}` }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-        <span style={{ fontSize:12, fontWeight:800, color:info.color, letterSpacing:1 }}>⚔️ {info.label} NV.{levelNum}</span>
-        <span style={{ fontSize:11, color:"var(--text2)", fontVariantNumeric:"tabular-nums" }}>{cur}/100 XP</span>
+        <span style={{ fontSize:12, fontWeight:800, color:info.color, letterSpacing:1 }}>
+          {isMax ? "👑" : "⚔️"} {info.label} NV.{info.levelNum}
+          {isMax && <span style={{ fontSize:10, marginLeft:6, color:"#ffd700" }}>MAX</span>}
+        </span>
+        <span style={{ fontSize:11, color:"var(--text2)", fontVariantNumeric:"tabular-nums" }}>
+          {isMax ? "ZERADO 🏆" : `${info.xpInLevel}/${XP_PER_LEVEL} XP`}
+        </span>
       </div>
-      <div className="xp-bar-wrap"><div className="xp-bar-fill" style={{ width:`${pct}%`, background:info.color }}/></div>
+      <div className="xp-bar-wrap">
+        <div className="xp-bar-fill" style={{ width:`${info.pctInLevel}%`, background:isMax?"linear-gradient(90deg,#ffd700,#ff8c00)":info.color }}/>
+      </div>
       <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
-        <span style={{ fontSize:10, color:"var(--text2)" }}>{xp} XP total</span>
-        {nextMilestone && (
+        <span style={{ fontSize:10, color:"var(--text2)" }}>{xp.toLocaleString("pt-BR")} XP total</span>
+        {!isMax && nextTierLv && (
           <span style={{ fontSize:10, color:info.color }}>
-            🔓 {info.tier==="iniciante"
-              ? `Investidor em ${toNext} XP · target investimento sobe para 15%`
-              : `Avançado em ${toNext} XP`}
+            🔓 {info.tier==="iniciante" ? "Investidor" : "Avançado"} no NV.{nextTierLv} · faltam {(nextTierLv - info.levelNum)} níveis
           </span>
         )}
       </div>
@@ -213,8 +265,30 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
           </div>
         )}
 
-        <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.18)", borderRadius:12, padding:"10px 14px", marginBottom:16, fontSize:12, color:"var(--text2)", textAlign:"center", lineHeight:1.5 }}>
-          XP = dia × 10 &nbsp;·&nbsp; Dia 1 = 10 XP &nbsp;·&nbsp; Dia 7 = 70 XP &nbsp;·&nbsp; Dia 30 = 300 XP
+        {/* Milestones — sem emoji ao lado, só em cima */}
+        <div style={{ display:"flex", justifyContent:"space-between", gap:4, marginBottom:16, overflowX:"auto", paddingBottom:2 }}>
+          {[
+            { day:1,  xp:10,  emoji:"🔥", label:"1"  },
+            { day:2,  xp:20,  emoji:"🔥", label:"2"  },
+            { day:3,  xp:30,  emoji:"🔥", label:"3"  },
+            { day:5,  xp:50,  emoji:"🔥", label:"5"  },
+            { day:7,  xp:70,  emoji:"⚡",  label:"7"  },
+            { day:14, xp:140, emoji:"💎", label:"14" },
+            { day:30, xp:300, emoji:"👑", label:"30" },
+          ].map((m,i)=>{
+            const active = (claimed ? streakDays : streakDays+1) >= m.day;
+            const isCurrent = (claimed ? streakDays : streakDays+1) === m.day;
+            return (
+              <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2, minWidth:36,
+                background: isCurrent ? "rgba(108,99,255,0.25)" : active ? "rgba(108,99,255,0.10)" : "var(--bg3)",
+                border: `1.5px solid ${isCurrent ? "#6c63ff" : active ? "rgba(108,99,255,0.3)" : "var(--border)"}`,
+                borderRadius:10, padding:"6px 4px" }}>
+                <span style={{ fontSize:16 }}>{m.emoji}</span>
+                <span style={{ fontSize:10, fontWeight:800, color: active ? "var(--text)" : "var(--text2)" }}>{m.label}</span>
+                <span style={{ fontSize:9, color: active ? accent : "var(--text2)", fontWeight:700 }}>{m.xp}xp</span>
+              </div>
+            );
+          })}
         </div>
 
         {claimed === null ? (
@@ -256,29 +330,60 @@ function BarChart({ data }: { data:{label:string;value:number;color:string;emoji
 function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
   const [step, setStep] = useState(0);
   const POTES = [
-    { emoji:"💆", name:"Pagar-se",  pct:"5-10%",  color:"#6c63ff", desc:"Invista em você mesmo — prazer, saúde, desenvolvimento" },
-    { emoji:"💝", name:"Doar",      pct:"5-10%",  color:"#ff6b9d", desc:"Generosidade quebra a mentalidade de escassez" },
-    { emoji:"📈", name:"Investir",  pct:"5-10%",  color:"#00d68f", desc:"Construa patrimônio. Os juros compostos trabalham por você" },
-    { emoji:"📋", name:"Contas",    pct:"60-70%", color:"#ffb703", desc:"Obrigações mensais. Aprenda a viver bem gastando menos" },
-    { emoji:"✨", name:"Sonho",     pct:"5-10%",  color:"#8b5cf6", desc:"Sua meta de longo prazo. Transforma controle em aventura" },
-    { emoji:"🌟", name:"Abundar",   pct:"5-10%",  color:"#f97316", desc:"Restaurante melhor, hobby, experiências — você merece" },
+    { emoji:"💆", name:"Pagar-se",  pct:"5%",   color:"#6c63ff", desc:"Invista em você mesmo — prazer, saúde, desenvolvimento" },
+    { emoji:"💝", name:"Doar",      pct:"5%",   color:"#ff6b9d", desc:"Generosidade quebra a mentalidade de escassez" },
+    { emoji:"📈", name:"Investir",  pct:"5%",   color:"#00d68f", desc:"Construa patrimônio. Os juros compostos trabalham por você" },
+    { emoji:"📋", name:"Contas",    pct:"70%",  color:"#ffb703", desc:"Obrigações mensais. Aprenda a viver bem gastando menos" },
+    { emoji:"✨", name:"Sonho",     pct:"10%",  color:"#8b5cf6", desc:"Sua meta de longo prazo. Transforma controle em aventura" },
+    { emoji:"🌟", name:"Abundar",   pct:"5%",   color:"#f97316", desc:"Restaurante melhor, hobby, experiências — você merece" },
   ];
   const steps = [
+    // Step 0: Boas-vindas
     <div style={{ textAlign:"center", padding:"0 8px" }}>
       <div style={{ marginBottom:16, display:"flex", justifyContent:"center" }}><CoinIcon size={72}/></div>
       <h2 style={{ fontSize:24, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff,#ffd700)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:12 }}>Bem-vindo, {user.name?.split(" ")[0]}!</h2>
       <p style={{ color:"var(--text2)", fontSize:14, lineHeight:1.65, marginBottom:20 }}>No MoneyGame, cada ação financeira vira experiência. Registre, ganhe XP e suba de nível enquanto constrói riqueza de verdade.</p>
-      {[{icon:"⚔️",text:"Ganhe XP proporcional a cada registro"},{icon:"🔥",text:"Mantenha sua streak diária e acumule bônus"},{icon:"📈",text:"Suba de nível e desbloqueie títulos exclusivos"}].map((f,i)=>(
+      {[{icon:"⚔️",text:"Ganhe XP proporcional a cada registro"},{icon:"🔥",text:"Mantenha sua streak diária e acumule bônus"},{icon:"👑",text:"Chegue ao NV.100 e entre no TOP 1%"}].map((f,i)=>(
         <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 14px", textAlign:"left", marginBottom:8 }}>
           <span style={{ fontSize:22 }}>{f.icon}</span><span style={{ fontSize:14, fontWeight:600 }}>{f.text}</span>
         </div>
       ))}
     </div>,
+
+    // Step 1: Jornada de níveis
+    <div>
+      <h2 style={{ fontSize:18, fontWeight:900, textAlign:"center", marginBottom:6 }}>⚔️ Sua Jornada de Níveis</h2>
+      <p style={{ fontSize:13, color:"var(--text2)", textAlign:"center", marginBottom:16, lineHeight:1.5 }}>Cada nível exige 1.000 XP. Ao longo de 100 níveis, você vai transformar sua mentalidade financeira.</p>
+      {[
+        { tier:"🌱", label:"INICIANTE", range:"NV.1 → NV.49", color:"#6c63ff",
+          desc:"Fase do hábito. Foco em controlar gastos e criar consistência. Distribuição conservadora: 5% investido." },
+        { tier:"📈", label:"INVESTIDOR", range:"NV.50 → NV.99", color:"#00d68f",
+          desc:"Disciplina comprovada. Sua distribuição muda: 15% para investimentos, 55% para contas. Os juros compostos começam a trabalhar." },
+        { tier:"👑", label:"AVANÇADO", range:"NV.100", color:"#ffd700",
+          desc:'Fim de jogo. Você alcançou o TOP 1% da população. 25% investido todo mês. Você superou o app.' },
+      ].map((n,i)=>(
+        <div key={i} style={{ display:"flex", gap:14, padding:"12px 14px", background:"var(--bg3)", borderRadius:14, borderLeft:`3px solid ${n.color}`, marginBottom:8 }}>
+          <span style={{ fontSize:26, flexShrink:0 }}>{n.tier}</span>
+          <div>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
+              <span style={{ fontWeight:800, fontSize:13, color:n.color }}>{n.label}</span>
+              <span style={{ fontSize:10, color:"var(--text2)", background:"var(--bg2)", padding:"2px 7px", borderRadius:6 }}>{n.range}</span>
+            </div>
+            <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>{n.desc}</div>
+          </div>
+        </div>
+      ))}
+      <div style={{ background:"rgba(108,99,255,0.08)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 14px", marginTop:8, fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>
+        💡 <strong style={{color:"var(--text)"}}>Dica:</strong> Você ganha XP ao registrar renda extra, pagar contas e manter sua streak diária.
+      </div>
+    </div>,
+
+    // Step 2: 6 Potes
     <div>
       <h2 style={{ fontSize:18, fontWeight:900, textAlign:"center", marginBottom:14 }}>🏺 Os 6 Potes da Riqueza</h2>
       <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"12px 16px", marginBottom:14 }}>
-        <div style={{ fontSize:10, fontWeight:800, color:"#a78bfa", textTransform:"uppercase", letterSpacing:2, marginBottom:6 }}>CADA REGISTRO CONTA</div>
-        <p style={{ fontSize:13, color:"var(--text)", lineHeight:1.6 }}>{rnd(REGISTRO_TEXTOS)}</p>
+        <div style={{ fontSize:10, fontWeight:800, color:"#a78bfa", textTransform:"uppercase", letterSpacing:2, marginBottom:6 }}>DISTRIBUIÇÃO INICIANTE</div>
+        <p style={{ fontSize:13, color:"var(--text)", lineHeight:1.6 }}>Ao chegar no NV.50 (Investidor), as porcentagens mudam automaticamente para maximizar seu patrimônio.</p>
       </div>
       {POTES.map((p,i)=>(
         <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${p.color}`, marginBottom:7 }}>
@@ -286,22 +391,26 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
           <div style={{ flex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between" }}>
               <span style={{ fontWeight:700, fontSize:13 }}>{p.name}</span>
-              <span style={{ fontSize:11, color:p.color, fontWeight:700 }}>{p.pct}</span>
+              <span style={{ fontSize:12, color:p.color, fontWeight:800, background:`${p.color}18`, padding:"2px 8px", borderRadius:6 }}>{p.pct}</span>
             </div>
             <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{p.desc}</div>
           </div>
         </div>
       ))}
     </div>,
+
+    // Step 3: Salário
     <OnboardingSalary user={user} onDone={onDone}/>,
   ];
   return (
     <div style={{ minHeight:"100vh", background:"var(--bg)", display:"flex", flexDirection:"column", padding:"20px 20px" }}>
       <div style={{ display:"flex", justifyContent:"center", gap:6, marginBottom:28 }}>
-        {[0,1,2].map(i=><div key={i} style={{ width:i===step?20:8, height:8, borderRadius:4, background:i===step?"#6c63ff":"var(--bg3)", transition:"all .3s" }}/>)}
+        {[0,1,2,3].map(i=><div key={i} style={{ width:i===step?20:8, height:8, borderRadius:4, background:i===step?"#6c63ff":"var(--bg3)", transition:"all .3s" }}/>)}
       </div>
       <div style={{ flex:1, overflowY:"auto" }}>{steps[step]}</div>
-      {step<2&&<button className="btn-primary" onClick={()=>setStep(s=>s+1)} style={{ width:"100%", marginTop:20, padding:"15px", fontSize:15 }}>{step===0?"Ver metodologia →":"Configurar meu perfil →"}</button>}
+      {step<3&&<button className="btn-primary" onClick={()=>setStep(s=>s+1)} style={{ width:"100%", marginTop:20, padding:"15px", fontSize:15 }}>
+        {step===0?"Ver sua jornada →":step===1?"Ver os 6 Potes →":"Configurar meu perfil →"}
+      </button>}
     </div>
   );
 }
@@ -661,6 +770,7 @@ export default function App() {
   const [showMethodology, setShowMethodology] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [showStreak, setShowStreak] = useState(false);
+  const [levelUpInfo, setLevelUpInfo] = useState<{levelNum:number;tier:string}|null>(null);
   const [isPC, setIsPC] = useState(typeof window!=="undefined" && window.innerWidth>=1024);
 
   useEffect(()=>{ const h=()=>setIsPC(window.innerWidth>=1024); window.addEventListener("resize",h); return()=>window.removeEventListener("resize",h); },[]);
@@ -672,10 +782,23 @@ export default function App() {
     try {
       const res = await fetch(`${API}/users/${user.id}/xp`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({xpGain})});
       const data = await res.json();
+      const prevInfo = getLevelInfo(xp);
+      const newInfo  = getLevelInfo(data.xp);
       setXp(data.xp); setLevelNum(data.levelNum); setLevel(data.level);
-      showToast(`+${xpGain} XP ⚔️`);
+      // Detectar level up
+      if (newInfo.levelNum > prevInfo.levelNum) {
+        // Só mostra modal em marcos especiais ou a cada 10 níveis
+        const lv = newInfo.levelNum;
+        if (lv === TIER_BREAK || lv === MAX_LEVEL || lv % 10 === 0) {
+          setLevelUpInfo({ levelNum: lv, tier: newInfo.tier });
+        } else {
+          showToast(`⚔️ LEVEL UP! ${newInfo.label} NV.${lv}`);
+        }
+      } else {
+        showToast(`+${xpGain} XP ⚔️`);
+      }
     } catch {}
-  },[user]);
+  },[user, xp]);
 
   const login = (u:User) => {
     sessionStorage.setItem("mg_user",JSON.stringify(u)); setUser(u);
@@ -786,11 +909,11 @@ export default function App() {
   const sharedModals = (
     <>
       {toast&&<Toast msg={toast} onDone={()=>setToast("")}/>}
+      {levelUpInfo&&<LevelUpModal levelNum={levelUpInfo.levelNum} tier={levelUpInfo.tier} onClose={()=>setLevelUpInfo(null)}/>}
       {showStreak&&<StreakModal user={user} onClose={()=>setShowStreak(false)} onClaim={onStreakClaim}/>}
       {showAddExp&&<AddExpenseModal userId={user.id} onClose={()=>{setShowAddExp(false);load();}} onXp={gainXpRaw}/>}
       {showAddCC&&<AddCCModal userId={user.id} onClose={()=>{setShowAddCC(false);load();}} onXp={gainXpRaw}/>}
       {showAddIncome&&<AddIncomeModal userId={user.id} onClose={()=>{setShowAddIncome(false);load();}} onXp={gainXpRaw}/>}
-      {/* FIX #3: SettingsModal retorna salário salvo e atualiza state */}
       {showSettings&&<SettingsModal user={user} salary={salary} onSave={(s:number)=>{setSalary(s);showToast("✅ Salário atualizado!");setShowSettings(false);}} onClose={()=>setShowSettings(false)} onReset={()=>{setShowSettings(false);setShowReset(true);}}/>}
       {showMethodology&&<MethodologyModal xp={xp} onClose={()=>setShowMethodology(false)}/>}
       {showReset&&<ResetModal onClose={()=>setShowReset(false)} onConfirm={handleReset}/>}
@@ -856,7 +979,7 @@ export default function App() {
             </div>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"20px 22px" }}>
-            <XPLevel xp={xp} level={level} levelNum={levelNum}/>
+            <XPLevel xp={xp}/>
             {tab==="dashboard"&&<DashboardContent {...dashProps}/>}
             {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)} onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }} onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}/>}
             {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
@@ -890,7 +1013,7 @@ export default function App() {
         </div>
       </header>
       <main style={{ padding:"14px 14px 0" }}>
-        <XPLevel xp={xp} level={level} levelNum={levelNum}/>
+        <XPLevel xp={xp}/>
         {tab==="dashboard"&&<DashboardContent {...dashProps}/>}
         {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)} onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }} onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}/>}
         {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
@@ -1513,34 +1636,56 @@ function MethodologyModal({ onClose, xp }: any) {
 
       {tab==="niveis" && (
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", fontSize:13, color:"var(--text2)", lineHeight:1.6 }}>
-            Seu nível reflete sua <strong style={{color:"var(--text)"}}>jornada financeira</strong>, não apenas o tempo de uso. Cada nível desbloqueia uma distribuição de potes mais focada em construção de patrimônio.
+          {/* XP atual do usuário */}
+          <div style={{ background:`${levelInfo.color}12`, border:`1px solid ${levelInfo.color}44`, borderRadius:12, padding:"12px 14px", display:"flex", alignItems:"center", gap:12 }}>
+            <span style={{ fontSize:28 }}>{levelInfo.tier==="avancado"?"👑":levelInfo.tier==="investidor"?"📈":"🌱"}</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:800, fontSize:13, color:levelInfo.color }}>{levelInfo.label} NV.{levelInfo.levelNum}</div>
+              <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>
+                {levelInfo.levelNum < MAX_LEVEL
+                  ? `${(xp||0).toLocaleString("pt-BR")} XP total · ${XP_PER_LEVEL - levelInfo.xpInLevel} XP para o próximo nível`
+                  : "🏆 Nível máximo atingido — você superou o app!"}
+              </div>
+            </div>
           </div>
+
+          <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", fontSize:13, color:"var(--text2)", lineHeight:1.6 }}>
+            Cada nível exige <strong style={{color:"var(--text)"}}>1.000 XP</strong>. São 100 níveis no total — uma jornada real de transformação financeira.
+          </div>
+
           {[
-            { tier:"iniciante",  xpRange:"0 – 99 XP",   color:"#6c63ff", emoji:"🌱", label:"Iniciante",
-              desc:"Você está criando o hábito. O foco é controlar gastos e criar consistência. Investimento conservador (5%) — o hábito de poupar importa mais que o valor.", unlock:"Acesso completo ao app e sistema de streak." },
-            { tier:"investidor", xpRange:"100 – 499 XP", color:"#00d68f", emoji:"📈", label:"Investidor",
-              desc:"Você tem disciplina comprovada. A distribuição muda: Investir sobe para 15%, Contas cai para 55%. Hora de diversificar — Tesouro Selic, CDB, FIIs.", unlock:"Distribuição de potes otimizada para crescimento." },
-            { tier:"avancado",   xpRange:"500+ XP",      color:"#ffd700", emoji:"👑", label:"Avançado",
-              desc:"Consistência de longo prazo. Você já pensa como investidor. Considere aumentar renda variável, aportar em ações, estudar sobre independência financeira.", unlock:"Perfil de risco agressivo liberado no dashboard." },
+            { tier:"iniciante"  as const, emoji:"🌱", label:"Iniciante",  range:"NV.1 → NV.49",  xpRange:"1.000 – 49.000 XP", color:"#6c63ff",
+              desc:"Fase do hábito. Foco em controlar gastos e criar consistência. Distribuição conservadora: 5% para investimentos. O hábito importa mais que o valor.",
+              pcts:"Pagar-se 5% · Doar 5% · Investir 5% · Contas 70% · Sonho 10% · Abundar 5%",
+              unlock:"Acesso completo + sistema de streak + perfil de risco no dashboard." },
+            { tier:"investidor" as const, emoji:"📈", label:"Investidor", range:"NV.50 → NV.99", xpRange:"50.000 – 99.000 XP", color:"#00d68f",
+              desc:"Disciplina comprovada. Sua distribuição muda automaticamente para maximizar patrimônio. Os juros compostos já trabalham por você.",
+              pcts:"Pagar-se 10% · Doar 5% · Investir 15% · Contas 55% · Sonho 10% · Abundar 5%",
+              unlock:"Nova distribuição de potes + dicas avançadas de investimento." },
+            { tier:"avancado"  as const, emoji:"👑", label:"Avançado",   range:"NV.100",        xpRange:"99.000+ XP",          color:"#ffd700",
+              desc:"Fim de jogo. Você alcançou o que menos de 1% das pessoas conseguem. 25% do salário investido todo mês. Você superou o app.",
+              pcts:"Pagar-se 10% · Doar 10% · Investir 25% · Contas 45% · Sonho 5% · Abundar 5%",
+              unlock:"🏆 Título TOP 1% + mensagem épica de conquista." },
           ].map((n,i)=>{
             const isCurrent = n.tier === levelInfo.tier;
             const isPast = (n.tier==="iniciante") || (n.tier==="investidor" && levelInfo.tier!=="iniciante");
             return (
-              <div key={i} style={{ background:isCurrent?`${n.color}12`:"var(--bg3)", border:`1.5px solid ${isCurrent?n.color:isPast?"rgba(0,214,143,0.2)":"var(--border)"}`, borderRadius:14, padding:"12px 14px" }}>
+              <div key={i} style={{ background:isCurrent?`${n.color}10`:"var(--bg3)", border:`1.5px solid ${isCurrent?n.color:isPast?"rgba(0,214,143,0.25)":"var(--border)"}`, borderRadius:14, padding:"12px 14px" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-                  <span style={{ fontSize:22 }}>{n.emoji}</span>
+                  <span style={{ fontSize:24 }}>{n.emoji}</span>
                   <div style={{ flex:1 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
                       <span style={{ fontWeight:800, fontSize:14, color:n.color }}>{n.label}</span>
-                      {isCurrent && <span style={{ fontSize:10, background:n.color, color:"#000", padding:"2px 7px", borderRadius:6, fontWeight:800 }}>SEU NÍVEL</span>}
-                      {!isCurrent && isPast && <span style={{ fontSize:10, color:"var(--green)" }}>✅ Superado</span>}
+                      <span style={{ fontSize:10, color:"var(--text2)", background:"var(--bg2)", padding:"2px 7px", borderRadius:6 }}>{n.range}</span>
+                      {isCurrent && <span style={{ fontSize:10, background:n.color, color:"#000", padding:"2px 7px", borderRadius:6, fontWeight:800 }}>VOCÊ ESTÁ AQUI</span>}
+                      {!isCurrent && isPast && <span style={{ fontSize:10, color:"var(--green)", fontWeight:700 }}>✅ Superado</span>}
                     </div>
-                    <div style={{ fontSize:11, color:"var(--text2)" }}>{n.xpRange}</div>
+                    <div style={{ fontSize:10, color:"var(--text2)", marginTop:2 }}>{n.xpRange}</div>
                   </div>
                 </div>
                 <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5, marginBottom:6 }}>{n.desc}</div>
-                <div style={{ fontSize:11, color:n.color, fontStyle:"italic" }}>🔓 {n.unlock}</div>
+                <div style={{ fontSize:11, color:n.color, background:`${n.color}10`, padding:"6px 10px", borderRadius:8, marginBottom:6 }}>📊 {n.pcts}</div>
+                <div style={{ fontSize:11, color:"var(--text2)", fontStyle:"italic" }}>🔓 {n.unlock}</div>
               </div>
             );
           })}
