@@ -1,11 +1,18 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import mysql from "mysql2/promise";
 import bcrypt from "bcrypt";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// Servir arquivos estáticos do frontend
+app.use(express.static(path.join(__dirname, "../client/dist")));
 
 // ── DATABASE CONNECTION ───────────────────────────────────────────────────
 const pool = mysql.createPool({
@@ -47,11 +54,10 @@ function getStreakXP(days: number): number {
 
 // ── AUTH ENDPOINTS ────────────────────────────────────────────────────────
 
-app.post("/api/auth/register", async (req: Request, res: Response) => {
+app.post("/api/auth/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Validations
     if (!name || name.trim().length < 2) {
       return res.status(400).json({ error: "Nome deve ter pelo menos 2 caracteres" });
     }
@@ -64,23 +70,19 @@ app.post("/api/auth/register", async (req: Request, res: Response) => {
 
     const conn = await pool.getConnection();
 
-    // Check if user exists
     const [rows] = await conn.execute("SELECT id FROM users WHERE email = ?", [email]);
     if ((rows as any[]).length > 0) {
       conn.release();
       return res.status(400).json({ error: "Email já registrado" });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user
     await conn.execute(
       "INSERT INTO users (name, email, password, xp, level, levelNum, streakDays, lastCheckin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       [name, email, hashedPassword, 0, "iniciante", 1, 0, new Date()]
     );
 
-    // Get user
     const [userRows] = await conn.execute("SELECT id, name, email, xp, level, levelNum, streakDays FROM users WHERE email = ?", [email]);
     const user = (userRows as any[])[0];
 
@@ -93,7 +95,7 @@ app.post("/api/auth/register", async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/auth/login", async (req: Request, res: Response) => {
+app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -129,7 +131,7 @@ app.post("/api/auth/login", async (req: Request, res: Response) => {
 
 // ── EXPENSE ENDPOINTS ─────────────────────────────────────────────────────
 
-app.get("/api/users/:userId/expenses", async (req: Request, res: Response) => {
+app.get("/api/users/:userId/expenses", async (req, res) => {
   try {
     const { userId } = req.params;
     const conn = await pool.getConnection();
@@ -144,7 +146,7 @@ app.get("/api/users/:userId/expenses", async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/users/:userId/expenses", async (req: Request, res: Response) => {
+app.post("/api/users/:userId/expenses", async (req, res) => {
   try {
     const { userId } = req.params;
     const { categoryId, name, amount } = req.body;
@@ -170,7 +172,7 @@ app.post("/api/users/:userId/expenses", async (req: Request, res: Response) => {
   }
 });
 
-app.delete("/api/users/:userId/expenses/:expenseId", async (req: Request, res: Response) => {
+app.delete("/api/users/:userId/expenses/:expenseId", async (req, res) => {
   try {
     const { userId, expenseId } = req.params;
     const conn = await pool.getConnection();
@@ -187,7 +189,7 @@ app.delete("/api/users/:userId/expenses/:expenseId", async (req: Request, res: R
   }
 });
 
-app.put("/api/users/:userId/expenses/:expenseId/toggle", async (req: Request, res: Response) => {
+app.put("/api/users/:userId/expenses/:expenseId/toggle", async (req, res) => {
   try {
     const { userId, expenseId } = req.params;
     const conn = await pool.getConnection();
@@ -215,7 +217,7 @@ app.put("/api/users/:userId/expenses/:expenseId/toggle", async (req: Request, re
 
 // ── CREDIT CARD ENDPOINTS ─────────────────────────────────────────────────
 
-app.get("/api/users/:userId/creditcard", async (req: Request, res: Response) => {
+app.get("/api/users/:userId/creditcard", async (req, res) => {
   try {
     const { userId } = req.params;
     const conn = await pool.getConnection();
@@ -230,7 +232,7 @@ app.get("/api/users/:userId/creditcard", async (req: Request, res: Response) => 
   }
 });
 
-app.post("/api/users/:userId/creditcard", async (req: Request, res: Response) => {
+app.post("/api/users/:userId/creditcard", async (req, res) => {
   try {
     const { userId } = req.params;
     const { description, amount, subcategory } = req.body;
@@ -256,7 +258,7 @@ app.post("/api/users/:userId/creditcard", async (req: Request, res: Response) =>
   }
 });
 
-app.delete("/api/users/:userId/creditcard/:ccId", async (req: Request, res: Response) => {
+app.delete("/api/users/:userId/creditcard/:ccId", async (req, res) => {
   try {
     const { userId, ccId } = req.params;
     const conn = await pool.getConnection();
@@ -275,7 +277,7 @@ app.delete("/api/users/:userId/creditcard/:ccId", async (req: Request, res: Resp
 
 // ── INCOME ENDPOINTS ──────────────────────────────────────────────────────
 
-app.get("/api/users/:userId/income", async (req: Request, res: Response) => {
+app.get("/api/users/:userId/income", async (req, res) => {
   try {
     const { userId } = req.params;
     const conn = await pool.getConnection();
@@ -290,7 +292,7 @@ app.get("/api/users/:userId/income", async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/users/:userId/income", async (req: Request, res: Response) => {
+app.post("/api/users/:userId/income", async (req, res) => {
   try {
     const { userId } = req.params;
     const { description, amount } = req.body;
@@ -316,7 +318,7 @@ app.post("/api/users/:userId/income", async (req: Request, res: Response) => {
   }
 });
 
-app.delete("/api/users/:userId/income/:incomeId", async (req: Request, res: Response) => {
+app.delete("/api/users/:userId/income/:incomeId", async (req, res) => {
   try {
     const { userId, incomeId } = req.params;
     const conn = await pool.getConnection();
@@ -335,7 +337,7 @@ app.delete("/api/users/:userId/income/:incomeId", async (req: Request, res: Resp
 
 // ── XP ENDPOINTS ──────────────────────────────────────────────────────────
 
-app.post("/api/users/:userId/xp", async (req: Request, res: Response) => {
+app.post("/api/users/:userId/xp", async (req, res) => {
   try {
     const { userId } = req.params;
     const { xpGain } = req.body;
@@ -346,7 +348,6 @@ app.post("/api/users/:userId/xp", async (req: Request, res: Response) => {
 
     const conn = await pool.getConnection();
 
-    // Get current XP
     const [rows] = await conn.execute("SELECT xp FROM users WHERE id = ?", [userId]);
     const user = (rows as any[])[0];
 
@@ -358,7 +359,6 @@ app.post("/api/users/:userId/xp", async (req: Request, res: Response) => {
     const newXp = (user.xp || 0) + xpGain;
     const { levelNum, level } = calcLevel(newXp);
 
-    // Update user
     await conn.execute("UPDATE users SET xp = ?, level = ?, levelNum = ? WHERE id = ?", [newXp, level, levelNum, userId]);
 
     conn.release();
@@ -372,7 +372,7 @@ app.post("/api/users/:userId/xp", async (req: Request, res: Response) => {
 
 // ── STREAK ENDPOINTS ──────────────────────────────────────────────────────
 
-app.post("/api/users/:userId/streak/checkin", async (req: Request, res: Response) => {
+app.post("/api/users/:userId/streak/checkin", async (req, res) => {
   try {
     const { userId } = req.params;
     const conn = await pool.getConnection();
@@ -393,29 +393,25 @@ app.post("/api/users/:userId/streak/checkin", async (req: Request, res: Response
       lastCheckin.setHours(0, 0, 0, 0);
     }
 
-    // Check if already checked in today
     if (lastCheckin && lastCheckin.getTime() === today.getTime()) {
       conn.release();
       return res.status(400).json({ error: "Você já reivindicou o streak hoje" });
     }
 
-    // Check if streak should reset
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
     let newStreakDays = user.streakDays || 0;
     if (lastCheckin && lastCheckin.getTime() !== yesterday.getTime()) {
-      newStreakDays = 1; // Reset streak
+      newStreakDays = 1;
     } else {
-      newStreakDays += 1; // Continue streak
+      newStreakDays += 1;
     }
 
-    // Calculate XP for streak
     const xpGain = getStreakXP(newStreakDays);
     const newXp = (user.xp || 0) + xpGain;
     const { levelNum, level } = calcLevel(newXp);
 
-    // Update user
     await conn.execute(
       "UPDATE users SET streakDays = ?, lastCheckin = ?, xp = ?, level = ?, levelNum = ? WHERE id = ?",
       [newStreakDays, today, newXp, level, levelNum, userId]
@@ -432,8 +428,14 @@ app.post("/api/users/:userId/streak/checkin", async (req: Request, res: Response
 
 // ── HEALTH CHECK ──────────────────────────────────────────────────────────
 
-app.get("/api/health", (req: Request, res: Response) => {
+app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+// ── SERVE FRONTEND ────────────────────────────────────────────────────────
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 });
 
 // ── START SERVER ──────────────────────────────────────────────────────────
