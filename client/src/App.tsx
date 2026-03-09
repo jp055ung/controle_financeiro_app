@@ -34,8 +34,8 @@ const CATS = [
 ];
 const CC_CATS = ["Comida","Roupas","Gasolina","Transporte","Saúde","Streaming","Outros"];
 const SONHO_ID = 6;
-const calcXpIncome  = (a: number) => Math.max(1, Math.round(a));
-const calcXpExpense = (a: number) => Math.max(1, Math.round(a * 0.05));
+const calcXpIncome  = (a: number) => Math.max(1, Math.round(a));           // renda extra: 1 XP/real
+const calcXpExpense = (a: number) => Math.max(1, Math.round(a * 0.1));     // despesa/cartão: 10% → R$100 = 10 XP
 const XP_PAY_BILL = 15;
 
 // ── SAÚDE FINANCEIRA ──────────────────────────────────────────────────────────
@@ -647,14 +647,13 @@ export default function App() {
     } catch {}
   },[user]);
 
-  // FIX #3: login seta salário corretamente — sem fallback para 2300
   const login = (u:User) => {
     sessionStorage.setItem("mg_user",JSON.stringify(u)); setUser(u);
-    setSalary(num(u.salaryBase)); // Se for 0, fica 0 — sem fallback!
-    if (u.xp) setXp(u.xp);
-    if (u.levelNum) setLevelNum(u.levelNum);
-    if (u.level) setLevel(u.level);
-    setStreakDays(u.streakDays || 0);
+    setSalary(num(u.salaryBase));
+    setXp(num(u.xp));           // sempre — mesmo que seja 0
+    setLevelNum(num(u.levelNum) || 1);
+    setLevel(u.level || "iniciante");
+    setStreakDays(num(u.streakDays));
     if (u.isNewUser) setShowOnboarding(true);
     if (u.lastCheckin) {
       const today=new Date(); today.setHours(0,0,0,0);
@@ -673,13 +672,16 @@ export default function App() {
       fetch(`${API}/users/${user.id}/extra-income`).then(r=>r.json()).catch(()=>[]),
     ]);
     setExpenses(Array.isArray(e)?e:[]); setCC(Array.isArray(c)?c:[]); setIncomes(Array.isArray(i)?i:[]);
-    // Recarrega usuário (salário + streak) sempre do servidor
+    // Recarrega usuário completo sempre do servidor
     try {
       const uRes = await fetch(`${API}/auth/me/${user.id}`);
       if (uRes.ok) {
         const uData = await uRes.json();
         if (uData.salaryBase !== undefined) setSalary(num(uData.salaryBase));
-        if (uData.streakDays !== undefined) setStreakDays(uData.streakDays || 0);
+        if (uData.xp !== undefined) setXp(num(uData.xp));
+        if (uData.levelNum !== undefined) setLevelNum(num(uData.levelNum) || 1);
+        if (uData.level) setLevel(uData.level);
+        if (uData.streakDays !== undefined) setStreakDays(num(uData.streakDays));
         if (uData.lastCheckin !== undefined) {
           const today = new Date(); today.setHours(0,0,0,0);
           const last = uData.lastCheckin ? new Date(uData.lastCheckin) : null;
