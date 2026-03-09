@@ -81,20 +81,48 @@ const REGISTRO_TEXTOS = [
 function rnd<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function getStreakPhrase(d: number) { return d>=30?rnd(STREAK_PHRASES["30+"]):d>=25?rnd(STREAK_PHRASES["25-30"]):d>=14?rnd(STREAK_PHRASES["14-25"]):d>=7?rnd(STREAK_PHRASES["7-14"]):d>=3?rnd(STREAK_PHRASES["3-7"]):rnd(STREAK_PHRASES["1-3"]); }
 function getStreakIcon(d: number) { return d>=30?"👑":d>=14?"💎":d>=7?"⚡":"🔥"; }
-function getStreakXP(d: number) { const m:Record<number,number>={1:5,2:15,3:25,4:35,5:50,6:65,7:100,14:150,30:300}; return m[d]??65; }
+function getStreakXP(d: number) { return d * 10; } // dia 1=10xp, dia 2=20xp, ..., dia 30=300xp
+
+const INVESTIR_ID = 3;
+
+// Nível: Iniciante (0-99 XP) → Investidor (100-499 XP) → Avançado (500+ XP)
+function getLevelInfo(xp: number): { label: string; color: string; tier: "iniciante"|"investidor"|"avancado" } {
+  if (xp >= 500) return { label:"AVANÇADO",    color:"#ffd700",  tier:"avancado"   };
+  if (xp >= 100) return { label:"INVESTIDOR",  color:"#00d68f",  tier:"investidor" };
+  return          { label:"INICIANTE",   color:"#6c63ff",  tier:"iniciante"  };
+}
+
+// % recomendadas por nível — muda ao virar Investidor
+function getTargetPct(tier: string) {
+  if (tier === "investidor" || tier === "avancado") {
+    return { pagar:10, doar:5, investir:15, contas:55, sonho:10, abundar:5 }; // mais investimento
+  }
+  return { pagar:5, doar:5, investir:5, contas:70, sonho:10, abundar:5 }; // conservador padrão
+}
 
 // ── XP BAR ────────────────────────────────────────────────────────────────────
 function XPLevel({ xp, level, levelNum }: { xp:number; level:string; levelNum:number }) {
+  const info = getLevelInfo(xp);
   const cur = xp % 100, pct = Math.round(cur);
-  const color = level === "avancado" ? "#ffd700" : "#6c63ff";
+  const nextMilestone = xp < 100 ? 100 : xp < 500 ? 500 : null;
+  const toNext = nextMilestone ? nextMilestone - xp : 0;
   return (
     <div style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 16px", marginBottom:14, border:"1px solid var(--border)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-        <span style={{ fontSize:12, fontWeight:800, color, letterSpacing:1 }}>⚔️ {level==="avancado"?"AVANÇADO":"INICIANTE"} NV.{levelNum}</span>
-        <span style={{ fontSize:11, color:"var(--text2)", fontVariantNumeric:"tabular-nums" }}>{cur}/100 XP · {pct}%</span>
+        <span style={{ fontSize:12, fontWeight:800, color:info.color, letterSpacing:1 }}>⚔️ {info.label} NV.{levelNum}</span>
+        <span style={{ fontSize:11, color:"var(--text2)", fontVariantNumeric:"tabular-nums" }}>{cur}/100 XP</span>
       </div>
-      <div className="xp-bar-wrap"><div className="xp-bar-fill" style={{ width:`${pct}%` }}/></div>
-      <div style={{ fontSize:10, color:"var(--text2)", marginTop:4 }}>Total: {xp} XP acumulado</div>
+      <div className="xp-bar-wrap"><div className="xp-bar-fill" style={{ width:`${pct}%`, background:info.color }}/></div>
+      <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
+        <span style={{ fontSize:10, color:"var(--text2)" }}>{xp} XP total</span>
+        {nextMilestone && (
+          <span style={{ fontSize:10, color:info.color }}>
+            🔓 {info.tier==="iniciante"
+              ? `Investidor em ${toNext} XP · target investimento sobe para 15%`
+              : `Avançado em ${toNext} XP`}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -120,168 +148,93 @@ function Modal({ title, onClose, children }: { title:string; onClose?:()=>void; 
 
 // ── STREAK MODAL ──────────────────────────────────────────────────────────────
 function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; onClaim:(d:any)=>void }) {
-  const [streakData, setStreakData] = useState<{streakDays:number;claimedToday:boolean;expiresIn:string}|null>(null);
+  const [streakDays, setStreakDays] = useState(0);
   const [claimed, setClaimed] = useState<boolean|null>(null);
-  const [claimResult, setClaimResult] = useState<any>(null);
-  const [phrase, setPhrase] = useState("");
+  const [xpGained, setXpGained] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [animPhase, setAnimPhase] = useState<"idle"|"burst"|"done">("idle");
-  const [particles, setParticles] = useState<{id:number;x:number;y:number;color:string;angle:number}[]>([]);
+  const [expiresIn, setExpiresIn] = useState("");
 
   useEffect(() => {
     fetch(`${API}/users/${user.id}/streak`)
       .then(r => r.json())
       .then(d => {
-        if (d && typeof d.claimedToday !== 'undefined') {
-          setStreakData(d);
-          setClaimed(!!d.claimedToday);
-          setPhrase(getStreakPhrase(d.claimedToday ? d.streakDays : d.streakDays + 1));
-        } else {
-          // Resposta inesperada — libera o botão para tentar
-          setClaimed(false);
-          setPhrase(getStreakPhrase(1));
-        }
+        setStreakDays(d.streakDays || 0);
+        setClaimed(!!d.claimedToday);
+        setExpiresIn(d.expiresIn || "");
       })
-      .catch(() => {
-        // Erro de rede — libera o botão com estado padrão
-        setClaimed(false);
-        setPhrase(getStreakPhrase(1));
-      });
+      .catch(() => setClaimed(false));
   }, []);
 
-  const triggerAnim = () => {
-    setAnimPhase("burst");
-    const cols = ["#ffd700","#6c63ff","#00d68f","#ff6b9d","#f97316","#a78bfa"];
-    setParticles(Array.from({length:20},(_,i)=>({ id:i, x:40+Math.random()*20, y:40+Math.random()*20, color:cols[i%cols.length], angle:(i/20)*360 })));
-    setTimeout(()=>{ setAnimPhase("done"); setParticles([]); }, 1200);
-  };
-
   const handleClaim = async () => {
-    if (loading) return;
-    if (claimed === true) return; // já resgatou
+    if (loading || claimed === true) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/users/${user.id}/streak/checkin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await fetch(`${API}/users/${user.id}/streak/checkin`, { method:"POST", headers:{"Content-Type":"application/json"} });
       const data = await res.json();
       if (res.ok) {
+        setStreakDays(data.streakDays);
+        setXpGained(data.xpGained);
         setClaimed(true);
-        setClaimResult(data);
-        setStreakData(s => s ? {...s, streakDays: data.streakDays, claimedToday: true} : s);
-        setPhrase(getStreakPhrase(data.streakDays));
-        triggerAnim();
         onClaim(data);
-      } else if (data?.error?.toLowerCase().includes("hoje") || data?.error?.toLowerCase().includes("realizado")) {
-        // Já resgatou hoje — corrige o estado
+      } else if (data?.error?.includes("hoje")) {
         setClaimed(true);
-      } else {
-        // Outro erro — mostra no console e libera botão
-        console.error("Streak error:", data);
       }
-    } catch(e) {
-      console.error("Streak fetch error:", e);
-    }
+    } catch {}
     setLoading(false);
   };
 
-  const days = streakData?.streakDays ?? 0;
-  const nextDays = claimed ? days : days+1;
-  const xpNext = getStreakXP(nextDays);
-  const accent = nextDays>=30?"#ffd700":nextDays>=14?"#a78bfa":nextDays>=7?"#6c63ff":"#f97316";
-  const MILESTONES = [1,2,3,5,7,14,30];
+  const nextDay = claimed ? streakDays : streakDays + 1;
+  const nextXP = nextDay * 10;
+  const accent = streakDays >= 30 ? "#ffd700" : streakDays >= 14 ? "#a78bfa" : streakDays >= 7 ? "#6c63ff" : "#f97316";
 
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:16 }} onClick={onClose}>
-      <div style={{ background:"linear-gradient(180deg,#13162a 0%,var(--bg2) 100%)", borderRadius:24, width:"100%", maxWidth:440, maxHeight:"90vh", overflowY:"auto", padding:"24px 20px 32px", position:"relative", border:"1px solid rgba(108,99,255,0.2)" }} onClick={e=>e.stopPropagation()}>
-        <style>{`
-          @keyframes floatUp{from{opacity:1;transform:translateX(-50%) translateY(0)}to{opacity:0;transform:translateX(-50%) translateY(-55px)}}
-          @keyframes burstP{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(var(--tx),var(--ty))}}
-          @keyframes popIn{0%{transform:scale(0.7);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
-        `}</style>
+      <div style={{ background:"var(--bg2)", borderRadius:24, width:"100%", maxWidth:400, padding:"28px 24px 32px", position:"relative", border:"1px solid rgba(108,99,255,0.25)" }} onClick={e=>e.stopPropagation()}>
+        <button onClick={onClose} style={{ position:"absolute", top:14, right:14, background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:30, height:30, borderRadius:8, fontSize:13 }}>✕</button>
 
-        {particles.map(p=>(
-          <div key={p.id} style={{ position:"absolute", top:`${p.y}%`, left:`${p.x}%`, width:9, height:9, borderRadius:"50%", background:p.color,
-            // @ts-ignore
-            "--tx":`${Math.cos(p.angle*Math.PI/180)*120}px`, "--ty":`${Math.sin(p.angle*Math.PI/180)*80}px`,
-            animation:"burstP 0.9s ease-out forwards", pointerEvents:"none", zIndex:20 }}/>
-        ))}
-
-        <button onClick={onClose} style={{ position:"absolute", top:14, right:14, background:"rgba(255,255,255,0.06)", border:"1px solid var(--border)", color:"var(--text2)", width:30, height:30, borderRadius:8, fontSize:13 }}>✕</button>
-
-        <div style={{ textAlign:"center", marginBottom:18 }}>
-          <span style={{ display:"inline-block", padding:"3px 14px", borderRadius:20, background:"rgba(108,99,255,0.12)", border:"1px solid rgba(108,99,255,0.3)", fontSize:10, fontWeight:800, color:"#a78bfa", letterSpacing:3, textTransform:"uppercase" }}>BÔNUS DIÁRIO</span>
+        <div style={{ textAlign:"center", marginBottom:20 }}>
+          <div style={{ fontSize:52, marginBottom:8 }}>{streakDays >= 30 ? "👑" : streakDays >= 14 ? "💎" : streakDays >= 7 ? "⚡" : "🔥"}</div>
+          <div style={{ fontSize:72, fontWeight:900, color:accent, lineHeight:1, letterSpacing:"-3px", fontVariantNumeric:"tabular-nums" }}>
+            {claimed ? streakDays : streakDays === 0 ? 1 : streakDays + 1}
+          </div>
+          <div style={{ fontSize:12, color:"var(--text2)", textTransform:"uppercase", letterSpacing:2, marginTop:4 }}>DIAS SEGUIDOS</div>
         </div>
 
-        {/* Ícone + número — SEM emoji ao lado do número */}
-        <div style={{ textAlign:"center", marginBottom:14, position:"relative" }}>
-          <div style={{ fontSize:48, lineHeight:1, marginBottom:4, filter:`drop-shadow(0 0 18px ${accent}99)` }}>{getStreakIcon(nextDays)}</div>
-          <div style={{ fontSize:88, fontWeight:900, lineHeight:1, color:accent, letterSpacing:"-5px", fontVariantNumeric:"tabular-nums" }}>{nextDays}</div>
-          <div style={{ fontSize:11, color:"var(--text2)", textTransform:"uppercase", letterSpacing:3, marginTop:4 }}>DIAS SEGUIDOS</div>
-          {animPhase==="burst"&&(
-            <div style={{ position:"absolute", top:6, left:"50%", fontSize:24, fontWeight:900, color:"#ffd700", animation:"floatUp 1.1s ease forwards", whiteSpace:"nowrap" }}>
-              +{claimResult?.xpGained??xpNext} XP ⚡
-            </div>
-          )}
-        </div>
-
-        {streakData && !claimed && (
-          <div style={{ textAlign:"center", marginBottom:12 }}>
-            <span style={{ background:"rgba(255,183,3,0.1)", border:"1px solid rgba(255,183,3,0.2)", borderRadius:8, padding:"4px 10px", color:"#ffb703", fontSize:12 }}>⏱ Expira em {streakData.expiresIn}</span>
+        {!claimed && claimed !== null && (
+          <div style={{ textAlign:"center", marginBottom:16 }}>
+            <span style={{ fontSize:28, fontWeight:900, color:"#ffd700" }}>+{nextXP}</span>
+            <span style={{ fontSize:14, color:"var(--text2)", marginLeft:4 }}>XP ao resgatar</span>
           </div>
         )}
 
-        {/* Marcos */}
-        <div style={{ display:"flex", gap:5, marginBottom:14, overflowX:"auto", paddingBottom:2 }}>
-          {MILESTONES.map(d=>{
-            const isDone = claimed ? d<=days : d<nextDays;
-            const isCurrent = d===nextDays;
-            return (
-              <div key={d} style={{ flex:"0 0 auto", width:46, background:isCurrent?`${accent}22`:isDone?"rgba(0,214,143,0.08)":"var(--bg3)", border:`1px solid ${isCurrent?accent:isDone?"rgba(0,214,143,0.3)":"var(--border)"}`, borderRadius:10, padding:"7px 2px", textAlign:"center", transform:isCurrent?"scale(1.06)":"none" }}>
-                <div style={{ fontSize:13 }}>{isDone&&!isCurrent?"✅":getStreakIcon(d)}</div>
-                <div style={{ fontSize:10, fontWeight:800, color:isCurrent?accent:isDone?"var(--green)":"var(--text2)", marginTop:2 }}>{d===7?"7⚡":d===14?"14💎":d===30?"30👑":d}</div>
-                <div style={{ fontSize:9, color:"var(--text2)" }}>{getStreakXP(d)}xp</div>
-              </div>
-            );
-          })}
-        </div>
-
-        {!claimed && claimed!==null && (
-          <div style={{ textAlign:"center", marginBottom:12 }}>
-            <span style={{ fontSize:30, fontWeight:900, color:"#ffd700", letterSpacing:-1 }}>+{xpNext}</span>
-            <span style={{ fontSize:14, color:"var(--text2)", marginLeft:5 }}>XP</span>
+        {expiresIn && !claimed && (
+          <div style={{ textAlign:"center", marginBottom:14 }}>
+            <span style={{ background:"rgba(255,183,3,0.1)", border:"1px solid rgba(255,183,3,0.2)", borderRadius:8, padding:"4px 10px", color:"#ffb703", fontSize:12 }}>⏱ Disponível por mais {expiresIn}</span>
           </div>
         )}
 
-        {/* Frase — sem quebra de linha forçada */}
-        <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"12px 16px", marginBottom:16 }}>
-          <p style={{ fontSize:15, fontWeight:700, color:"var(--text)", lineHeight:1.5, textAlign:"center", wordBreak:"keep-all" }}>
-            {claimed&&claimResult ? "Sequência mantida. Volte amanhã e não quebre o ritmo." : phrase}
-          </p>
+        <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.18)", borderRadius:12, padding:"10px 14px", marginBottom:16, fontSize:12, color:"var(--text2)", textAlign:"center", lineHeight:1.5 }}>
+          XP = dia × 10 &nbsp;·&nbsp; Dia 1 = 10 XP &nbsp;·&nbsp; Dia 7 = 70 XP &nbsp;·&nbsp; Dia 30 = 300 XP
         </div>
 
-        {claimed===null ? (
-          <div style={{ width:"100%", padding:"15px", borderRadius:14, background:"var(--bg3)", textAlign:"center", color:"var(--text2)", fontSize:14 }}>Carregando...</div>
+        {claimed === null ? (
+          <div style={{ width:"100%", padding:15, borderRadius:14, background:"var(--bg3)", textAlign:"center", color:"var(--text2)", fontSize:14 }}>Carregando...</div>
         ) : claimed ? (
-          <div style={{ width:"100%", padding:"16px", borderRadius:14, background:"linear-gradient(135deg,rgba(0,214,143,0.15),rgba(0,214,143,0.08))", border:"1px solid rgba(0,214,143,0.35)", textAlign:"center" }}>
+          <div style={{ width:"100%", padding:16, borderRadius:14, background:"rgba(0,214,143,0.12)", border:"1px solid rgba(0,214,143,0.35)", textAlign:"center" }}>
             <div style={{ fontSize:22, marginBottom:4 }}>✅</div>
-            <div style={{ fontSize:16, fontWeight:800, color:"var(--green)" }}>Resgatado hoje{claimResult?` · +${claimResult.xpGained} XP`:""}</div>
-            <div style={{ fontSize:12, color:"var(--text2)", marginTop:3 }}>Volte amanhã para o dia {days+1} 🔥</div>
+            <div style={{ fontSize:16, fontWeight:800, color:"var(--green)" }}>Resgatado hoje! +{xpGained} XP</div>
+            <div style={{ fontSize:12, color:"var(--text2)", marginTop:3 }}>Volte amanhã para o dia {streakDays + 1} 🔥</div>
           </div>
         ) : (
-          <button
-            onClick={handleClaim}
-            disabled={loading}
-            style={{ width:"100%", padding:"16px", border:"none", borderRadius:14, background:loading?"var(--bg3)":"linear-gradient(135deg,#6c63ff,#b44fff)", color:loading?"var(--text2)":"white", fontSize:16, fontWeight:800, cursor:loading?"default":"pointer", letterSpacing:0.5, boxShadow:loading?"none":"0 4px 24px rgba(108,99,255,0.45)" }}
-          >
-            {loading ? "⏳ Salvando..." : "🎁 Resgatar bônus"}
+          <button onClick={handleClaim} disabled={loading} style={{ width:"100%", padding:16, border:"none", borderRadius:14, background:loading?"var(--bg3)":"linear-gradient(135deg,#6c63ff,#b44fff)", color:loading?"var(--text2)":"white", fontSize:16, fontWeight:800, cursor:loading?"default":"pointer", boxShadow:loading?"none":"0 4px 20px rgba(108,99,255,0.4)" }}>
+            {loading ? "⏳ Salvando..." : `🎁 Resgatar +${nextXP} XP`}
           </button>
         )}
       </div>
     </div>
   );
 }
+
 
 // ── BAR CHART ─────────────────────────────────────────────────────────────────
 function BarChart({ data }: { data:{label:string;value:number;color:string;emoji:string}[] }) {
@@ -486,7 +439,7 @@ function HealthCard({ score, salary }: { score:number; salary:number }) {
 }
 
 // ── DASHBOARD CONTENT ─────────────────────────────────────────────────────────
-function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,onStreak,onCreditClick }: any) {
+function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick }: any) {
   return (
     <>
       {/* SAÚDE FINANCEIRA — topo */}
@@ -495,7 +448,6 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
       {/* STREAK */}
       <div onClick={onStreak} style={{ background:streakClaimed?"rgba(0,214,143,0.05)":"rgba(108,99,255,0.06)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.28)":"rgba(108,99,255,0.32)"}`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          {/* Streak: apenas emoji, sem badge numérico */}
           <span style={{ fontSize:30 }}>{getStreakIcon(streakDays)}</span>
           <div>
             <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:1 }}>Streak Diária</div>
@@ -507,13 +459,13 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         {!streakClaimed&&<div style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.3)", color:"#a78bfa", fontSize:12, fontWeight:700, padding:"5px 11px", borderRadius:8, whiteSpace:"nowrap" }}>+{getStreakXP(streakDays+1)} XP</div>}
       </div>
 
-      {/* KPIs */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
+      {/* KPIs — Despesas Reais (sem Investir) */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:totalInvestido>0?10:14 }}>
         {[
-          { label:"Salário Base",   value:fmt(salary),                           color:"var(--primary)", icon:"💼" },
-          { label:"Total Despesas", value:fmt(totalExpSemSonho+totalCC),         color:"var(--red)",     icon:"💸" },
-          { label:"Renda Extra",    value:fmt(totalIncome),                      color:"var(--green)",   icon:"💵" },
-          { label:"Saldo Livre",    value:fmt(balance), color:balance>=0?"var(--green)":"var(--red)", icon:balance>=0?"✅":"⚠️" },
+          { label:"Salário Base",    value:fmt(salary),                              color:"var(--primary)", icon:"💼" },
+          { label:"Despesas Reais",  value:fmt(totalExpReais+totalCC),               color:"var(--red)",     icon:"💸" },
+          { label:"Renda Extra",     value:fmt(totalIncome),                         color:"var(--green)",   icon:"💵" },
+          { label:"Saldo Livre",     value:fmt(balance), color:balance>=0?"var(--green)":"var(--red)", icon:balance>=0?"✅":"⚠️" },
         ].map((k,i)=>(
           <div key={i} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 14px", borderTop:`3px solid ${k.color}` }}>
             <div style={{ fontSize:17, marginBottom:3 }}>{k.icon}</div>
@@ -522,6 +474,84 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
           </div>
         ))}
       </div>
+
+      {/* INVESTIMENTO — separado das despesas */}
+      {(()=>{
+        const investTotal = byCategory.find((c:any)=>c.id===INVESTIR_ID)?.total||0;
+        if (investTotal === 0) return null;
+        const receita = salary + totalIncome;
+        const pct = receita > 0 ? Math.round(investTotal/receita*100) : 0;
+        const tier = levelInfo?.tier || "iniciante";
+        const targetPct = getTargetPct(tier);
+
+        // Dica: combina % investido atual com o tier do investidor
+        type RiskProfile = { label:string; color:string; icon:string; tip:string; tipExtra?: string };
+        let riskProfile: RiskProfile;
+        if (tier === "avancado") {
+          if (pct >= 20) riskProfile = { label:"Agressivo", color:"#a78bfa", icon:"🚀", tip:"Você está no topo. Considere diversificar em FIIs, BDRs e fundos internacionais para reduzir risco concentrado.", tipExtra:"Verifique se sua reserva de emergência está intacta — ela nunca deve ser investida." };
+          else if (pct >= 10) riskProfile = { label:"Moderado", color:"#00d68f", icon:"📈", tip:"Bom ritmo de quem já sabe o que faz. Para seu nível, explore fundos de índice (ETFs) e previdência privada PGBL/VGBL.", tipExtra:`Seu target como Avançado é ${targetPct.investir}% — você está em ${pct}%.` };
+          else riskProfile = { label:"Abaixo do target", color:"#ffb703", icon:"⚠️", tip:"Para seu nível, você pode aportar mais.", tipExtra:`Meta recomendada para Avançado: ${targetPct.investir}% da receita. Você está em ${pct}%.` };
+        } else if (tier === "investidor") {
+          if (pct >= 15) riskProfile = { label:"Acima do Target", color:"#a78bfa", icon:"🚀", tip:"Excelente! Você está superando o target do seu nível. Considere CDBs de liquidez diária e LCI/LCA isentos de IR.", tipExtra:"Diversifique: não coloque mais de 30% em um único ativo ou emissor." };
+          else if (pct >= 10) riskProfile = { label:"No Target", color:"#00d68f", icon:"✅", tip:`Perfeito para o nível Investidor. Foque em Tesouro Selic para sua reserva e comece a explorar ações de dividendos.`, tipExtra:`Sua meta é ${targetPct.investir}% — você está em ${pct}%. Continue assim.` };
+          else riskProfile = { label:"Conservador", color:"#ffb703", icon:"🛡️", tip:"Boa base! Priorize Tesouro Selic até completar sua reserva de emergência (6× as despesas mensais).", tipExtra:`Meta do nível Investidor: ${targetPct.investir}% — você está em ${pct}%. Pequenos aumentos mensais fazem diferença.` };
+        } else {
+          // Iniciante
+          if (pct >= 10) riskProfile = { label:"Acima do esperado!", color:"#00d68f", icon:"🌱", tip:"Incrível para um Iniciante! Certifique-se de ter uma reserva de emergência antes de assumir mais risco.", tipExtra:"Chegando a 100 XP você vira Investidor e recebe recomendações mais sofisticadas." };
+          else if (pct >= 5) riskProfile = { label:"No caminho certo", color:"#6c63ff", icon:"💡", tip:"Ótimo começo. Tesouro Selic e CDBs de alta liquidez são perfeitos para quem está construindo disciplina.", tipExtra:`Meta do nível Iniciante: ${targetPct.investir}% — você está em ${pct}%. Suba de nível para desbloquear mais dicas.` };
+          else riskProfile = { label:"Comece pequeno", color:"#ffb703", icon:"🌱", tip:"Mesmo R$50/mês investidos hoje, com juros compostos, valem muito mais em 10 anos. Consistência > volume.", tipExtra:"Dica: automatize um aporte fixo todo dia de pagamento — o que você não vê, não gasta." };
+        }
+
+        return (
+          <div style={{ background:"linear-gradient(135deg,rgba(0,214,143,0.07),rgba(0,214,143,0.03))", border:"1px solid rgba(0,214,143,0.28)", borderRadius:14, padding:"13px 16px", marginBottom:14 }}>
+            {/* Header */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:24 }}>📈</span>
+                <div>
+                  <div style={{ fontSize:10, color:"#00d68f", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Capital Alocado este Mês</div>
+                  <div style={{ fontSize:20, fontWeight:900, color:"#00d68f", fontVariantNumeric:"tabular-nums" }}>{fmt(investTotal)}</div>
+                </div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700 }}>% DA RECEITA</div>
+                <div style={{ fontSize:20, fontWeight:900, color:riskProfile.color }}>{pct}%</div>
+              </div>
+            </div>
+
+            {/* Barra de progresso em direção ao target */}
+            {receita > 0 && (
+              <div style={{ marginBottom:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"var(--text2)", marginBottom:4 }}>
+                  <span>Atual: {pct}%</span>
+                  <span>Target {levelInfo?.label?.toLowerCase() || "iniciante"}: {targetPct.investir}%</span>
+                </div>
+                <div style={{ height:6, background:"var(--bg3)", borderRadius:3, overflow:"hidden" }}>
+                  <div style={{ height:"100%", width:`${Math.min(pct/targetPct.investir*100, 100)}%`, background:`linear-gradient(90deg,#00d68f,#6c63ff)`, borderRadius:3, transition:"width .6s" }}/>
+                </div>
+              </div>
+            )}
+
+            {/* Perfil de risco + dica */}
+            <div style={{ background:"rgba(0,0,0,0.18)", borderRadius:10, padding:"9px 12px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
+                <span style={{ fontSize:16 }}>{riskProfile.icon}</span>
+                <span style={{ fontSize:11, fontWeight:800, color:riskProfile.color }}>{riskProfile.label}</span>
+              </div>
+              <div style={{ fontSize:11, color:"var(--text2)", lineHeight:1.5 }}>{riskProfile.tip}</div>
+              {riskProfile.tipExtra && (
+                <div style={{ fontSize:10, color:"var(--text2)", marginTop:5, paddingTop:5, borderTop:"1px solid rgba(255,255,255,0.06)", fontStyle:"italic" }}>{riskProfile.tipExtra}</div>
+              )}
+            </div>
+
+            {/* Disclaimer */}
+            <div style={{ marginTop:8, fontSize:10, color:"rgba(0,214,143,0.6)", display:"flex", alignItems:"flex-start", gap:5 }}>
+              <span style={{ flexShrink:0 }}>ℹ️</span>
+              <span>Este valor <strong style={{ color:"rgba(0,214,143,0.8)" }}>não entra no cálculo de despesas</strong> — é patrimônio sendo construído. Seu Saldo Livre já considera isso.</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* CC */}
       {totalCC>0&&(
@@ -704,13 +734,19 @@ export default function App() {
   if (showOnboarding) return <Onboarding user={user} onDone={()=>{setShowOnboarding(false);load();}}/>;
 
   // CÁLCULOS
+  const totalInvestido = expenses.filter(e=>Number(e.categoryId)===INVESTIR_ID).reduce((s,e)=>s+num(e.amount),0);
+  // "Despesas reais" = tudo exceto Sonho e Investir (que são categorias de construção de patrimônio)
   const totalExpSemSonho = expenses.filter(e=>e.categoryId!==SONHO_ID).reduce((s,e)=>s+num(e.amount),0);
+  const totalExpReais = expenses.filter(e=>e.categoryId!==SONHO_ID && Number(e.categoryId)!==INVESTIR_ID).reduce((s,e)=>s+num(e.amount),0);
   const totalCC = cc.reduce((s,c)=>s+num(c.amount),0);
   const totalIncome = incomes.reduce((s,i)=>s+num(i.amount),0);
   const totalPaid = expenses.filter(e=>e.paid&&e.categoryId!==SONHO_ID).reduce((s,e)=>s+num(e.amount),0)+totalCC;
-  const totalPending = totalExpSemSonho+totalCC-totalPaid;
-  const balance = salary+totalIncome-totalExpSemSonho-totalCC;
-  const extraNeeded = Math.max(0,totalExpSemSonho+totalCC-salary);
+  const totalPending = totalExpReais+totalCC-totalPaid;
+  // Saldo Livre = Receita - Despesas Reais - Cartão (investimento FORA — é patrimônio, não gasto)
+  const balance = salary + totalIncome - totalExpReais - totalCC;
+  const extraNeeded = Math.max(0, totalExpReais+totalCC-salary);
+  // Tier de nível baseado no XP total
+  const levelInfo = getLevelInfo(xp);
   // FIX #1: Sonho — busca por categoryId === SONHO_ID
   const sonhoExp = expenses.filter(e=>Number(e.categoryId)===SONHO_ID);
   const sonhoTotal = sonhoExp.reduce((s,e)=>s+num(e.amount),0);
@@ -718,7 +754,7 @@ export default function App() {
   const sonhoRecorrente = sonhoExp.find(e=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
   const sonhoProgresso = sonhoRecorrente ? Math.min(sonhoTotal/num(sonhoRecorrente.recurringGoal)*100,100) : 0;
   const byCategory = CATS.map(cat=>({...cat,items:expenses.filter(e=>Number(e.categoryId)===cat.id),total:expenses.filter(e=>Number(e.categoryId)===cat.id).reduce((s,e)=>s+num(e.amount),0)}));
-  // FIX #5: score de saúde financeira
+  // Score de saúde financeira
   const healthScore = calcHealthScore(salary, totalExpSemSonho, totalIncome, totalPaid, totalExpSemSonho+totalCC, streakDays);
 
   const NAV = [{id:"dashboard",icon:"📊",label:"Dashboard"},{id:"expenses",icon:"💸",label:"Despesas"},{id:"credit",icon:"💳",label:"Cartão"},{id:"income",icon:"💵",label:"Renda Extra"},{id:"reports",icon:"📈",label:"Relatórios"}];
@@ -756,12 +792,12 @@ export default function App() {
       {showAddIncome&&<AddIncomeModal userId={user.id} onClose={()=>{setShowAddIncome(false);load();}} onXp={gainXpRaw}/>}
       {/* FIX #3: SettingsModal retorna salário salvo e atualiza state */}
       {showSettings&&<SettingsModal user={user} salary={salary} onSave={(s:number)=>{setSalary(s);showToast("✅ Salário atualizado!");setShowSettings(false);}} onClose={()=>setShowSettings(false)} onReset={()=>{setShowSettings(false);setShowReset(true);}}/>}
-      {showMethodology&&<MethodologyModal onClose={()=>setShowMethodology(false)}/>}
+      {showMethodology&&<MethodologyModal xp={xp} onClose={()=>setShowMethodology(false)}/>}
       {showReset&&<ResetModal onClose={()=>setShowReset(false)} onConfirm={handleReset}/>}
     </>
   );
 
-  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit") };
+  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit") };
 
   // ── PC LAYOUT ─────────────────────────────────────────────────────────────
   if (isPC) return (
@@ -778,7 +814,7 @@ export default function App() {
           </div>
           <div style={{ padding:"12px 16px", borderBottom:"1px solid var(--border)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
-              <span style={{ fontSize:10, fontWeight:800, color:"#6c63ff" }}>⚔️ {level==="avancado"?"AVANÇADO":"INICIANTE"} NV.{levelNum}</span>
+              <span style={{ fontSize:10, fontWeight:800, color:levelInfo.color }}>⚔️ {levelInfo.label} NV.{levelNum}</span>
               <span style={{ fontSize:10, color:"var(--text2)" }}>{xp%100}/100</span>
             </div>
             <div className="xp-bar-wrap"><div className="xp-bar-fill" style={{ width:`${xp%100}%` }}/></div>
@@ -811,7 +847,7 @@ export default function App() {
               <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
             </div>
             <div style={{ display:"flex", gap:10 }}>
-              {[{label:"Saldo",value:fmt(balance),color:balance>=0?"var(--green)":"var(--red)"},{label:"Despesas",value:fmt(totalExpSemSonho+totalCC),color:"var(--red)"},{label:"Saúde",value:`${healthScore}/100`,color:getHealthBand(healthScore).color}].map((k,i)=>(
+              {[{label:"Saldo",value:fmt(balance),color:balance>=0?"var(--green)":"var(--red)"},{label:"Despesas",value:fmt(totalExpReais+totalCC),color:"var(--red)"},{label:"Saúde",value:`${healthScore}/100`,color:getHealthBand(healthScore).color}].map((k,i)=>(
                 <div key={i} style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:10, padding:"7px 13px", textAlign:"center" }}>
                   <div style={{ fontSize:9, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.5 }}>{k.label}</div>
                   <div style={{ fontSize:14, fontWeight:800, fontVariantNumeric:"tabular-nums", color:k.color }}>{k.value}</div>
@@ -823,7 +859,11 @@ export default function App() {
             <XPLevel xp={xp} level={level} levelNum={levelNum}/>
             {tab==="dashboard"&&<DashboardContent {...dashProps}/>}
             {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)} onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }} onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}/>}
-            {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)} onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}/>}
+            {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
+              onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
+              onPay={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!c.paid})}); load(); }}
+              onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}
+            />
             {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }}/>}
             {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore}/>}
           </div>
@@ -841,7 +881,7 @@ export default function App() {
           <div style={{ fontSize:17, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", display:"flex", alignItems:"center", gap:6 }}>
             <CoinIcon size={20}/> MONEYGAME
           </div>
-          <div style={{ fontSize:11, color:"var(--text2)" }}>Olá, {user.name?.split(" ")[0]}! ⚔️ {level==="avancado"?"AVANÇADO":"INICIANTE"} NV.{levelNum}</div>
+          <div style={{ fontSize:11, color:"var(--text2)" }}>Olá, {user.name?.split(" ")[0]}! <span style={{ color:levelInfo.color, fontWeight:700 }}>⚔️ {levelInfo.label} NV.{levelNum}</span></div>
         </div>
         <div style={{ display:"flex", gap:7 }}>
           <button onClick={()=>setShowMethodology(true)} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>📚</button>
@@ -853,7 +893,11 @@ export default function App() {
         <XPLevel xp={xp} level={level} levelNum={levelNum}/>
         {tab==="dashboard"&&<DashboardContent {...dashProps}/>}
         {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)} onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }} onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}/>}
-        {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)} onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}/>}
+        {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
+          onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
+          onPay={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!c.paid})}); load(); }}
+          onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}
+        />
         {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }}/>}
         {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore}/>}
       </main>
@@ -912,31 +956,72 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete }: any) {
 }
 
 // ── ABA CARTÃO ────────────────────────────────────────────────────────────────
-function CreditContent({ cc,totalCC,onAdd,onDelete }: any) {
+function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit }: any) {
+  const [editId, setEditId] = useState<number|null>(null);
+  const [editVal, setEditVal] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const totalPago = cc.filter((c:any)=>c.paid).reduce((s:number,c:any)=>s+num(c.amount),0);
+  const totalPendente = totalCC - totalPago;
+
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
         <h2 style={{ fontSize:17, fontWeight:800 }}>💳 Cartão</h2>
         <button className="btn-primary" onClick={onAdd} style={{ padding:"9px 16px", fontSize:13 }}>+ Adicionar</button>
       </div>
+
+      {/* Resumo fatura */}
       <div className="card" style={{ marginBottom:14, borderTop:"3px solid var(--yellow)" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
           <div>
             <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase" }}>Total da Fatura</div>
             <div style={{ fontSize:26, fontWeight:900, fontVariantNumeric:"tabular-nums", color:"var(--yellow)" }}>{fmt(totalCC)}</div>
           </div>
-          <span style={{ fontSize:38 }}>💳</span>
+          <span style={{ fontSize:36 }}>💳</span>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+          <div style={{ background:"rgba(0,214,143,0.08)", border:"1px solid rgba(0,214,143,0.2)", borderRadius:10, padding:"8px 12px" }}>
+            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700 }}>✅ PAGO</div>
+            <div style={{ fontSize:16, fontWeight:800, color:"var(--green)", fontVariantNumeric:"tabular-nums" }}>{fmt(totalPago)}</div>
+          </div>
+          <div style={{ background:"rgba(255,183,3,0.08)", border:"1px solid rgba(255,183,3,0.2)", borderRadius:10, padding:"8px 12px" }}>
+            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700 }}>⏳ PENDENTE</div>
+            <div style={{ fontSize:16, fontWeight:800, color:"var(--yellow)", fontVariantNumeric:"tabular-nums" }}>{fmt(totalPendente)}</div>
+          </div>
         </div>
       </div>
-      {cc.length===0&&<div className="card" style={{ textAlign:"center", color:"var(--text2)", padding:38 }}>Nenhum gasto no cartão</div>}
-      {cc.map((c:CC)=>(
-        <div key={c.id} className="card" style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", marginBottom:7 }}>
-          <div style={{ flex:1 }}>
-            <div style={{ fontWeight:600, fontSize:14 }}>{c.description}</div>
-            {c.subcategory&&<div style={{ fontSize:11, color:"var(--text2)" }}>{c.subcategory}</div>}
-          </div>
-          <span style={{ fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--yellow)" }}>{fmt(num(c.amount))}</span>
-          <button className="btn-danger" onClick={()=>onDelete(c.id)}>🗑</button>
+
+      {cc.length===0 && <div className="card" style={{ textAlign:"center", color:"var(--text2)", padding:38 }}>Nenhum gasto no cartão</div>}
+
+      {cc.map((c: any) => (
+        <div key={c.id} className="card" style={{ marginBottom:8, padding:"12px 14px", opacity:c.paid?0.7:1 }}>
+          {/* Modo edição */}
+          {editId===c.id ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <input value={editDesc} onChange={e=>setEditDesc(e.target.value)} placeholder="Descrição" style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:13 }}/>
+              <input value={editVal} onChange={e=>setEditVal(e.target.value)} placeholder="Valor (ex: 250.00)" type="number" step="0.01" style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:13 }}/>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={()=>{ onEdit(c.id, editDesc, editVal); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"8px" }}>✅ Salvar</button>
+                <button onClick={()=>setEditId(null)} style={{ flex:1, padding:"8px", background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer" }}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:600, fontSize:14, textDecoration:c.paid?"line-through":"none", color:c.paid?"var(--text2)":"var(--text)" }}>{c.description}</div>
+                {c.subcategory&&<div style={{ fontSize:11, color:"var(--text2)" }}>{c.subcategory}</div>}
+              </div>
+              <span style={{ fontWeight:800, fontVariantNumeric:"tabular-nums", color:c.paid?"var(--text2)":"var(--yellow)", flexShrink:0 }}>{fmt(num(c.amount))}</span>
+              {/* Pagar */}
+              <button onClick={()=>onPay(c)} title={c.paid?"Desmarcar":"Pagar"} style={{ background:c.paid?"rgba(0,214,143,0.1)":"rgba(0,214,143,0.15)", border:`1px solid ${c.paid?"rgba(0,214,143,0.2)":"rgba(0,214,143,0.4)"}`, color:"var(--green)", borderRadius:8, padding:"6px 9px", fontSize:13, cursor:"pointer", flexShrink:0 }}>
+                {c.paid ? "↩️" : "✅"}
+              </button>
+              {/* Editar */}
+              <button onClick={()=>{ setEditId(c.id); setEditVal(String(num(c.amount))); setEditDesc(c.description); }} style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:8, padding:"6px 9px", fontSize:13, cursor:"pointer", flexShrink:0 }}>✏️</button>
+              {/* Deletar */}
+              <button className="btn-danger" onClick={()=>onDelete(c.id)} style={{ flexShrink:0 }}>🗑</button>
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -1061,39 +1146,55 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
         {loadingH ? (
           <div style={{ textAlign:"center", color:"var(--text2)", padding:16 }}>Carregando...</div>
         ) : history.length===0 ? (
-          <div style={{ textAlign:"center", color:"var(--text2)", padding:16, fontSize:13, lineHeight:1.5 }}>
-            Nenhum mês arquivado ainda.<br/>Use "Virar Mês" em Configurações ao final de cada mês.
+          <div style={{ textAlign:"center", color:"var(--text2)", padding:20, fontSize:13, lineHeight:1.6 }}>
+            Nenhum mês arquivado ainda.<br/>
+            <span style={{ fontSize:11 }}>Use "Virar Mês" em ⚙️ Configurações ao fechar cada mês.</span>
           </div>
         ) : (
           <>
-            {/* Mini gráfico de barras do histórico */}
-            <div style={{ display:"flex", alignItems:"flex-end", gap:6, height:80, marginBottom:14, paddingBottom:2 }}>
-              {history.slice().reverse().map((h:any,i:number)=>{
-                const maxVal = Math.max(...history.map((x:any)=>x.totalExpenses),1);
-                const pct = Math.max(h.totalExpenses/maxVal*70, 4);
-                const isPositive = h.balance >= 0;
-                return (
-                  <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
-                    <div style={{ width:"100%", borderRadius:"3px 3px 0 0", background:isPositive?"var(--green)":"var(--red)", height:`${pct}px`, transition:"height .6s", opacity:0.85 }}/>
-                    <div style={{ fontSize:8, color:"var(--text2)", textAlign:"center", whiteSpace:"nowrap" }}>{h.month.slice(5)}/{h.month.slice(2,4)}</div>
-                  </div>
-                );
-              })}
+            {/* Gráfico de barras verticais duplas — Despesas (vermelho) vs Renda (verde) */}
+            <div style={{ overflowX:"auto", paddingBottom:4 }}>
+              <div style={{ display:"flex", alignItems:"flex-end", gap:4, height:120, minWidth: history.length > 4 ? history.length * 50 : "100%", paddingBottom:20, position:"relative" }}>
+                {/* Linha de base */}
+                <div style={{ position:"absolute", bottom:20, left:0, right:0, height:1, background:"var(--border)" }}/>
+                {history.slice().reverse().map((h:any, i:number)=>{
+                  const maxVal = Math.max(...history.map((x:any)=>Math.max(x.totalExpenses,x.totalIncome)), 1);
+                  const expH = Math.max(Math.round(h.totalExpenses/maxVal*90), h.totalExpenses>0?4:0);
+                  const incH = Math.max(Math.round(h.totalIncome/maxVal*90), h.totalIncome>0?4:0);
+                  const monthName = new Date(h.month+"-02").toLocaleDateString("pt-BR",{month:"short"}).replace(".","");
+                  return (
+                    <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:0, minWidth:40 }}>
+                      <div style={{ display:"flex", alignItems:"flex-end", gap:2, height:100 }}>
+                        {/* Barra despesas */}
+                        <div title={`Despesas: ${fmt(h.totalExpenses)}`} style={{ width:12, height:expH, background:"var(--red)", borderRadius:"3px 3px 0 0", opacity:0.85, transition:"height .5s", cursor:"default" }}/>
+                        {/* Barra renda */}
+                        <div title={`Renda: ${fmt(h.totalIncome)}`} style={{ width:12, height:incH, background:"var(--green)", borderRadius:"3px 3px 0 0", opacity:0.85, transition:"height .5s", cursor:"default" }}/>
+                      </div>
+                      <div style={{ fontSize:9, color:"var(--text2)", marginTop:3, textAlign:"center", textTransform:"uppercase" }}>{monthName}/{h.month.slice(2,4)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Legenda */}
+              <div style={{ display:"flex", gap:14, justifyContent:"center", marginTop:4, marginBottom:8 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:4, fontSize:11, color:"var(--text2)" }}><div style={{ width:10,height:10,background:"var(--red)",borderRadius:2 }}/> Despesas</div>
+                <div style={{ display:"flex", alignItems:"center", gap:4, fontSize:11, color:"var(--text2)" }}><div style={{ width:10,height:10,background:"var(--green)",borderRadius:2 }}/> Renda</div>
+              </div>
             </div>
+            {/* Lista dos meses */}
             {history.map((h:any,i:number)=>(
-              <div key={i} style={{ padding:"10px 12px", background:"var(--bg3)", borderRadius:10, marginBottom:7, borderLeft:`3px solid ${h.balance>=0?"var(--green)":"var(--red)"}` }}>
+              <div key={i} style={{ padding:"10px 12px", background:"var(--bg3)", borderRadius:10, marginBottom:6, borderLeft:`3px solid ${h.balance>=0?"var(--green)":"var(--red)"}` }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                   <span style={{ fontWeight:700, fontSize:13 }}>
-                    {new Date(h.month+"-01").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}
+                    {new Date(h.month+"-02").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}
                   </span>
                   <span style={{ fontSize:12, fontWeight:800, color:h.balance>=0?"var(--green)":"var(--red)", fontVariantNumeric:"tabular-nums" }}>
-                    {h.balance>=0?"+":""}{fmt(h.balance)}
+                    {h.balance>=0?"+":"-"}{fmt(Math.abs(h.balance))}
                   </span>
                 </div>
-                <div style={{ display:"flex", gap:14, fontSize:11, color:"var(--text2)" }}>
+                <div style={{ display:"flex", gap:12, fontSize:11, color:"var(--text2)", flexWrap:"wrap" }}>
                   <span>💸 {fmt(h.totalExpenses)}</span>
                   <span>💵 {fmt(h.totalIncome)}</span>
-                  <span>📋 {h.items} itens</span>
                 </div>
               </div>
             ))}
@@ -1106,9 +1207,9 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
         <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>⚔️ Como ganhar XP</div>
         {[
           {label:"Renda extra registrada",desc:"1 real = 1 XP",color:"var(--green)",emoji:"💵"},
-          {label:"Despesa ou cartão",desc:"1 real = 0,05 XP",color:"var(--primary)",emoji:"💸"},
+          {label:"Despesa ou cartão",desc:"1 real = 0,10 XP",color:"var(--primary)",emoji:"💸"},
           {label:"Conta marcada como paga",desc:"+15 XP fixo",color:"var(--purple)",emoji:"✅"},
-          {label:"Streak diária",desc:"5 a 300 XP",color:"#f97316",emoji:"🔥"},
+          {label:"Streak diária",desc:"Dia 1=10 XP · Dia 7=70 XP · Dia 30=300 XP",color:"#f97316",emoji:"🔥"},
         ].map((r,i)=>(
           <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:i<3?"1px solid var(--border)":"none" }}>
             <span style={{ fontSize:17 }}>{r.emoji}</span>
@@ -1343,46 +1444,65 @@ function ResetModal({ onClose, onConfirm }: any) {
   );
 }
 
-function MethodologyModal({ onClose }: any) {
-  const [tab, setTab] = useState<"potes"|"saude">("potes");
-  const POTES = [
-    { cat:"Pagar-se",  pct:"5-10%",  color:"#6c63ff", emoji:"💆", desc:"Invista em você mesmo. Um presente, um passeio, um momento de prazer." },
-    { cat:"Doar",      pct:"5-10%",  color:"#ff6b9d", emoji:"💝", desc:"Generosidade quebra a mentalidade de escassez e cria energia de abundância." },
-    { cat:"Investir",  pct:"5-10%",  color:"#00d68f", emoji:"📈", desc:"Construa patrimônio. Quanto mais cedo começa, mais os juros compostos trabalham." },
-    { cat:"Contas",    pct:"60-70%", color:"#ffb703", emoji:"📋", desc:"Suas obrigações mensais. Aprenda a viver bem gastando menos." },
-    { cat:"Sonho",     pct:"5-10%",  color:"#8b5cf6", emoji:"✨", desc:"Seu objetivo motivador. Transforma controle financeiro em aventura." },
-    { cat:"Abundar",   pct:"5-10%",  color:"#f97316", emoji:"🌟", desc:"Os luxos da vida. Restaurante melhor, hobby, experiências." },
+function MethodologyModal({ onClose, xp }: any) {
+  const [tab, setTab] = useState<"potes"|"niveis"|"saude">("potes");
+  const levelInfo = getLevelInfo(xp || 0);
+
+  const POTES_INICIANTE = [
+    { cat:"Pagar-se",  pct:"5%",   color:"#6c63ff", emoji:"💆", desc:"Invista em você mesmo. Um presente, um passeio, um momento de prazer." },
+    { cat:"Doar",      pct:"5%",   color:"#ff6b9d", emoji:"💝", desc:"Generosidade quebra a mentalidade de escassez e cria energia de abundância." },
+    { cat:"Investir",  pct:"5%",   color:"#00d68f", emoji:"📈", desc:"Construa patrimônio. Mesmo que pequeno, o hábito é o que importa agora." },
+    { cat:"Contas",    pct:"70%",  color:"#ffb703", emoji:"📋", desc:"Suas obrigações mensais. Aprenda a viver bem gastando menos." },
+    { cat:"Sonho",     pct:"10%",  color:"#8b5cf6", emoji:"✨", desc:"Seu objetivo motivador. Transforma controle financeiro em aventura." },
+    { cat:"Abundar",   pct:"5%",   color:"#f97316", emoji:"🌟", desc:"Os luxos da vida. Restaurante melhor, hobby, experiências." },
   ];
+  const POTES_INVESTIDOR = [
+    { cat:"Pagar-se",  pct:"10%",  color:"#6c63ff", emoji:"💆", desc:"Você já controla os gastos — merece aumentar o que investe em si." },
+    { cat:"Doar",      pct:"5%",   color:"#ff6b9d", emoji:"💝", desc:"Generosidade gera abundância. Mantenha o hábito." },
+    { cat:"Investir",  pct:"15%",  color:"#00d68f", emoji:"📈", desc:"Prioridade máxima agora. Diversifique: Tesouro, FIIs, ações." },
+    { cat:"Contas",    pct:"55%",  color:"#ffb703", emoji:"📋", desc:"Com disciplina, você reduziu Contas para abrir espaço para investimentos." },
+    { cat:"Sonho",     pct:"10%",  color:"#8b5cf6", emoji:"✨", desc:"Sonho maior agora — você tem estrutura para realizá-los." },
+    { cat:"Abundar",   pct:"5%",   color:"#f97316", emoji:"🌟", desc:"Recompensa merecida. Aproveite sem culpa." },
+  ];
+  const potes = (levelInfo.tier === "investidor" || levelInfo.tier === "avancado") ? POTES_INVESTIDOR : POTES_INICIANTE;
+
   const SAUDE_BANDS = [
     { range:"83 a 100", label:"Ótima",       color:"#00d68f", bg:"rgba(0,214,143,0.12)",  desc:"Vida financeira sem estresse. Finanças proporcionam segurança e liberdade." },
     { range:"69 a 82",  label:"Muito Boa",   color:"#4ade80", bg:"rgba(74,222,128,0.1)",  desc:"Domínio do dia a dia, mas precisa dar o salto do patrimônio." },
     { range:"61 a 68",  label:"Boa",         color:"#a3e635", bg:"rgba(163,230,53,0.08)", desc:"Básico bem feito." },
     { range:"57 a 60",  label:"Ok",          color:"#facc15", bg:"rgba(250,204,21,0.08)", desc:"Equilíbrio financeiro no limite — com pouco espaço para erro." },
-    { range:"50 a 56",  label:"Baixa",       color:"#fb923c", bg:"rgba(251,146,60,0.08)", desc:"Primeiros sinais de desequilíbrio e risco de alto estresse financeiro." },
+    { range:"50 a 56",  label:"Baixa",       color:"#fb923c", bg:"rgba(251,146,60,0.08)", desc:"Primeiros sinais de desequilíbrio." },
     { range:"37 a 49",  label:"Muito Baixa", color:"#f97316", bg:"rgba(249,115,22,0.08)", desc:"Risco de atingir uma situação crítica." },
     { range:"0 a 36",   label:"Ruim",        color:"#ff4d6a", bg:"rgba(255,77,106,0.12)", desc:"Círculo de fragilidade, estresse e desorganização financeira." },
   ];
+
   return (
     <Modal title="📚 Metodologia do App" onClose={onClose}>
-      {/* Tabs */}
       <div style={{ display:"flex", gap:6, marginBottom:16 }}>
-        {([{id:"potes",label:"🏺 6 Potes"},{id:"saude",label:"💚 Saúde Financeira"}] as const).map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{ flex:1, padding:"9px", borderRadius:10, fontWeight:700, fontSize:12, background:tab===t.id?"var(--primary)":"var(--bg3)", color:tab===t.id?"white":"var(--text2)", border:`1.5px solid ${tab===t.id?"var(--primary)":"var(--border)"}` }}>{t.label}</button>
+        {([{id:"potes",label:"🏺 Potes"},{id:"niveis",label:"⚔️ Níveis"},{id:"saude",label:"💚 Saúde"}] as const).map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{ flex:1, padding:"8px 4px", borderRadius:10, fontWeight:700, fontSize:11, background:tab===t.id?"var(--primary)":"var(--bg3)", color:tab===t.id?"white":"var(--text2)", border:`1.5px solid ${tab===t.id?"var(--primary)":"var(--border)"}` }}>{t.label}</button>
         ))}
       </div>
 
       {tab==="potes" && (
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", fontSize:13, color:"var(--text2)", lineHeight:1.6 }}>
-            A metodologia dos 6 Potes propõe que riqueza é um estado mental baseado em inteligência emocional. A chave está em como você distribui o que ganha.
+          {/* Badge nível atual */}
+          <div style={{ background:`${levelInfo.color}18`, border:`1px solid ${levelInfo.color}44`, borderRadius:12, padding:"8px 12px", display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:18 }}>⚔️</span>
+            <div>
+              <div style={{ fontSize:11, fontWeight:800, color:levelInfo.color }}>Distribuição atual: {levelInfo.label}</div>
+              <div style={{ fontSize:11, color:"var(--text2)" }}>
+                {levelInfo.tier==="iniciante" ? "Foco em criar o hábito. Investimento conservador." : "Você tem disciplina — aumente o investimento!"}
+              </div>
+            </div>
           </div>
-          {POTES.map((p,i)=>(
+          {potes.map((p,i)=>(
             <div key={i} style={{ display:"flex", gap:12, padding:"10px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${p.color}` }}>
               <span style={{ fontSize:20, flexShrink:0 }}>{p.emoji}</span>
-              <div>
-                <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:3 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
                   <span style={{ fontWeight:700, fontSize:13 }}>{p.cat}</span>
-                  <span style={{ fontSize:11, color:p.color, fontWeight:700 }}>{p.pct}</span>
+                  <span style={{ fontSize:12, color:p.color, fontWeight:800, background:`${p.color}18`, padding:"2px 8px", borderRadius:6 }}>{p.pct}</span>
                 </div>
                 <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>{p.desc}</div>
               </div>
@@ -1391,18 +1511,54 @@ function MethodologyModal({ onClose }: any) {
         </div>
       )}
 
+      {tab==="niveis" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", fontSize:13, color:"var(--text2)", lineHeight:1.6 }}>
+            Seu nível reflete sua <strong style={{color:"var(--text)"}}>jornada financeira</strong>, não apenas o tempo de uso. Cada nível desbloqueia uma distribuição de potes mais focada em construção de patrimônio.
+          </div>
+          {[
+            { tier:"iniciante",  xpRange:"0 – 99 XP",   color:"#6c63ff", emoji:"🌱", label:"Iniciante",
+              desc:"Você está criando o hábito. O foco é controlar gastos e criar consistência. Investimento conservador (5%) — o hábito de poupar importa mais que o valor.", unlock:"Acesso completo ao app e sistema de streak." },
+            { tier:"investidor", xpRange:"100 – 499 XP", color:"#00d68f", emoji:"📈", label:"Investidor",
+              desc:"Você tem disciplina comprovada. A distribuição muda: Investir sobe para 15%, Contas cai para 55%. Hora de diversificar — Tesouro Selic, CDB, FIIs.", unlock:"Distribuição de potes otimizada para crescimento." },
+            { tier:"avancado",   xpRange:"500+ XP",      color:"#ffd700", emoji:"👑", label:"Avançado",
+              desc:"Consistência de longo prazo. Você já pensa como investidor. Considere aumentar renda variável, aportar em ações, estudar sobre independência financeira.", unlock:"Perfil de risco agressivo liberado no dashboard." },
+          ].map((n,i)=>{
+            const isCurrent = n.tier === levelInfo.tier;
+            const isPast = (n.tier==="iniciante") || (n.tier==="investidor" && levelInfo.tier!=="iniciante");
+            return (
+              <div key={i} style={{ background:isCurrent?`${n.color}12`:"var(--bg3)", border:`1.5px solid ${isCurrent?n.color:isPast?"rgba(0,214,143,0.2)":"var(--border)"}`, borderRadius:14, padding:"12px 14px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+                  <span style={{ fontSize:22 }}>{n.emoji}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ fontWeight:800, fontSize:14, color:n.color }}>{n.label}</span>
+                      {isCurrent && <span style={{ fontSize:10, background:n.color, color:"#000", padding:"2px 7px", borderRadius:6, fontWeight:800 }}>SEU NÍVEL</span>}
+                      {!isCurrent && isPast && <span style={{ fontSize:10, color:"var(--green)" }}>✅ Superado</span>}
+                    </div>
+                    <div style={{ fontSize:11, color:"var(--text2)" }}>{n.xpRange}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5, marginBottom:6 }}>{n.desc}</div>
+                <div style={{ fontSize:11, color:n.color, fontStyle:"italic" }}>🔓 {n.unlock}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {tab==="saude" && (
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", fontSize:13, color:"var(--text2)", lineHeight:1.6 }}>
-            A Saúde Financeira mede o equilíbrio entre sua receita total (salário + renda extra) e suas despesas (contas + cartão). Mesmo que suas despesas superem seu salário base, renda extra complementar é considerada — o que importa é a relação entre o que entra e o que sai.
+            A Saúde Financeira mede o equilíbrio entre sua receita total (salário + renda extra) e suas despesas (contas + cartão). Investimento não conta como despesa — é patrimônio sendo construído.
           </div>
           <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 12px", fontSize:12, color:"var(--text2)", lineHeight:1.6 }}>
-            <div style={{ fontWeight:700, color:"#a78bfa", marginBottom:4, fontSize:12 }}>📐 Como é calculada</div>
+            <div style={{ fontWeight:700, color:"#a78bfa", marginBottom:4 }}>📐 Como é calculada</div>
             <div>Receita = Salário Base + Renda Extra</div>
-            <div>Saldo = Receita − (Despesas + Cartão)</div>
-            <div style={{ marginTop:6, color:"var(--text)" }}>Quanto maior o saldo proporcional à receita, melhor o score. Contas pagas e streak diária também contribuem.</div>
+            <div>Despesas Reais = Contas + Cartão (sem Investir)</div>
+            <div>Saldo = Receita − (Despesas Reais + Investimento)</div>
+            <div style={{ marginTop:6, color:"var(--text)" }}>Contas pagas e streak diária também contribuem para o score.</div>
           </div>
-          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginTop:4, marginBottom:2, letterSpacing:1, textTransform:"uppercase" }}>Faixas de Pontuação</div>
           {SAUDE_BANDS.map((b,i)=>(
             <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"9px 12px", background:b.bg, borderRadius:10, border:`1px solid ${b.color}33` }}>
               <div style={{ minWidth:60, fontSize:11, fontWeight:700, color:b.color, flexShrink:0 }}>{b.range}</div>
