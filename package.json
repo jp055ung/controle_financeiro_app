@@ -5,7 +5,7 @@
   "main": "dist/server/index.js",
   "scripts": {
     "dev": "node server/index.ts",
-    "build": "tsc",
+    "build": "tsc && vite build"
     "start": "node dist/server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
