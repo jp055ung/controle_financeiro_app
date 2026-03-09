@@ -5,7 +5,7 @@
   "main": "dist/server/index.js",
   "scripts": {
     "dev": "node server/index.ts",
-    "build": "tsc && vite build"
+    "build": "tsc && vite build",
     "start": "node dist/server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -22,6 +22,8 @@
     "@types/express": "^4.17.21",
     "@types/node": "^20.0.0",
     "@types/bcrypt": "^5.0.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^4.2.0"
   }
 }
