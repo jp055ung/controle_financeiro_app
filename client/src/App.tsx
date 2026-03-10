@@ -210,9 +210,12 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
     fetch(`${API}/users/${user.id}/streak`)
       .then(r => r.json())
       .then(d => {
-        setStreakDays(d.streakDays || 0);
+        const days = d.streakDays || 0;
+        setStreakDays(days);
         setClaimed(!!d.claimedToday);
         setExpiresIn(d.expiresIn || "");
+        // Se já resgatou hoje, o XP ganho foi o dia atual * 10
+        if (d.claimedToday) setXpGained(days * 10);
       })
       .catch(() => setClaimed(false));
   }, []);
@@ -1511,7 +1514,9 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
   const [insights, setInsights] = useState<{type:string;label:string;text:string;sub?:string}[]|null>(null);
   const [loading, setLoading] = useState(false);
   const monthLabel = new Date().toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
-  const cacheKey = `ai_insights_${new Date().toISOString().slice(0,7)}`;
+  // Chave única por mês — ex: "mg_ia_2026-03"
+  const currentMonth = new Date().toISOString().slice(0,7);
+  const cacheKey = `mg_ia_${currentMonth}`;
 
   // Injeta keyframe shimmer uma vez
   useEffect(()=>{
@@ -1519,19 +1524,30 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
     if (!document.getElementById(id)) {
       const s = document.createElement("style");
       s.id = id;
-      s.textContent = `@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}} @keyframes mgpulse{0%,100%{opacity:.6}50%{opacity:1}}`;
+      s.textContent = `@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}`;
       document.head.appendChild(s);
     }
   },[]);
 
-  // Tenta carregar cache do sessionStorage
+  // Carrega do localStorage — persiste entre recarregamentos, expira no mês seguinte
   useEffect(()=>{
     try {
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached) setInsights(JSON.parse(cached));
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const { month, data } = JSON.parse(raw);
+        // Só usa se for do mês atual
+        if (month === currentMonth && Array.isArray(data)) setInsights(data);
+      }
     } catch {}
-  // eslint-disable-next-line
-  },[cacheKey]);
+  },[cacheKey, currentMonth]);
+
+  const saveCache = (data: any[]) => {
+    try { localStorage.setItem(cacheKey, JSON.stringify({ month: currentMonth, data })); } catch {}
+    // Limpa meses anteriores
+    try {
+      Object.keys(localStorage).filter(k=>k.startsWith("mg_ia_") && k!==cacheKey).forEach(k=>localStorage.removeItem(k));
+    } catch {}
+  };
 
   const generate = async () => {
     if (loading) return;
@@ -1541,55 +1557,52 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
       const pctCC = totalReceita > 0 ? Math.round(totalCC / totalReceita * 100) : 0;
       const pctInvest = totalReceita > 0 ? Math.round(totalInvestido / totalReceita * 100) : 0;
       const saldo = totalReceita - totalGasto;
-      const metaInvest = levelInfo.tier === "iniciante" ? 5 : levelInfo.tier === "investidor" ? 15 : 25;
+      const metaInvest = levelInfo?.tier === "iniciante" ? 5 : levelInfo?.tier === "investidor" ? 15 : 25;
 
-      // Parcelamentos ativos
       const parcelamentos = cc.filter((c:any)=>(c.installments||1)>1);
       const parcStr = parcelamentos.length > 0
         ? parcelamentos.map((c:any)=>`${c.description}: ${c.installmentCurrent||1}/${c.installments}x de ${fmt(num(c.amount))}`).join("; ")
         : "nenhum";
 
-      const prompt = `Você é um consultor financeiro direto e amigável do app MoneyGame. Analise estes dados do usuário e gere de 2 a 4 insights financeiros úteis em JSON.
+      const prompt = `Você é um consultor financeiro direto e amigável do app MoneyGame. Analise estes dados e gere de 2 a 4 insights financeiros úteis em JSON.
 
 DADOS DO MÊS (${monthLabel}):
 - Salário base: R$ ${salary}
-- Renda extra: R$ ${totalIncome}  
+- Renda extra: R$ ${totalIncome}
 - Receita total: R$ ${totalReceita}
-- Total gasto (todas categorias): R$ ${totalGasto}
-- Cartão de crédito: R$ ${totalCC} (${pctCC}% da receita)
-- Total investido: R$ ${totalInvestido} (${pctInvest}% da receita, meta do nível: ${metaInvest}%)
-- Saldo do mês: R$ ${saldo}
+- Total gasto: R$ ${totalGasto}
+- Cartão: R$ ${totalCC} (${pctCC}% da receita)
+- Investido: R$ ${totalInvestido} (${pctInvest}% — meta do nível: ${metaInvest}%)
+- Saldo: R$ ${saldo}
 - Saúde financeira: ${healthScore}/100
-- Nível: ${levelInfo.label} NV.${levelInfo.levelNum}
-- XP total: ${xp}
-- Parcelamentos ativos: ${parcStr}
+- Nível: ${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}
+- Parcelamentos: ${parcStr}
 
-Retorne SOMENTE um array JSON válido (sem markdown, sem texto extra) com 2-4 objetos assim:
-[{"type":"tip|alert|info|gold","label":"Título curto","text":"Mensagem direta em 1-2 frases com números reais","sub":"Dica extra opcional curta"}]
+Retorne SOMENTE um array JSON válido (sem markdown, sem texto extra):
+[{"type":"tip|alert|info|gold","label":"Título curto","text":"1-2 frases com números reais","sub":"dica curta opcional"}]
 
-Tipos: "alert"=vermelho/atenção, "tip"=verde/positivo, "info"=roxo/informativo, "gold"=dourado/projeção.
-Seja direto, use os números reais, mencione SELIC apenas se houver investimento ativo.`;
+tip=positivo/verde, alert=atenção/vermelho, info=informativo/roxo, gold=projeção/dourado.`;
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      // Chama o proxy do servidor (evita CORS)
+      const res = await fetch(`${API}/ai/insights`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 800,
-          messages: [{ role: "user", content: prompt }]
-        })
+        body: JSON.stringify({ prompt }),
       });
-      const data = await res.json();
-      const raw = data.content?.map((b:any)=>b.text||"").join("").trim();
-      // Remove possíveis backticks
-      const clean = raw.replace(/```json|```/g,"").trim();
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || "Erro no servidor");
+
+      const clean = (resData.text || "").replace(/```json|```/g,"").trim();
       const parsed = JSON.parse(clean);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         setInsights(parsed);
-        try { sessionStorage.setItem(cacheKey, JSON.stringify(parsed)); } catch {}
+        saveCache(parsed);
+      } else {
+        throw new Error("Resposta inválida");
       }
-    } catch (e) {
-      setInsights([{type:"info",label:"Sem dados suficientes",text:"Adicione despesas e renda este mês para gerar uma análise personalizada.",sub:""}]);
+    } catch (e: any) {
+      const fallback = [{type:"alert",label:"Erro ao gerar análise",text:`Verifique se o servidor está com a variável ANTHROPIC_API_KEY configurada. Detalhe: ${e.message}`,sub:""}];
+      setInsights(fallback);
     }
     setLoading(false);
   };
@@ -1603,31 +1616,29 @@ Seja direto, use os números reais, mencione SELIC apenas se houver investimento
 
   return (
     <div style={{ marginBottom:14 }}>
-      {/* Botão / Card de entrada */}
       {!insights && (
         <button onClick={generate} disabled={loading}
-          style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,214,143,0.06))", border:"1px solid rgba(108,99,255,0.25)", borderRadius:16, padding:"18px 16px", cursor:loading?"default":"pointer", textAlign:"center", transition:"opacity .2s", opacity:loading?0.7:1 }}>
+          style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,214,143,0.06))", border:"1px solid rgba(108,99,255,0.25)", borderRadius:16, padding:"18px 16px", cursor:loading?"default":"pointer", textAlign:"center", opacity:loading?0.8:1 }}>
           <div style={{ fontSize:28, marginBottom:6 }}>{loading ? "⏳" : "🤖"}</div>
           <div style={{ fontSize:15, fontWeight:900, color:"var(--text)", marginBottom:4 }}>
             {loading ? "Analisando seus dados..." : `Análise IA — ${monthLabel}`}
           </div>
           <div style={{ fontSize:12, color:"var(--text2)" }}>
-            {loading ? "Aguarde alguns segundos" : "Gerada com base nos seus dados reais · clique para gerar"}
+            {loading ? "Isso pode levar alguns segundos" : "Gerada com base nos seus dados reais · clique para gerar"}
           </div>
           {loading && (
             <div style={{ marginTop:10, height:3, background:"var(--bg3)", borderRadius:2, overflow:"hidden", position:"relative" }}>
-              <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, background:"linear-gradient(90deg,transparent,#6c63ff,#00d68f,transparent)", animation:"shimmer 1.5s infinite", transform:"translateX(-100%)" }}/>
+              <div style={{ position:"absolute", top:0, left:0, width:"50%", height:"100%", background:"linear-gradient(90deg,transparent,#6c63ff,#00d68f,transparent)", animation:"shimmer 1.5s infinite" }}/>
             </div>
           )}
         </button>
       )}
 
-      {/* Insights gerados */}
       {insights && (
         <div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
             <div style={{ fontSize:13, fontWeight:700 }}>🤖 Análise IA — {monthLabel}</div>
-            <button onClick={()=>{ setInsights(null); try{sessionStorage.removeItem(cacheKey);}catch{} }}
+            <button onClick={()=>{ setInsights(null); try{localStorage.removeItem(cacheKey);}catch{} }}
               style={{ fontSize:11, color:"var(--text2)", background:"none", border:"1px solid var(--border)", borderRadius:7, padding:"3px 9px", cursor:"pointer" }}>
               🔄 Regerar
             </button>
@@ -1644,7 +1655,9 @@ Seja direto, use os números reais, mencione SELIC apenas se houver investimento
               </div>
             );
           })}
-          <div style={{ fontSize:10, color:"var(--text2)", textAlign:"center", marginTop:4 }}>Análise fixada até a virada do mês</div>
+          <div style={{ fontSize:10, color:"var(--text2)", textAlign:"center", marginTop:4 }}>
+            Análise fixada até a virada do mês · {currentMonth}
+          </div>
         </div>
       )}
     </div>
@@ -1684,20 +1697,6 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
   return (
     <div>
       <h2 style={{ fontSize:17, fontWeight:800, marginBottom:14 }}>📈 Relatórios</h2>
-
-      {/* Botão Análise IA */}
-      <AiInsightButton
-        salary={salary}
-        totalGasto={totalGasto}
-        totalIncome={totalIncome}
-        totalCC={totalCC}
-        totalInvestido={totalInvestido||0}
-        byCategory={byCategory}
-        cc={cc}
-        healthScore={healthScore}
-        levelInfo={levelInfo}
-        xp={xp||0}
-      />
 
       {/* Cards resumo — registros + valor produzido */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
@@ -1791,24 +1790,19 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
         )}
       </div>
 
-      {/* Como ganhar XP */}
-      <div className="card" style={{ marginBottom:14 }}>
-        <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>⚔️ Como ganhar XP</div>
-        {[
-          {label:"Renda extra registrada",desc:"1 real = 1 XP",color:"var(--green)",emoji:"💵"},
-          {label:"Despesa ou cartão",desc:"1 real = 0,10 XP",color:"var(--primary)",emoji:"💸"},
-          {label:"Conta marcada como paga",desc:"+15 XP fixo",color:"var(--purple)",emoji:"✅"},
-          {label:"Streak diária",desc:"Dia 1=10 XP · Dia 7=70 XP · Dia 30=300 XP",color:"#f97316",emoji:"🔥"},
-        ].map((r,i)=>(
-          <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:i<3?"1px solid var(--border)":"none" }}>
-            <span style={{ fontSize:17 }}>{r.emoji}</span>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:600 }}>{r.label}</div>
-              <div style={{ fontSize:11, color:r.color, fontWeight:600 }}>{r.desc}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Análise IA — substitui o card de XP */}
+      <AiInsightButton
+        salary={salary}
+        totalGasto={totalGasto}
+        totalIncome={totalIncome}
+        totalCC={totalCC}
+        totalInvestido={totalInvestido||0}
+        byCategory={byCategory}
+        cc={cc}
+        healthScore={healthScore}
+        levelInfo={levelInfo}
+        xp={xp||0}
+      />
     </div>
   );
 }
