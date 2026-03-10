@@ -885,16 +885,20 @@ export default function App() {
 
   // CÁLCULOS
   const totalInvestido = expenses.filter(e=>Number(e.categoryId)===INVESTIR_ID).reduce((s,e)=>s+num(e.amount),0);
-  // "Despesas reais" = tudo exceto Sonho e Investir (que são categorias de construção de patrimônio)
-  const totalExpSemSonho = expenses.filter(e=>e.categoryId!==SONHO_ID).reduce((s,e)=>s+num(e.amount),0);
-  const totalExpReais = expenses.filter(e=>e.categoryId!==SONHO_ID && Number(e.categoryId)!==INVESTIR_ID).reduce((s,e)=>s+num(e.amount),0);
+  // Todas as despesas entram no total — Sonho e Investir são conquistas mas contam como saída
+  const totalExpAll = expenses.reduce((s,e)=>s+num(e.amount),0);
+  // Alias para compatibilidade com dashboard/reports
+  const totalExpSemSonho = totalExpAll;
+  const totalExpReais = totalExpAll; // tudo conta no saldo/pendente
   const totalCC = cc.reduce((s,c)=>s+num(c.amount),0);
+  // CC não pago = pendente real (não basta ter renda, precisa marcar pago)
+  const totalCCPago = cc.filter((c:any)=>c.paid).reduce((s:number,c:any)=>s+num(c.amount),0);
   const totalIncome = incomes.reduce((s,i)=>s+num(i.amount),0);
-  const totalPaid = expenses.filter(e=>e.paid&&e.categoryId!==SONHO_ID).reduce((s,e)=>s+num(e.amount),0)+totalCC;
-  const totalPending = totalExpReais+totalCC-totalPaid;
-  // Saldo Livre = Receita - Despesas Reais - Cartão (investimento FORA — é patrimônio, não gasto)
-  const balance = salary + totalIncome - totalExpReais - totalCC;
-  const extraNeeded = Math.max(0, totalExpReais+totalCC-salary);
+  const totalPaid = expenses.filter(e=>e.paid).reduce((s,e)=>s+num(e.amount),0) + totalCCPago;
+  const totalPending = totalExpAll + totalCC - totalPaid;
+  // Saldo = Receita - Todas despesas - Cartão
+  const balance = salary + totalIncome - totalExpAll - totalCC;
+  const extraNeeded = Math.max(0, totalExpAll+totalCC-salary);
   // Tier de nível baseado no XP total
   const levelInfo = getLevelInfo(xp);
   // FIX #1: Sonho — busca por categoryId === SONHO_ID
@@ -904,8 +908,8 @@ export default function App() {
   const sonhoRecorrente = sonhoExp.find(e=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
   const sonhoProgresso = sonhoRecorrente ? Math.min(sonhoTotal/num(sonhoRecorrente.recurringGoal)*100,100) : 0;
   const byCategory = CATS.map(cat=>({...cat,items:expenses.filter(e=>Number(e.categoryId)===cat.id),total:expenses.filter(e=>Number(e.categoryId)===cat.id).reduce((s,e)=>s+num(e.amount),0)}));
-  // Score de saúde financeira
-  const healthScore = calcHealthScore(salary, totalExpSemSonho, totalIncome, totalPaid, totalExpSemSonho+totalCC, streakDays);
+  // Score de saúde financeira — usa total real (todas as categorias)
+  const healthScore = calcHealthScore(salary, totalExpAll, totalIncome, totalPaid, totalExpAll+totalCC, streakDays);
 
   const NAV = [{id:"dashboard",icon:"📊",label:"Dashboard"},{id:"expenses",icon:"💸",label:"Despesas"},{id:"credit",icon:"💳",label:"Cartão"},{id:"income",icon:"💵",label:"Renda Extra"},{id:"reports",icon:"📈",label:"Relatórios"}];
 
@@ -1008,13 +1012,18 @@ export default function App() {
           <div style={{ flex:1, overflowY:"auto", padding:"20px 22px" }}>
             <XPLevel xp={xp}/>
             {tab==="dashboard"&&<DashboardContent {...dashProps}/>}
-            {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)} onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }} onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}/>}
+            {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
+              onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
+              onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
+              onEdit={async(id:number,name:string,amount:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount)})}); load(); }}
+            />}
             {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
               onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
               onPay={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!c.paid})}); if(!c.paid)gainXpRaw(XP_PAY_BILL); load(); }}
               onEdit={async(id:number,desc:string,amount:string,dueDay:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null})}); load(); }}
+              onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
             />}
-            {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }}/>}
+            {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
             {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore}/>}
           </div>
         </div>
@@ -1042,13 +1051,18 @@ export default function App() {
       <main style={{ padding:"14px 14px 0" }}>
         <XPLevel xp={xp}/>
         {tab==="dashboard"&&<DashboardContent {...dashProps}/>}
-        {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)} onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }} onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}/>}
+        {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
+          onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
+          onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
+          onEdit={async(id:number,name:string,amount:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount)})}); load(); }}
+        />}
         {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
           onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
           onPay={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!c.paid})}); if(!c.paid)gainXpRaw(XP_PAY_BILL); load(); }}
           onEdit={async(id:number,desc:string,amount:string,dueDay:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null})}); load(); }}
+          onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
         />}
-        {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }}/>}
+        {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
         {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore}/>}
       </main>
       <nav style={{ position:"fixed", bottom:0, left:0, right:0, background:"var(--bg2)", borderTop:"1px solid var(--border)", display:"flex", zIndex:50 }}>
@@ -1064,7 +1078,11 @@ export default function App() {
 }
 
 // ── ABA DESPESAS ──────────────────────────────────────────────────────────────
-function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete }: any) {
+function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: any) {
+  const [editId, setEditId] = useState<number|null>(null);
+  const [editName, setEditName] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
@@ -1083,19 +1101,40 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete }: any) {
           </div>
           {cat.items.map((exp:Expense)=>{
             const isDueSoon = exp.dueDate&&!exp.paid&&(()=>{ const diff=Math.ceil((new Date(exp.dueDate!).getTime()-new Date().getTime())/86400000); return diff>=0&&diff<=3; })();
+            const isSonhoOrInvest = Number(exp.categoryId)===SONHO_ID || Number(exp.categoryId)===INVESTIR_ID;
             return (
-              <div key={exp.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", background:"var(--bg3)", borderRadius:10, marginBottom:5, border:`1px solid ${isDueSoon?"rgba(255,183,3,.4)":"var(--border)"}` }}>
-                <input type="checkbox" checked={!!exp.paid} onChange={()=>onPay(exp)} style={{ width:18, height:18, accentColor:"var(--primary)", flexShrink:0 }}/>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:13, fontWeight:600, textDecoration:exp.paid?"line-through":"none", color:exp.paid?"var(--text2)":"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{exp.name}</div>
-                  <div style={{ fontSize:10, color:isDueSoon?"var(--yellow)":"var(--text2)" }}>
-                    {exp.subcategory&&`${exp.subcategory} · `}
-                    {exp.dueDate&&`Vence: ${new Date(exp.dueDate).toLocaleDateString("pt-BR")}`}
-                    {isDueSoon&&" ⚠️"}{exp.recurring?" 🔄":""}
+              <div key={exp.id} style={{ padding:"8px 10px", background:"var(--bg3)", borderRadius:10, marginBottom:5, border:`1px solid ${isDueSoon?"rgba(255,183,3,.4)":"var(--border)"}` }}>
+                {editId===exp.id ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                    <input value={editName} onChange={e=>setEditName(e.target.value)} placeholder="Nome"
+                      style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                    <input value={editAmount} onChange={e=>setEditAmount(e.target.value)} placeholder="Valor (R$)" type="number" step="0.01"
+                      style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                    <div style={{ display:"flex", gap:7 }}>
+                      <button onClick={()=>{ onEdit(exp.id,editName,editAmount); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
+                      <button onClick={()=>setEditId(null)} style={{ flex:1, padding:"7px", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer", fontSize:12 }}>Cancelar</button>
+                    </div>
                   </div>
-                </div>
-                <span style={{ fontWeight:800, fontSize:12, fontVariantNumeric:"tabular-nums", color:exp.paid?"var(--green)":"var(--yellow)", flexShrink:0 }}>{fmt(num(exp.amount))}</span>
-                <button className="btn-danger" onClick={()=>onDelete(exp.id)} style={{ padding:"5px 9px", flexShrink:0 }}>🗑</button>
+                ) : (
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <input type="checkbox" checked={!!exp.paid} onChange={()=>onPay(exp)} style={{ width:18, height:18, accentColor:"var(--primary)", flexShrink:0 }}/>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, textDecoration:exp.paid?"line-through":"none", color:exp.paid?"var(--text2)":isSonhoOrInvest?"var(--text)":"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {exp.name}
+                        {isSonhoOrInvest && <span style={{ fontSize:10, color: Number(exp.categoryId)===INVESTIR_ID?"var(--green)":"#06b6d4", fontWeight:700, marginLeft:5 }}>{Number(exp.categoryId)===INVESTIR_ID?"📈 Patrimônio":"✨ Sonho"}</span>}
+                      </div>
+                      <div style={{ fontSize:10, color:isDueSoon?"var(--yellow)":"var(--text2)" }}>
+                        {exp.subcategory&&`${exp.subcategory} · `}
+                        {exp.dueDate&&`Vence: ${new Date(exp.dueDate).toLocaleDateString("pt-BR")}`}
+                        {isDueSoon&&" ⚠️"}{exp.recurring?" 🔄":""}
+                      </div>
+                    </div>
+                    <span style={{ fontWeight:800, fontSize:12, fontVariantNumeric:"tabular-nums", color:exp.paid?"var(--green)":"var(--yellow)", flexShrink:0 }}>{fmt(num(exp.amount))}</span>
+                    <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); }}
+                      style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"4px 8px", fontSize:12, cursor:"pointer", flexShrink:0 }}>✏️</button>
+                    <button className="btn-danger" onClick={()=>onDelete(exp.id)} style={{ padding:"4px 8px", flexShrink:0 }}>🗑</button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1106,7 +1145,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete }: any) {
 }
 
 // ── ABA CARTÃO ────────────────────────────────────────────────────────────────
-function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit }: any) {
+function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll }: any) {
   const [editId, setEditId] = useState<number|null>(null);
   const [editVal, setEditVal] = useState("");
   const [editDesc, setEditDesc] = useState("");
@@ -1131,7 +1170,14 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit }: any) {
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
         <h2 style={{ fontSize:17, fontWeight:800 }}>💳 Cartão</h2>
-        <button className="btn-primary" onClick={onAdd} style={{ padding:"9px 16px", fontSize:13 }}>+ Adicionar</button>
+        <div style={{ display:"flex", gap:7 }}>
+          {cc.some((c:any)=>!c.paid) && (
+            <button onClick={onPayAll} style={{ padding:"9px 13px", fontSize:12, background:"rgba(0,214,143,0.12)", border:"1px solid rgba(0,214,143,0.3)", color:"var(--green)", borderRadius:10, fontWeight:700, cursor:"pointer" }}>
+              ✅ Pagar Fatura
+            </button>
+          )}
+          <button className="btn-primary" onClick={onAdd} style={{ padding:"9px 16px", fontSize:13 }}>+ Adicionar</button>
+        </div>
       </div>
 
       {/* Resumo fatura */}
@@ -1253,7 +1299,11 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit }: any) {
 }
 
 // ── ABA RENDA EXTRA ───────────────────────────────────────────────────────────
-function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete }: any) {
+function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete,onEdit }: any) {
+  const [editId, setEditId] = useState<number|null>(null);
+  const [editDesc, setEditDesc] = useState("");
+  const [editAmt, setEditAmt] = useState("");
+
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
@@ -1275,13 +1325,30 @@ function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete }: any) 
       </div>
       {incomes.length===0&&<div className="card" style={{ textAlign:"center", color:"var(--text2)", padding:38 }}>Nenhuma renda extra registrada</div>}
       {incomes.map((inc:Income)=>(
-        <div key={inc.id} className="card" style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", marginBottom:7 }}>
-          <div style={{ flex:1 }}>
-            <div style={{ fontWeight:600, fontSize:14 }}>{inc.description}</div>
-            <div style={{ fontSize:11, color:"var(--text2)" }}>{new Date(inc.date).toLocaleDateString("pt-BR")}</div>
-          </div>
-          <span style={{ fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--green)" }}>+{fmt(num(inc.amount))}</span>
-          <button className="btn-danger" onClick={()=>onDelete(inc.id)}>🗑</button>
+        <div key={inc.id} className="card" style={{ padding:"11px 14px", marginBottom:7 }}>
+          {editId===inc.id ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+              <input value={editDesc} onChange={e=>setEditDesc(e.target.value)} placeholder="Descrição"
+                style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+              <input value={editAmt} onChange={e=>setEditAmt(e.target.value)} placeholder="Valor (R$)" type="number" step="0.01"
+                style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+              <div style={{ display:"flex", gap:7 }}>
+                <button onClick={()=>{ onEdit(inc.id,editDesc,editAmt); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
+                <button onClick={()=>setEditId(null)} style={{ flex:1, padding:"7px", background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer", fontSize:12 }}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:600, fontSize:14 }}>{inc.description}</div>
+                <div style={{ fontSize:11, color:"var(--text2)" }}>{new Date(inc.date).toLocaleDateString("pt-BR")}</div>
+              </div>
+              <span style={{ fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--green)" }}>+{fmt(num(inc.amount))}</span>
+              <button onClick={()=>{ setEditId(inc.id); setEditDesc(inc.description); setEditAmt(String(num(inc.amount))); }}
+                style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"5px 9px", fontSize:12, cursor:"pointer" }}>✏️</button>
+              <button className="btn-danger" onClick={()=>onDelete(inc.id)}>🗑</button>
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -1412,10 +1479,15 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
   const monthLabel = new Date().toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
   const levelInfo = getLevelInfo(xp||0);
 
+  // Totais do mês
+  const totalRegistros = expenses.length + cc.length;
+  const totalProduzido = salary + totalIncome; // salário + renda extra
+  const totalGasto = totalExpSemSonho + totalCC;
+
   // Dados para pizza — categorias com gastos
   const pieData = byCategory.map((cat:any)=>({ label:cat.name, value:cat.total, color:cat.color, emoji:cat.emoji }));
 
-  // Dados para o gráfico horizontal de histórico
+  // Dados para o gráfico horizontal — histórico inclui salário no income
   const histChartData = history.slice().reverse().map((h:any)=>({
     label: new Date(h.month+"-02").toLocaleDateString("pt-BR",{month:"short",year:"2-digit"}).replace(". de "," "),
     expenses: h.totalExpenses || 0,
@@ -1427,19 +1499,26 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
     <div>
       <h2 style={{ fontSize:17, fontWeight:800, marginBottom:14 }}>📈 Relatórios</h2>
 
-      {/* Cards resumo */}
+      {/* Cards resumo — registros + valor produzido */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
-        {[
-          { label:"Despesas",    value:fmt(totalExpSemSonho+totalCC), color:"var(--red)"     },
-          { label:"Renda Extra", value:fmt(totalIncome),              color:"var(--green)"   },
-          { label:"XP Total",    value:`${(xp||0).toLocaleString("pt-BR")} XP`, color:"var(--yellow)"  },
-          { label:"Nível",       value:`${levelInfo.label} ${levelInfo.levelNum}`, color:levelInfo.color },
-        ].map((k,i)=>(
-          <div key={i} className="card" style={{ borderTop:`3px solid ${k.color}` }}>
-            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>{k.label}</div>
-            <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:k.color }}>{k.value}</div>
-          </div>
-        ))}
+        <div className="card" style={{ borderTop:"3px solid var(--red)" }}>
+          <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Gastos</div>
+          <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--red)" }}>{fmt(totalGasto)}</div>
+        </div>
+        <div className="card" style={{ borderTop:"3px solid var(--green)" }}>
+          <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Produzido</div>
+          <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--green)" }}>{fmt(totalProduzido)}</div>
+          <div style={{ fontSize:9, color:"var(--text2)", marginTop:2 }}>salário + extras</div>
+        </div>
+        <div className="card" style={{ borderTop:"3px solid var(--primary)" }}>
+          <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Registros</div>
+          <div style={{ fontSize:15, fontWeight:800, color:"var(--primary)" }}>{totalRegistros}</div>
+          <div style={{ fontSize:9, color:"var(--text2)", marginTop:2 }}>{expenses.length} despesas · {cc.length} cartão</div>
+        </div>
+        <div className="card" style={{ borderTop:`3px solid ${(totalProduzido-totalGasto)>=0?"var(--green)":"var(--red)"}` }}>
+          <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Saldo</div>
+          <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:(totalProduzido-totalGasto)>=0?"var(--green)":"var(--red)" }}>{fmt(totalProduzido-totalGasto)}</div>
+        </div>
       </div>
 
       {/* Saúde financeira */}
@@ -1471,7 +1550,7 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
         <PieChart data={pieData}/>
       </div>
 
-      {/* Histórico de meses — gráfico horizontal */}
+      {/* Histórico de meses */}
       <div className="card" style={{ marginBottom:14 }}>
         <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📅 Histórico de Meses</div>
         {loadingH ? (
@@ -1481,22 +1560,31 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
             <HBarChart data={histChartData}/>
             {history.length > 0 && (
               <div style={{ marginTop:14, display:"flex", flexDirection:"column", gap:6 }}>
-                {history.map((h:any,i:number)=>(
-                  <div key={i} style={{ padding:"9px 12px", background:"var(--bg3)", borderRadius:10, borderLeft:`3px solid ${(h.totalIncome||0)>=(h.totalExpenses||0)?"var(--green)":"var(--red)"}` }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span style={{ fontWeight:700, fontSize:13, textTransform:"capitalize" }}>
-                        {new Date(h.month+"-02").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}
-                      </span>
-                      <span style={{ fontSize:12, fontWeight:800, color:(h.totalIncome||0)>=(h.totalExpenses||0)?"var(--green)":"var(--red)", fontVariantNumeric:"tabular-nums" }}>
-                        {(h.totalIncome||0)>=(h.totalExpenses||0)?"+":""}{fmt((h.totalIncome||0)-(h.totalExpenses||0))}
-                      </span>
+                {history.map((h:any,i:number)=>{
+                  const saldo = (h.totalIncome||0) - (h.totalExpenses||0);
+                  return (
+                    <div key={i} style={{ padding:"9px 12px", background:"var(--bg3)", borderRadius:10, borderLeft:`3px solid ${saldo>=0?"var(--green)":"var(--red)"}` }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <span style={{ fontWeight:700, fontSize:13, textTransform:"capitalize" }}>
+                          {new Date(h.month+"-02").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}
+                        </span>
+                        <span style={{ fontSize:12, fontWeight:800, color:saldo>=0?"var(--green)":"var(--red)", fontVariantNumeric:"tabular-nums" }}>
+                          {saldo>=0?"+":""}{fmt(saldo)}
+                        </span>
+                      </div>
+                      <div style={{ display:"flex", gap:14, fontSize:11, color:"var(--text2)", marginTop:3 }}>
+                        <span>💸 {fmt(h.totalExpenses||0)}</span>
+                        <span>💵 {fmt(h.totalIncome||0)}</span>
+                      </div>
                     </div>
-                    <div style={{ display:"flex", gap:14, fontSize:11, color:"var(--text2)", marginTop:3 }}>
-                      <span>💸 {fmt(h.totalExpenses||0)}</span>
-                      <span>💵 {fmt(h.totalIncome||0)}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+            )}
+            {history.length===0 && (
+              <div style={{ textAlign:"center", color:"var(--text2)", padding:20, fontSize:13, lineHeight:1.6 }}>
+                Nenhum mês arquivado ainda.<br/>
+                <span style={{ fontSize:11 }}>Use "Virar Mês" em ⚙️ ao fechar cada mês.</span>
               </div>
             )}
           </>
@@ -1630,11 +1718,17 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
 }
 
 function AddCCModal({ userId, onClose, onXp }: any) {
+  // Modo: "total" (valor total ÷ parcelas) ou "parcela" (valor da parcela × vezes)
+  const [mode, setMode] = useState<"total"|"parcela">("parcela");
   const [form, setForm] = useState({ subcategory:"Outros", description:"", amount:"", installments:"1", dueDay:"" });
   const [loading, setLoading] = useState(false);
-  const totalAmt = parseFloat(form.amount) || 0;
+
   const inst = Math.max(1, parseInt(form.installments) || 1);
-  const parcelAmt = inst > 1 ? Math.round(totalAmt / inst * 100) / 100 : totalAmt;
+  const rawAmt = parseFloat(form.amount) || 0;
+  // Em modo "parcela": amount = valor da parcela, totalAmount = parcela × inst
+  // Em modo "total":   amount = valor total,   parcelAmt = total ÷ inst
+  const parcelAmt = mode === "parcela" ? rawAmt : (inst > 1 ? Math.round(rawAmt / inst * 100) / 100 : rawAmt);
+  const totalAmt  = mode === "parcela" ? rawAmt * inst : rawAmt;
 
   const submit = async () => {
     if (!form.description || !form.amount) return;
@@ -1642,7 +1736,13 @@ function AddCCModal({ userId, onClose, onXp }: any) {
     try {
       const res = await fetch(`${API}/users/${userId}/credit-card`, {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ ...form, amount:totalAmt, installments:inst, dueDay: form.dueDay ? parseInt(form.dueDay) : null })
+        body: JSON.stringify({
+          description: form.description,
+          subcategory: form.subcategory,
+          amount: totalAmt,      // servidor recebe total e divide por inst
+          installments: inst,
+          dueDay: form.dueDay ? parseInt(form.dueDay) : null,
+        })
       });
       if (res.ok) { onXp(calcXpExpense(parcelAmt)); onClose(); }
     } catch {}
@@ -1656,43 +1756,59 @@ function AddCCModal({ userId, onClose, onXp }: any) {
           {CC_CATS.map(c=><option key={c}>{c}</option>)}
         </select>
         <input placeholder="Descrição *" value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}/>
-        <input type="number" placeholder="Valor total (R$) *" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} step="0.01"/>
 
-        {/* Parcelamento */}
+        {/* Toggle de modo */}
+        <div style={{ display:"flex", gap:6 }}>
+          {(["parcela","total"] as const).map(m=>(
+            <button key={m} onClick={()=>setMode(m)}
+              style={{ flex:1, padding:"8px", borderRadius:9, border:`1.5px solid ${mode===m?"var(--primary)":"var(--border)"}`,
+                background:mode===m?"var(--primary)":"var(--bg3)", color:mode===m?"white":"var(--text2)", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+              {m==="parcela" ? "💳 Valor da parcela" : "🏷️ Valor total"}
+            </button>
+          ))}
+        </div>
+
+        <input type="number" step="0.01"
+          placeholder={mode==="parcela" ? "Valor de cada parcela (R$) *" : "Valor total da compra (R$) *"}
+          value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/>
+
+        {/* Parcelamento — número livre + botões rápidos */}
         <div>
-          <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5 }}>PARCELAS</label>
-          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+          <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5 }}>NÚMERO DE PARCELAS</label>
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:7 }}>
             {[1,2,3,4,6,10,12].map(n=>(
               <button key={n} onClick={()=>setForm(f=>({...f,installments:String(n)}))}
-                style={{ padding:"6px 12px", borderRadius:8, border:`1.5px solid ${inst===n?"var(--primary)":"var(--border)"}`,
+                style={{ padding:"5px 10px", borderRadius:8, border:`1.5px solid ${inst===n?"var(--primary)":"var(--border)"}`,
                   background:inst===n?"var(--primary)":"var(--bg3)", color:inst===n?"white":"var(--text2)",
-                  fontSize:13, fontWeight:700, cursor:"pointer" }}>
+                  fontSize:12, fontWeight:700, cursor:"pointer" }}>
                 {n===1?"À vista":`${n}x`}
               </button>
             ))}
           </div>
+          <input type="number" min="1" max="60" placeholder="Ou digite (ex: 18)"
+            value={form.installments} onChange={e=>setForm(f=>({...f,installments:e.target.value}))}
+            style={{ fontSize:13 }}/>
         </div>
 
-        {/* Preview parcela */}
-        {totalAmt > 0 && (
+        {/* Preview */}
+        {rawAmt > 0 && (
           <div style={{ background:"rgba(108,99,255,0.08)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:10, padding:"10px 14px" }}>
             {inst > 1 ? (
               <>
-                <div style={{ fontSize:12, color:"var(--text2)", marginBottom:4 }}>Parcelamento:</div>
                 <div style={{ fontSize:18, fontWeight:900, color:"var(--primary)" }}>{inst}x de {fmt(parcelAmt)}</div>
                 <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>Total: {fmt(totalAmt)}</div>
               </>
             ) : (
-              <div style={{ fontSize:16, fontWeight:800, color:"var(--primary)" }}>À vista: {fmt(totalAmt)}</div>
+              <div style={{ fontSize:16, fontWeight:800, color:"var(--primary)" }}>À vista: {fmt(rawAmt)}</div>
             )}
             <div style={{ fontSize:11, color:"#00d68f", marginTop:4 }}>⚔️ +{calcXpExpense(parcelAmt)} XP por parcela registrada</div>
           </div>
         )}
 
-        {/* Vencimento da fatura */}
+        {/* Vencimento */}
         <div>
-          <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5 }}>DIA DE VENCIMENTO DA FATURA (opcional)</label>
-          <input type="number" placeholder="Ex: 10 (dia 10 do mês)" min="1" max="31"
+          <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5 }}>DIA DE VENCIMENTO (opcional)</label>
+          <input type="number" placeholder="Ex: 10" min="1" max="31"
             value={form.dueDay} onChange={e=>setForm(f=>({...f,dueDay:e.target.value}))}/>
         </div>
 
