@@ -345,6 +345,29 @@ app.delete("/api/credit-card/:id", async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Pagar fatura inteira — marca todos como pago
+app.post("/api/users/:userId/credit-card/pay-all", async (req, res) => {
+  try {
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    await p.execute("UPDATE creditCardExpenses SET paid=1 WHERE userId=?", [req.params.userId]);
+    res.json({ success:true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ── EDITAR DESPESA ────────────────────────────────────────────────────────────
+app.patch("/api/expenses/:id/edit", async (req, res) => {
+  try {
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const { name, amount } = req.body;
+    if (name !== undefined) await p.execute("UPDATE expenses SET name=? WHERE id=?", [name, req.params.id]);
+    if (amount !== undefined) {
+      const amt = parseFloat(amount);
+      if (!isNaN(amt) && amt > 0) await p.execute("UPDATE expenses SET amount=? WHERE id=?", [amt, req.params.id]);
+    }
+    res.json({ success:true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ── RENDA EXTRA ───────────────────────────────────────────────────────────────
 app.get("/api/users/:userId/extra-income", async (req, res) => {
   try {
@@ -374,6 +397,20 @@ app.delete("/api/extra-income/:id", async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Editar renda extra
+app.patch("/api/extra-income/:id/edit", async (req, res) => {
+  try {
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const { description, amount } = req.body;
+    if (description !== undefined) await p.execute("UPDATE extraIncomes SET description=? WHERE id=?", [description, req.params.id]);
+    if (amount !== undefined) {
+      const amt = parseFloat(amount);
+      if (!isNaN(amt) && amt > 0) await p.execute("UPDATE extraIncomes SET amount=? WHERE id=?", [amt, req.params.id]);
+    }
+    res.json({ success:true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ── VIRAR O MÊS ──────────────────────────────────────────────────────────────
 app.post("/api/users/:userId/reset-month", async (req, res) => {
   try {
@@ -389,6 +426,10 @@ app.post("/api/users/:userId/reset-month", async (req, res) => {
     const totalExp = (expRows||[]).reduce((s: number, e: any) => s + parseFloat(e.amount||0), 0);
     const totalCC  = (ccRows||[]).reduce((s: number, c: any) => s + parseFloat(c.amount||0), 0);
     const totalInc = (incRows||[]).reduce((s: number, i: any) => s + parseFloat(i.amount||0), 0);
+    // Busca salário do usuário para incluir no balanço histórico
+    const [uSalary] = await p.execute("SELECT salaryBase FROM users WHERE id=?", [uid]) as any;
+    const salaryBase = parseFloat((uSalary[0]||{}).salaryBase||0);
+    const totalIncomeWithSalary = totalInc + salaryBase;
 
     await p.execute(
       `INSERT INTO monthArchive (userId,month,expensesJson,creditCardJson,incomesJson,totalExpenses,totalIncome)
@@ -396,7 +437,7 @@ app.post("/api/users/:userId/reset-month", async (req, res) => {
        ON DUPLICATE KEY UPDATE
          expensesJson=VALUES(expensesJson), creditCardJson=VALUES(creditCardJson),
          incomesJson=VALUES(incomesJson), totalExpenses=VALUES(totalExpenses), totalIncome=VALUES(totalIncome)`,
-      [uid, month, JSON.stringify(expRows||[]), JSON.stringify(ccRows||[]), JSON.stringify(incRows||[]), totalExp+totalCC, totalInc]
+      [uid, month, JSON.stringify(expRows||[]), JSON.stringify(ccRows||[]), JSON.stringify(incRows||[]), totalExp+totalCC, totalIncomeWithSalary]
     );
 
     // Limpa — NÃO toca xp, streakDays, salaryBase
