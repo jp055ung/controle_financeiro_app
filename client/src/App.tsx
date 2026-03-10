@@ -683,7 +683,7 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
             {/* Disclaimer */}
             <div style={{ marginTop:8, fontSize:10, color:"rgba(0,214,143,0.6)", display:"flex", alignItems:"flex-start", gap:5 }}>
               <span style={{ flexShrink:0 }}>ℹ️</span>
-              <span>Este valor <strong style={{ color:"rgba(0,214,143,0.8)" }}>não entra no cálculo de despesas</strong> — é patrimônio sendo construído. Seu Saldo Livre já considera isso.</span>
+              <span>Investimento é uma <strong style={{ color:"rgba(0,214,143,0.8)" }}>conquista</strong>, não um gasto — mas entra no seu saldo para um controle real do que saiu da conta.</span>
             </div>
           </div>
         );
@@ -1019,12 +1019,26 @@ export default function App() {
             />}
             {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
               onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
-              onPay={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!c.paid})}); if(!c.paid)gainXpRaw(XP_PAY_BILL); load(); }}
+              onPay={async(c:any)=>{ 
+                if((c.installments||1)>1 && !c.paid) {
+                  // Parcelado + ainda não pago: marca pago E agenda avanço de parcela
+                  await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:true})});
+                  gainXpRaw(XP_PAY_BILL);
+                } else if((c.installments||1)>1 && c.paid) {
+                  // Desmarcar pago numa parcela
+                  await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:false})});
+                } else {
+                  await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!c.paid})});
+                  if(!c.paid)gainXpRaw(XP_PAY_BILL);
+                }
+                load();
+              }}
+              onAdvance={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({advanceInstallment:true})}); load(); }}
               onEdit={async(id:number,desc:string,amount:string,dueDay:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null})}); load(); }}
               onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
             />}
             {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
-            {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore}/>}
+            {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore} totalInvestido={totalInvestido} levelInfo={levelInfo}/>}
           </div>
         </div>
       </div>
@@ -1058,12 +1072,24 @@ export default function App() {
         />}
         {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
           onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
-          onPay={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!c.paid})}); if(!c.paid)gainXpRaw(XP_PAY_BILL); load(); }}
+          onPay={async(c:any)=>{ 
+            if((c.installments||1)>1 && !c.paid) {
+              await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:true})});
+              gainXpRaw(XP_PAY_BILL);
+            } else if((c.installments||1)>1 && c.paid) {
+              await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:false})});
+            } else {
+              await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!c.paid})});
+              if(!c.paid)gainXpRaw(XP_PAY_BILL);
+            }
+            load();
+          }}
+          onAdvance={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({advanceInstallment:true})}); load(); }}
           onEdit={async(id:number,desc:string,amount:string,dueDay:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null})}); load(); }}
           onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
         />}
         {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
-        {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore}/>}
+        {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore} totalInvestido={totalInvestido} levelInfo={levelInfo}/>}
       </main>
       <nav style={{ position:"fixed", bottom:0, left:0, right:0, background:"var(--bg2)", borderTop:"1px solid var(--border)", display:"flex", zIndex:50 }}>
         {NAV.map(n=>(
@@ -1145,7 +1171,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
 }
 
 // ── ABA CARTÃO ────────────────────────────────────────────────────────────────
-function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll }: any) {
+function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, onAdvance }: any) {
   const [editId, setEditId] = useState<number|null>(null);
   const [editVal, setEditVal] = useState("");
   const [editDesc, setEditDesc] = useState("");
@@ -1154,7 +1180,7 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll }
   const totalPago = cc.filter((c:any)=>c.paid).reduce((s:number,c:any)=>s+num(c.amount),0);
   const totalPendente = totalCC - totalPago;
 
-  // Vencimento global — pega o dueDay de qualquer item que tenha
+  // Vencimento global
   const dueDayGlobal = cc.find((c:any)=>c.dueDay)?.dueDay || null;
   const getDueInfo = () => {
     if (!dueDayGlobal) return null;
@@ -1219,14 +1245,14 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll }
         const isParcelado = (c.installments||1) > 1;
         const parcAtual = c.installmentCurrent || 1;
         const parcTotal = c.installments || 1;
-        const totalCompra = c.totalAmount ? num(c.totalAmount) : num(c.amount);
-        const parcPagas = parcAtual - 1;
-        const pctParcelas = Math.round(parcPagas / parcTotal * 100);
+        const totalCompra = c.totalAmount ? num(c.totalAmount) : num(c.amount) * parcTotal;
+        // parcPagas = parcelas anteriores (já viradas) + se a atual está paga
+        const parcPagas = (parcAtual - 1) + (c.paid ? 1 : 0);
+        const restantes = parcTotal - parcPagas;
 
         return (
-          <div key={c.id} className="card" style={{ marginBottom:10, padding:"12px 14px", opacity:c.paid?0.75:1, borderLeft:`3px solid ${c.paid?"var(--green)":isParcelado?"var(--primary)":"var(--border)"}` }}>
+          <div key={c.id} className="card" style={{ marginBottom:10, padding:"12px 14px", opacity:c.paid&&!isParcelado?0.75:1, borderLeft:`3px solid ${c.paid?"var(--green)":isParcelado?"var(--primary)":"var(--border)"}` }}>
             {editId===c.id ? (
-              /* Modo edição */
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 <input value={editDesc} onChange={e=>setEditDesc(e.target.value)} placeholder="Descrição"
                   style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:13 }}/>
@@ -1246,13 +1272,13 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll }
                 {/* Linha principal */}
                 <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontWeight:700, fontSize:14, textDecoration:c.paid?"line-through":"none", color:c.paid?"var(--text2)":"var(--text)" }}>
+                    <div style={{ fontWeight:700, fontSize:14, textDecoration:c.paid&&!isParcelado?"line-through":"none", color:c.paid&&!isParcelado?"var(--text2)":"var(--text)" }}>
                       {c.description}
                     </div>
                     {c.subcategory && <div style={{ fontSize:11, color:"var(--text2)", marginTop:1 }}>{c.subcategory}</div>}
                     {isParcelado && (
-                      <div style={{ fontSize:11, color:"var(--primary)", fontWeight:700, marginTop:3 }}>
-                        📦 Parcela {parcAtual}/{parcTotal} · Total: {fmt(totalCompra)}
+                      <div style={{ fontSize:11, color: c.paid ? "var(--green)" : "var(--primary)", fontWeight:700, marginTop:3 }}>
+                        📦 Parcela {parcAtual}/{parcTotal} {c.paid ? "✅" : ""} · Total: {fmt(totalCompra)}
                       </div>
                     )}
                   </div>
@@ -1268,20 +1294,35 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll }
                 {isParcelado && (
                   <div style={{ marginTop:8 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"var(--text2)", marginBottom:3 }}>
-                      <span>{parcPagas} parcelas pagas</span>
-                      <span>{parcTotal - parcAtual + 1} restantes</span>
+                      <span style={{ color: parcPagas > 0 ? "var(--green)" : "var(--text2)" }}>{parcPagas} {parcPagas===1?"parcela paga":"parcelas pagas"}</span>
+                      <span>{restantes} {restantes===1?"restante":"restantes"}</span>
                     </div>
-                    <div style={{ display:"flex", gap:3 }}>
+                    <div style={{ display:"flex", gap:2 }}>
                       {Array.from({length:parcTotal}).map((_,i)=>(
-                        <div key={i} style={{ flex:1, height:5, borderRadius:3, background: i < parcPagas ? "var(--green)" : i === parcPagas ? "var(--primary)" : "var(--bg3)" }}/>
+                        <div key={i} style={{
+                          flex:1, height:5, borderRadius:3,
+                          background: i < parcPagas ? "var(--green)" : i === parcAtual-1 ? (c.paid ? "var(--green)" : "var(--primary)") : "var(--bg3)"
+                        }}/>
                       ))}
                     </div>
+                    {/* Botão avançar parcela — só aparece quando pago */}
+                    {c.paid && parcAtual < parcTotal && (
+                      <button onClick={()=>onAdvance(c)}
+                        style={{ marginTop:8, width:"100%", padding:"7px", background:"rgba(0,214,143,0.08)", border:"1px solid rgba(0,214,143,0.25)", color:"var(--green)", borderRadius:9, fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                        ➡️ Avançar para Parcela {parcAtual+1}/{parcTotal}
+                      </button>
+                    )}
+                    {c.paid && parcAtual >= parcTotal && (
+                      <div style={{ marginTop:8, fontSize:11, color:"var(--green)", fontWeight:700, textAlign:"center" }}>
+                        🎉 Última parcela — pode excluir após confirmação
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Ações */}
                 <div style={{ display:"flex", gap:7, marginTop:10, justifyContent:"flex-end" }}>
-                  <button onClick={()=>onPay(c)} title={c.paid?"Desmarcar pago":"Marcar pago"}
+                  <button onClick={()=>onPay(c)} title={c.paid?"Desmarcar":"Marcar pago"}
                     style={{ background:c.paid?"rgba(0,214,143,0.12)":"rgba(0,214,143,0.18)", border:`1px solid ${c.paid?"rgba(0,214,143,0.25)":"rgba(0,214,143,0.45)"}`, color:"var(--green)", borderRadius:8, padding:"5px 10px", fontSize:13, cursor:"pointer" }}>
                     {c.paid ? "↩️ Desmarcar" : "✅ Pagar"}
                   </button>
@@ -1465,8 +1506,153 @@ function HBarChart({ data }: { data:{label:string;expenses:number;income:number;
   );
 }
 
+// ── COMPONENTE ANÁLISE IA ─────────────────────────────────────────────────────
+function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvestido, byCategory, cc, healthScore, levelInfo, xp }: any) {
+  const [insights, setInsights] = useState<{type:string;label:string;text:string;sub?:string}[]|null>(null);
+  const [loading, setLoading] = useState(false);
+  const monthLabel = new Date().toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+  const cacheKey = `ai_insights_${new Date().toISOString().slice(0,7)}`;
+
+  // Injeta keyframe shimmer uma vez
+  useEffect(()=>{
+    const id = "mg-shimmer-style";
+    if (!document.getElementById(id)) {
+      const s = document.createElement("style");
+      s.id = id;
+      s.textContent = `@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}} @keyframes mgpulse{0%,100%{opacity:.6}50%{opacity:1}}`;
+      document.head.appendChild(s);
+    }
+  },[]);
+
+  // Tenta carregar cache do sessionStorage
+  useEffect(()=>{
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) setInsights(JSON.parse(cached));
+    } catch {}
+  // eslint-disable-next-line
+  },[cacheKey]);
+
+  const generate = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const totalReceita = salary + totalIncome;
+      const pctCC = totalReceita > 0 ? Math.round(totalCC / totalReceita * 100) : 0;
+      const pctInvest = totalReceita > 0 ? Math.round(totalInvestido / totalReceita * 100) : 0;
+      const saldo = totalReceita - totalGasto;
+      const metaInvest = levelInfo.tier === "iniciante" ? 5 : levelInfo.tier === "investidor" ? 15 : 25;
+
+      // Parcelamentos ativos
+      const parcelamentos = cc.filter((c:any)=>(c.installments||1)>1);
+      const parcStr = parcelamentos.length > 0
+        ? parcelamentos.map((c:any)=>`${c.description}: ${c.installmentCurrent||1}/${c.installments}x de ${fmt(num(c.amount))}`).join("; ")
+        : "nenhum";
+
+      const prompt = `Você é um consultor financeiro direto e amigável do app MoneyGame. Analise estes dados do usuário e gere de 2 a 4 insights financeiros úteis em JSON.
+
+DADOS DO MÊS (${monthLabel}):
+- Salário base: R$ ${salary}
+- Renda extra: R$ ${totalIncome}  
+- Receita total: R$ ${totalReceita}
+- Total gasto (todas categorias): R$ ${totalGasto}
+- Cartão de crédito: R$ ${totalCC} (${pctCC}% da receita)
+- Total investido: R$ ${totalInvestido} (${pctInvest}% da receita, meta do nível: ${metaInvest}%)
+- Saldo do mês: R$ ${saldo}
+- Saúde financeira: ${healthScore}/100
+- Nível: ${levelInfo.label} NV.${levelInfo.levelNum}
+- XP total: ${xp}
+- Parcelamentos ativos: ${parcStr}
+
+Retorne SOMENTE um array JSON válido (sem markdown, sem texto extra) com 2-4 objetos assim:
+[{"type":"tip|alert|info|gold","label":"Título curto","text":"Mensagem direta em 1-2 frases com números reais","sub":"Dica extra opcional curta"}]
+
+Tipos: "alert"=vermelho/atenção, "tip"=verde/positivo, "info"=roxo/informativo, "gold"=dourado/projeção.
+Seja direto, use os números reais, mencione SELIC apenas se houver investimento ativo.`;
+
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 800,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const raw = data.content?.map((b:any)=>b.text||"").join("").trim();
+      // Remove possíveis backticks
+      const clean = raw.replace(/```json|```/g,"").trim();
+      const parsed = JSON.parse(clean);
+      if (Array.isArray(parsed)) {
+        setInsights(parsed);
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(parsed)); } catch {}
+      }
+    } catch (e) {
+      setInsights([{type:"info",label:"Sem dados suficientes",text:"Adicione despesas e renda este mês para gerar uma análise personalizada.",sub:""}]);
+    }
+    setLoading(false);
+  };
+
+  const typeStyle: Record<string,{bg:string;border:string;labelColor:string;barColor:string}> = {
+    alert: { bg:"rgba(255,77,106,0.07)",   border:"rgba(255,77,106,0.22)",   labelColor:"#ff4d6a", barColor:"#ff4d6a" },
+    tip:   { bg:"rgba(0,214,143,0.06)",    border:"rgba(0,214,143,0.2)",     labelColor:"#00d68f", barColor:"#00d68f" },
+    info:  { bg:"rgba(108,99,255,0.07)",   border:"rgba(108,99,255,0.22)",   labelColor:"#a78bfa", barColor:"#6c63ff" },
+    gold:  { bg:"rgba(255,215,0,0.06)",    border:"rgba(255,215,0,0.2)",     labelColor:"#ffd700", barColor:"#ffd700" },
+  };
+
+  return (
+    <div style={{ marginBottom:14 }}>
+      {/* Botão / Card de entrada */}
+      {!insights && (
+        <button onClick={generate} disabled={loading}
+          style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,214,143,0.06))", border:"1px solid rgba(108,99,255,0.25)", borderRadius:16, padding:"18px 16px", cursor:loading?"default":"pointer", textAlign:"center", transition:"opacity .2s", opacity:loading?0.7:1 }}>
+          <div style={{ fontSize:28, marginBottom:6 }}>{loading ? "⏳" : "🤖"}</div>
+          <div style={{ fontSize:15, fontWeight:900, color:"var(--text)", marginBottom:4 }}>
+            {loading ? "Analisando seus dados..." : `Análise IA — ${monthLabel}`}
+          </div>
+          <div style={{ fontSize:12, color:"var(--text2)" }}>
+            {loading ? "Aguarde alguns segundos" : "Gerada com base nos seus dados reais · clique para gerar"}
+          </div>
+          {loading && (
+            <div style={{ marginTop:10, height:3, background:"var(--bg3)", borderRadius:2, overflow:"hidden", position:"relative" }}>
+              <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, background:"linear-gradient(90deg,transparent,#6c63ff,#00d68f,transparent)", animation:"shimmer 1.5s infinite", transform:"translateX(-100%)" }}/>
+            </div>
+          )}
+        </button>
+      )}
+
+      {/* Insights gerados */}
+      {insights && (
+        <div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <div style={{ fontSize:13, fontWeight:700 }}>🤖 Análise IA — {monthLabel}</div>
+            <button onClick={()=>{ setInsights(null); try{sessionStorage.removeItem(cacheKey);}catch{} }}
+              style={{ fontSize:11, color:"var(--text2)", background:"none", border:"1px solid var(--border)", borderRadius:7, padding:"3px 9px", cursor:"pointer" }}>
+              🔄 Regerar
+            </button>
+          </div>
+          {insights.map((ins,i)=>{
+            const s = typeStyle[ins.type] || typeStyle.info;
+            return (
+              <div key={i} style={{ background:s.bg, border:`1px solid ${s.border}`, borderRadius:13, padding:"12px 14px", marginBottom:8, borderLeft:`3px solid ${s.barColor}` }}>
+                <div style={{ fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1, color:s.labelColor, marginBottom:5 }}>
+                  {ins.type==="alert"?"⚠️":ins.type==="tip"?"✅":ins.type==="gold"?"📊":"💡"} {ins.label}
+                </div>
+                <div style={{ fontSize:13, color:"var(--text)", lineHeight:1.6 }}>{ins.text}</div>
+                {ins.sub && <div style={{ fontSize:11, color:"var(--text2)", marginTop:5, fontStyle:"italic" }}>{ins.sub}</div>}
+              </div>
+            );
+          })}
+          <div style={{ fontSize:10, color:"var(--text2)", textAlign:"center", marginTop:4 }}>Análise fixada até a virada do mês</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── ABA RELATÓRIOS ────────────────────────────────────────────────────────────
-function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expenses,cc,xp,userId,salary,healthScore }: any) {
+function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expenses,cc,xp,userId,salary,healthScore,totalInvestido,levelInfo: lvInfo }: any) {
   const [history, setHistory] = useState<any[]>([]);
   const [loadingH, setLoadingH] = useState(true);
 
@@ -1477,17 +1663,17 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
 
   const band = getHealthBand(healthScore);
   const monthLabel = new Date().toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
-  const levelInfo = getLevelInfo(xp||0);
+  const levelInfo = lvInfo || getLevelInfo(xp||0);
 
   // Totais do mês
   const totalRegistros = expenses.length + cc.length;
-  const totalProduzido = salary + totalIncome; // salário + renda extra
+  const totalProduzido = salary + totalIncome;
   const totalGasto = totalExpSemSonho + totalCC;
 
-  // Dados para pizza — categorias com gastos
+  // Dados para pizza
   const pieData = byCategory.map((cat:any)=>({ label:cat.name, value:cat.total, color:cat.color, emoji:cat.emoji }));
 
-  // Dados para o gráfico horizontal — histórico inclui salário no income
+  // Dados para gráfico histórico
   const histChartData = history.slice().reverse().map((h:any)=>({
     label: new Date(h.month+"-02").toLocaleDateString("pt-BR",{month:"short",year:"2-digit"}).replace(". de "," "),
     expenses: h.totalExpenses || 0,
@@ -1498,6 +1684,20 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
   return (
     <div>
       <h2 style={{ fontSize:17, fontWeight:800, marginBottom:14 }}>📈 Relatórios</h2>
+
+      {/* Botão Análise IA */}
+      <AiInsightButton
+        salary={salary}
+        totalGasto={totalGasto}
+        totalIncome={totalIncome}
+        totalCC={totalCC}
+        totalInvestido={totalInvestido||0}
+        byCategory={byCategory}
+        cc={cc}
+        healthScore={healthScore}
+        levelInfo={levelInfo}
+        xp={xp||0}
+      />
 
       {/* Cards resumo — registros + valor produzido */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
@@ -1682,8 +1882,9 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
         <input type="number" placeholder={isSonho&&form.recurring?"Valor mensal (deixe em branco p/ calcular)":"Valor (R$) *"} value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/>
         <input placeholder="Subcategoria (opcional)" value={form.subcategory} onChange={e=>setForm(f=>({...f,subcategory:e.target.value}))}/>
         <input type="date" value={form.dueDate} onChange={e=>setForm(f=>({...f,dueDate:e.target.value}))}/>
-        <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--text2)", cursor:"pointer" }}>
-          <input type="checkbox" checked={form.recurring} onChange={e=>setForm(f=>({...f,recurring:e.target.checked}))}/> Recorrente 🔄
+        <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--text2)", cursor:"pointer", userSelect:"none" as any }}>
+          <input type="checkbox" checked={form.recurring} onChange={e=>setForm(f=>({...f,recurring:e.target.checked}))} style={{ width:16, height:16, accentColor:"var(--primary)", flexShrink:0 }}/>
+          <span>Recorrente 🔄</span>
         </label>
 
         {/* FIX #1: Bloco Sonho aparece quando categoria=Sonho + recorrente */}
