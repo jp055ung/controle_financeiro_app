@@ -3,6 +3,8 @@ import cors from "cors";
 import mysql from "mysql2/promise";
 import "dotenv/config";
 import path from "path";
+import bcrypt from "bcryptjs";
+import cron from "node-cron";
 
 const app = express();
 app.use(cors());
@@ -82,9 +84,31 @@ async function runMigrations() {
     "ALTER TABLE creditCardExpenses ADD COLUMN dueDay INT NULL",
     "ALTER TABLE monthArchive ADD COLUMN totalExpenses DECIMAL(10,2) DEFAULT 0",
     "ALTER TABLE monthArchive ADD COLUMN totalIncome DECIMAL(10,2) DEFAULT 0",
+    "ALTER TABLE monthArchive ADD COLUMN salaryBase DECIMAL(10,2) DEFAULT 0",
+    "ALTER TABLE monthArchive ADD COLUMN totalExtra DECIMAL(10,2) DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN lastAiReport TIMESTAMP NULL",
   ];
   for (const sql of alters) { try { await p.execute(sql); } catch {} }
   console.log("✅ Migrações OK");
+}
+
+// ── CRON — VIRADA AUTOMÁTICA NO ÚLTIMO DIA DO MÊS (23:59) ────────────────────
+function scheduleMonthReset() {
+  // Roda todo dia às 23:59 — verifica se é o último dia do mês
+  cron.schedule("59 23 * * *", async () => {
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    if (tomorrow.getMonth() !== now.getMonth()) {
+      // É o último dia do mês
+      const p = getPool(); if (!p) return;
+      const [users] = await p.execute("SELECT id FROM users") as any;
+      console.log(`🔄 Virada automática de mês — ${users.length} usuários`);
+      for (const u of users) {
+        try { await doMonthReset(String(u.id), p); } catch (e: any) { console.error(`Cron reset user ${u.id}:`, e.message); }
+      }
+      console.log("✅ Virada automática concluída");
+    }
+  }, { timezone: "America/Sao_Paulo" });
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -94,7 +118,8 @@ app.post("/api/auth/register", async (req, res) => {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
     const [ex] = await p.execute("SELECT id FROM users WHERE email=?", [email]) as any;
     if (ex.length > 0) return res.status(400).json({ error: "Email ja cadastrado" });
-    await p.execute("INSERT INTO users (name,email,password,salaryBase,xp,streakDays,levelNum,level) VALUES (?,?,?,0,0,0,1,'iniciante')", [name, email, password]);
+    const hashedPassword = await bcrypt.hash(password, 12);
+    await p.execute("INSERT INTO users (name,email,password,salaryBase,xp,streakDays,levelNum,level) VALUES (?,?,?,0,0,0,1,'iniciante')", [name, email, hashedPassword]);
     const [rows] = await p.execute("SELECT * FROM users WHERE email=?", [email]) as any;
     const u = rows[0];
     res.json({ user: { id:u.id, name:u.name, email:u.email, salaryBase:0, xp:0, level:'iniciante', levelNum:1, streakDays:0, isNewUser:true } });
@@ -105,9 +130,11 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const [rows] = await p.execute("SELECT * FROM users WHERE email=? AND password=?", [email, password]) as any;
+    const [rows] = await p.execute("SELECT * FROM users WHERE email=?", [email]) as any;
     if (!rows.length) return res.status(401).json({ error: "Credenciais invalidas" });
     const u = rows[0];
+    const passwordMatch = await bcrypt.compare(password, u.password);
+    if (!passwordMatch) return res.status(401).json({ error: "Credenciais invalidas" });
     res.json({ user: { id:u.id, name:u.name, email:u.email, salaryBase:u.salaryBase||0, xp:u.xp||0, level:u.level||'iniciante', levelNum:u.levelNum||1, streakDays:u.streakDays||0, lastCheckin:u.lastCheckin||null } });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -170,9 +197,21 @@ app.get("/api/users/:id/streak", async (req, res) => {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
     const [rows] = await p.execute("SELECT streakDays, lastCheckin FROM users WHERE id=?", [req.params.id]) as any;
     if (!rows.length) return res.status(404).json({ error: "Nao encontrado" });
-    const { streakDays, lastCheckin } = rows[0];
+    let { streakDays, lastCheckin } = rows[0];
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+
+    // Se o último checkin foi antes de ontem, streak quebrou — zera no banco
+    if (lastCheckin) {
+      const lc = new Date(lastCheckin);
+      const lcStart = new Date(lc.getFullYear(), lc.getMonth(), lc.getDate());
+      if (lcStart.getTime() < yesterdayStart.getTime() && streakDays > 0) {
+        await p.execute("UPDATE users SET streakDays=0 WHERE id=?", [req.params.id]);
+        streakDays = 0;
+      }
+    }
+
     let claimedToday = false;
     if (lastCheckin) {
       const lc = new Date(lastCheckin);
@@ -223,7 +262,8 @@ app.post("/api/users/:id/streak/checkin", async (req, res) => {
     await p.execute("UPDATE users SET streakDays=?, lastCheckin=NOW(), xp=?, levelNum=?, level=? WHERE id=?",
       [newStreak, newXp, newLevelNum, newTier, req.params.id]);
 
-    res.json({ streakDays:newStreak, xpGained:xpGain, xp:newXp, levelNum:newLevelNum, level:newTier });
+    const milestone = [7, 15, 30].includes(newStreak) ? newStreak : null;
+    res.json({ streakDays:newStreak, xpGained:xpGain, xp:newXp, levelNum:newLevelNum, level:newTier, milestone });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -270,6 +310,11 @@ app.patch("/api/expenses/:id/paid", async (req, res) => {
 app.delete("/api/expenses/:id", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const userId = req.query.userId || req.body.userId;
+    if (!userId) return res.status(400).json({ error: "userId obrigatorio" });
+    const [rows] = await p.execute("SELECT userId FROM expenses WHERE id=?", [req.params.id]) as any;
+    if (!rows.length) return res.status(404).json({ error: "Despesa nao encontrada" });
+    if (String(rows[0].userId) !== String(userId)) return res.status(403).json({ error: "Acesso negado" });
     await p.execute("DELETE FROM expenses WHERE id=?", [req.params.id]);
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -340,6 +385,11 @@ app.patch("/api/credit-card/:id", async (req, res) => {
 app.delete("/api/credit-card/:id", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const userId = req.query.userId || req.body.userId;
+    if (!userId) return res.status(400).json({ error: "userId obrigatorio" });
+    const [rows] = await p.execute("SELECT userId FROM creditCardExpenses WHERE id=?", [req.params.id]) as any;
+    if (!rows.length) return res.status(404).json({ error: "Item nao encontrado" });
+    if (String(rows[0].userId) !== String(userId)) return res.status(403).json({ error: "Acesso negado" });
     await p.execute("DELETE FROM creditCardExpenses WHERE id=?", [req.params.id]);
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -392,6 +442,11 @@ app.post("/api/users/:userId/extra-income", async (req, res) => {
 app.delete("/api/extra-income/:id", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const userId = req.query.userId || req.body.userId;
+    if (!userId) return res.status(400).json({ error: "userId obrigatorio" });
+    const [rows] = await p.execute("SELECT userId FROM extraIncomes WHERE id=?", [req.params.id]) as any;
+    if (!rows.length) return res.status(404).json({ error: "Item nao encontrado" });
+    if (String(rows[0].userId) !== String(userId)) return res.status(403).json({ error: "Acesso negado" });
     await p.execute("DELETE FROM extraIncomes WHERE id=?", [req.params.id]);
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -412,43 +467,44 @@ app.patch("/api/extra-income/:id/edit", async (req, res) => {
 });
 
 // ── VIRAR O MÊS ──────────────────────────────────────────────────────────────
+async function doMonthReset(uid: string, p: mysql.Pool) {
+  const month = new Date().toISOString().slice(0, 7);
+
+  const [expRows] = await p.execute("SELECT name, CAST(amount AS CHAR) as amount, categoryId, paid FROM expenses WHERE userId=?", [uid]) as any;
+  const [ccRows]  = await p.execute("SELECT description, CAST(amount AS CHAR) as amount, paid FROM creditCardExpenses WHERE userId=?", [uid]) as any;
+  const [incRows] = await p.execute("SELECT description, CAST(amount AS CHAR) as amount FROM extraIncomes WHERE userId=?", [uid]) as any;
+  const [uSalary] = await p.execute("SELECT salaryBase FROM users WHERE id=?", [uid]) as any;
+
+  const totalExp    = (expRows||[]).reduce((s: number, e: any) => s + parseFloat(e.amount||0), 0);
+  const totalCC     = (ccRows||[]).reduce((s: number, c: any) => s + parseFloat(c.amount||0), 0);
+  const totalExtra  = (incRows||[]).reduce((s: number, i: any) => s + parseFloat(i.amount||0), 0);
+  const salaryBase  = parseFloat((uSalary[0]||{}).salaryBase||0);
+
+  await p.execute(
+    `INSERT INTO monthArchive (userId,month,expensesJson,creditCardJson,incomesJson,totalExpenses,totalIncome,salaryBase,totalExtra)
+     VALUES (?,?,?,?,?,?,?,?,?)
+     ON DUPLICATE KEY UPDATE
+       expensesJson=VALUES(expensesJson), creditCardJson=VALUES(creditCardJson),
+       incomesJson=VALUES(incomesJson), totalExpenses=VALUES(totalExpenses),
+       totalIncome=VALUES(totalIncome), salaryBase=VALUES(salaryBase), totalExtra=VALUES(totalExtra)`,
+    [uid, month, JSON.stringify(expRows||[]), JSON.stringify(ccRows||[]), JSON.stringify(incRows||[]),
+     totalExp+totalCC, totalExtra+salaryBase, salaryBase, totalExtra]
+  );
+
+  await p.execute("DELETE FROM expenses WHERE userId=? AND (recurring=0 OR recurring IS NULL)", [uid]);
+  await p.execute("DELETE FROM creditCardExpenses WHERE userId=?", [uid]);
+  await p.execute("DELETE FROM extraIncomes WHERE userId=?", [uid]);
+  await p.execute("UPDATE expenses SET paid=0 WHERE userId=? AND recurring=1", [uid]);
+
+  const [uRows] = await p.execute("SELECT id, name, salaryBase FROM users WHERE id=?", [uid]) as any;
+  return { month, user: uRows[0]||{} };
+}
+
 app.post("/api/users/:userId/reset-month", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const uid = req.params.userId;
-    const month = new Date().toISOString().slice(0, 7);
-
-    // Busca totais simples (sem colunas que podem não existir)
-    const [expRows] = await p.execute("SELECT name, CAST(amount AS CHAR) as amount, categoryId, paid FROM expenses WHERE userId=?", [uid]) as any;
-    const [ccRows]  = await p.execute("SELECT description, CAST(amount AS CHAR) as amount, paid FROM creditCardExpenses WHERE userId=?", [uid]) as any;
-    const [incRows] = await p.execute("SELECT description, CAST(amount AS CHAR) as amount FROM extraIncomes WHERE userId=?", [uid]) as any;
-
-    const totalExp = (expRows||[]).reduce((s: number, e: any) => s + parseFloat(e.amount||0), 0);
-    const totalCC  = (ccRows||[]).reduce((s: number, c: any) => s + parseFloat(c.amount||0), 0);
-    const totalInc = (incRows||[]).reduce((s: number, i: any) => s + parseFloat(i.amount||0), 0);
-    // Busca salário do usuário para incluir no balanço histórico
-    const [uSalary] = await p.execute("SELECT salaryBase FROM users WHERE id=?", [uid]) as any;
-    const salaryBase = parseFloat((uSalary[0]||{}).salaryBase||0);
-    const totalIncomeWithSalary = totalInc + salaryBase;
-
-    await p.execute(
-      `INSERT INTO monthArchive (userId,month,expensesJson,creditCardJson,incomesJson,totalExpenses,totalIncome)
-       VALUES (?,?,?,?,?,?,?)
-       ON DUPLICATE KEY UPDATE
-         expensesJson=VALUES(expensesJson), creditCardJson=VALUES(creditCardJson),
-         incomesJson=VALUES(incomesJson), totalExpenses=VALUES(totalExpenses), totalIncome=VALUES(totalIncome)`,
-      [uid, month, JSON.stringify(expRows||[]), JSON.stringify(ccRows||[]), JSON.stringify(incRows||[]), totalExp+totalCC, totalIncomeWithSalary]
-    );
-
-    // Limpa — NÃO toca xp, streakDays, salaryBase
-    await p.execute("DELETE FROM expenses WHERE userId=? AND (recurring=0 OR recurring IS NULL)", [uid]);
-    await p.execute("DELETE FROM creditCardExpenses WHERE userId=?", [uid]);
-    await p.execute("DELETE FROM extraIncomes WHERE userId=?", [uid]);
-    await p.execute("UPDATE expenses SET paid=0 WHERE userId=? AND recurring=1", [uid]);
-
-    // Busca usuário sem assumir colunas — apenas as seguras
-    const [uRows] = await p.execute("SELECT id, name, salaryBase FROM users WHERE id=?", [uid]) as any;
-    res.json({ success:true, month, user: uRows[0]||{} });
+    const result = await doMonthReset(req.params.userId, p);
+    res.json({ success:true, ...result });
   } catch (e: any) {
     console.error("reset-month:", e.message);
     res.status(500).json({ error: e.message });
@@ -460,16 +516,41 @@ app.get("/api/users/:userId/history", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.json([]);
     const [rows] = await p.execute(
-      "SELECT month, totalExpenses, totalIncome FROM monthArchive WHERE userId=? ORDER BY month DESC LIMIT 12",
+      "SELECT month, totalExpenses, totalIncome, salaryBase, totalExtra FROM monthArchive WHERE userId=? ORDER BY month DESC LIMIT 12",
       [req.params.userId]
     ) as any;
     const history = (rows||[]).map((r: any) => ({
       month: r.month,
       totalExpenses: parseFloat(r.totalExpenses||0),
       totalIncome: parseFloat(r.totalIncome||0),
+      salaryBase: parseFloat(r.salaryBase||0),
+      totalExtra: parseFloat(r.totalExtra||0),
       balance: parseFloat(r.totalIncome||0) - parseFloat(r.totalExpenses||0),
     }));
     res.json(history);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GRADE IA — verifica se usuário pode gerar relatório (15 em 15 dias) ───────
+app.get("/api/users/:id/ai-report/can-generate", async (req, res) => {
+  try {
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const [rows] = await p.execute("SELECT lastAiReport FROM users WHERE id=?", [req.params.id]) as any;
+    if (!rows.length) return res.status(404).json({ error: "Nao encontrado" });
+    const last = rows[0].lastAiReport;
+    if (!last) return res.json({ canGenerate: true, daysLeft: 0 });
+    const diffMs = Date.now() - new Date(last).getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    const daysLeft = Math.max(0, Math.ceil(15 - diffDays));
+    res.json({ canGenerate: daysLeft === 0, daysLeft, lastGenerated: last });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/users/:id/ai-report/mark-generated", async (req, res) => {
+  try {
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    await p.execute("UPDATE users SET lastAiReport=NOW() WHERE id=?", [req.params.id]);
+    res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -485,4 +566,6 @@ const PORT = parseInt(String(process.env.PORT || "3000"), 10);
 app.listen(PORT, "0.0.0.0", async () => {
   console.log(`🪙 MoneyGame porta ${PORT}`);
   try { await runMigrations(); } catch (e: any) { console.error("Migration warning:", e.message); }
+  scheduleMonthReset();
+  console.log("⏰ Cron de virada mensal agendado");
 });
