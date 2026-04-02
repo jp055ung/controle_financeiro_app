@@ -198,6 +198,39 @@ function Modal({ title, onClose, children }: { title:string; onClose?:()=>void; 
   );
 }
 
+// ── STREAK MILESTONE MODAL ────────────────────────────────────────────────────
+function StreakMilestoneModal({ days, xpGained, onClose }: { days:number; xpGained:number; onClose:()=>void }) {
+  const info = days === 7
+    ? { emoji:"⚡", title:"7 Dias Consecutivos!", color:"#6c63ff",
+        quote:"\"A consistência é o que transforma a média em excelência.\" — Tony Robbins",
+        msg:"Uma semana inteira controlando seu dinheiro. Você está construindo um hábito que menos de 10% das pessoas têm." }
+    : days === 15
+    ? { emoji:"💎", title:"15 Dias! Você é diferente.", color:"#a78bfa",
+        quote:"\"Quem não sabe para onde vai o dinheiro, sempre vai a lugar nenhum.\" — Primo Rico",
+        msg:"Meio mês de disciplina financeira. Você já vê para onde vai cada real. Isso é poder." }
+    : { emoji:"👑", title:"30 Dias! Missão do Mês Concluída.", color:"#ffd700",
+        quote:"\"Riqueza nasce da constância, não do acaso.\" — Flávio Augusto",
+        msg:"Um mês completo. Isso é mentalidade de quem constrói patrimônio. O streak recomeça — e você já sabe que consegue." };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:20 }} onClick={onClose}>
+      <div style={{ background:"var(--bg2)", borderRadius:24, padding:"32px 24px", maxWidth:380, width:"100%", textAlign:"center", border:`2px solid ${info.color}55` }} onClick={e=>e.stopPropagation()}>
+        <div style={{ fontSize:64, marginBottom:8 }}>{info.emoji}</div>
+        <div style={{ fontSize:11, fontWeight:800, color:info.color, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>🏆 CONQUISTA DESBLOQUEADA</div>
+        <div style={{ fontSize:22, fontWeight:900, color:info.color, marginBottom:12 }}>{info.title}</div>
+        <div style={{ fontSize:14, color:"var(--text2)", lineHeight:1.7, marginBottom:14 }}>{info.msg}</div>
+        <div style={{ background:`${info.color}10`, border:`1px solid ${info.color}30`, borderRadius:12, padding:"12px 16px", marginBottom:20, fontSize:13, color:"var(--text2)", fontStyle:"italic", lineHeight:1.6 }}>
+          {info.quote}
+        </div>
+        <div style={{ fontSize:20, fontWeight:900, color:"#ffd700", marginBottom:16 }}>+{xpGained} XP 🔥</div>
+        <button onClick={onClose} style={{ background:info.color, color:"#000", border:"none", borderRadius:14, padding:"14px 32px", fontSize:15, fontWeight:800, cursor:"pointer", width:"100%" }}>
+          🚀 Continuar a jornada!
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── STREAK MODAL ──────────────────────────────────────────────────────────────
 function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; onClaim:(d:any)=>void }) {
   const [streakDays, setStreakDays] = useState(0);
@@ -205,6 +238,8 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
   const [xpGained, setXpGained] = useState(0);
   const [loading, setLoading] = useState(false);
   const [expiresIn, setExpiresIn] = useState("");
+  const [milestone, setMilestone] = useState<number|null>(null);
+  const [streakBroken, setStreakBroken] = useState(false);
 
   useEffect(() => {
     fetch(`${API}/users/${user.id}/streak`)
@@ -214,7 +249,7 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
         setStreakDays(days);
         setClaimed(!!d.claimedToday);
         setExpiresIn(d.expiresIn || "");
-        // Se já resgatou hoje, o XP ganho foi o dia atual * 10
+        setStreakBroken(!!d.streakBroken);
         if (d.claimedToday) setXpGained(days * 10);
       })
       .catch(() => setClaimed(false));
@@ -230,6 +265,7 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
         setStreakDays(data.streakDays);
         setXpGained(data.xpGained);
         setClaimed(true);
+        if (data.isMilestone) setMilestone(data.streakDays);
         onClaim(data);
       } else if (data?.error?.includes("hoje")) {
         setClaimed(true);
@@ -237,6 +273,8 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
     } catch {}
     setLoading(false);
   };
+
+  if (milestone) return <StreakMilestoneModal days={milestone} xpGained={xpGained} onClose={()=>{ setMilestone(null); onClose(); }}/>;
 
   const nextDay = claimed ? streakDays : streakDays + 1;
   const nextXP = nextDay * 10;
@@ -248,6 +286,11 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
         <button onClick={onClose} style={{ position:"absolute", top:14, right:14, background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:30, height:30, borderRadius:8, fontSize:13 }}>✕</button>
 
         <div style={{ textAlign:"center", marginBottom:20 }}>
+          {streakBroken && (
+            <div style={{ background:"rgba(255,77,106,0.1)", border:"1px solid rgba(255,77,106,0.3)", borderRadius:10, padding:"8px 12px", marginBottom:12, fontSize:12, color:"#ff4d6a" }}>
+              💔 Sua streak foi resetada — você perdeu um dia. Comece de novo!
+            </div>
+          )}
           <div style={{ fontSize:52, marginBottom:8 }}>{streakDays >= 30 ? "👑" : streakDays >= 14 ? "💎" : streakDays >= 7 ? "⚡" : "🔥"}</div>
           <div style={{ fontSize:72, fontWeight:900, color:accent, lineHeight:1, letterSpacing:"-3px", fontVariantNumeric:"tabular-nums" }}>
             {claimed ? streakDays : streakDays === 0 ? 1 : streakDays + 1}
@@ -470,10 +513,12 @@ function OnboardingSalary({ user, onDone }: { user:User; onDone:()=>void }) {
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
-  const [mode, setMode] = useState<"login"|"register"|"intro">("intro");
+  const [mode, setMode] = useState<"login"|"register"|"intro"|"forgot">("intro");
   const [form, setForm] = useState({ name:"", email:"", password:"" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotDone, setForgotDone] = useState(false);
 
   const submit = async () => {
     setLoading(true); setError("");
@@ -483,6 +528,18 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
       if (!res.ok) { setError(data.error||"Erro"); return; }
       onLogin(data.user);
     } catch { setError("Erro de conexão"); } finally { setLoading(false); }
+  };
+
+  const submitForgot = async () => {
+    if (!forgotEmail.trim()) { setError("Digite seu e-mail"); return; }
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`${API}/auth/reset-password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:forgotEmail.trim()})});
+      const data = await res.json();
+      if (!res.ok) { setError(data.error||"E-mail não encontrado"); }
+      else { setForgotDone(true); }
+    } catch { setError("Erro de conexão"); }
+    setLoading(false);
   };
 
   if (mode==="intro") return (
@@ -505,6 +562,45 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
     </div>
   );
 
+  if (mode==="forgot") return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:"20px" }}>
+      <div style={{ width:"100%", maxWidth:370 }}>
+        <div style={{ textAlign:"center", marginBottom:24 }}>
+          <div style={{ marginBottom:8, display:"flex", justifyContent:"center" }}><CoinIcon size={44}/></div>
+          <h1 style={{ fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>MONEYGAME</h1>
+        </div>
+        <div className="card">
+          {forgotDone ? (
+            <div style={{ textAlign:"center", padding:"12px 0" }}>
+              <div style={{ fontSize:44, marginBottom:12 }}>✅</div>
+              <div style={{ fontSize:16, fontWeight:800, color:"var(--green)", marginBottom:8 }}>Senha resetada!</div>
+              <div style={{ fontSize:13, color:"var(--text2)", lineHeight:1.6, marginBottom:20 }}>
+                Sua senha foi redefinida para <strong style={{color:"var(--text)"}}>0000</strong>.<br/>
+                Entre com ela e troque em ⚙️ Configurações.
+              </div>
+              <button className="btn-primary" onClick={()=>{setMode("login");setForgotDone(false);setForgotEmail("");}} style={{ width:"100%" }}>
+                Ir para o login →
+              </button>
+            </div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ fontSize:14, fontWeight:700, marginBottom:4 }}>🔑 Redefinir Senha</div>
+              <div style={{ fontSize:13, color:"var(--text2)", lineHeight:1.5 }}>
+                Digite seu e-mail cadastrado. Sua senha será redefinida para <strong style={{color:"var(--text)"}}>0000</strong> — troque depois em ⚙️ Configurações.
+              </div>
+              <input type="email" placeholder="Seu e-mail cadastrado" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submitForgot()}/>
+              {error&&<p style={{ color:"var(--red)", fontSize:13, textAlign:"center", margin:0 }}>{error}</p>}
+              <button className="btn-primary" onClick={submitForgot} disabled={loading} style={{ width:"100%" }}>
+                {loading ? "Aguarde..." : "Redefinir para 0000"}
+              </button>
+              <button className="btn-ghost" onClick={()=>{setMode("login");setError("");}} style={{ width:"100%", fontSize:12 }}>← Voltar ao login</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:"20px" }}>
       <div style={{ width:"100%", maxWidth:370 }}>
@@ -515,15 +611,20 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
         <div className="card">
           <div style={{ display:"flex", gap:8, marginBottom:18 }}>
             {(["login","register"] as const).map(m=>(
-              <button key={m} onClick={()=>setMode(m)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, background:mode===m?"var(--primary)":"var(--bg3)", color:mode===m?"white":"var(--text2)", border:"1.5px solid var(--border)" }}>{m==="login"?"Entrar":"Cadastrar"}</button>
+              <button key={m} onClick={()=>{setMode(m);setError("");}} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, background:mode===m?"var(--primary)":"var(--bg3)", color:mode===m?"white":"var(--text2)", border:"1.5px solid var(--border)" }}>{m==="login"?"Entrar":"Cadastrar"}</button>
             ))}
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             {mode==="register"&&<input placeholder="Seu nome" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>}
             <input type="email" placeholder="E-mail" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))}/>
             <input type="password" placeholder="Senha" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submit()}/>
-            {error&&<p style={{ color:"var(--red)", fontSize:13, textAlign:"center" }}>{error}</p>}
+            {error&&<p style={{ color:"var(--red)", fontSize:13, textAlign:"center", margin:0 }}>{error}</p>}
             <button className="btn-primary" onClick={submit} disabled={loading} style={{ width:"100%", marginTop:4 }}>{loading?"Aguarde...":mode==="login"?"Entrar":"Criar conta"}</button>
+            {mode==="login" && (
+              <button onClick={()=>{setMode("forgot");setError("");}} style={{ background:"none", border:"none", color:"var(--text2)", fontSize:12, cursor:"pointer", padding:"4px 0" }}>
+                Esqueci minha senha
+              </button>
+            )}
             <button className="btn-ghost" onClick={()=>setMode("intro")} style={{ width:"100%", fontSize:12 }}>← Voltar</button>
           </div>
         </div>
@@ -579,10 +680,226 @@ function HealthCard({ score, salary }: { score:number; salary:number }) {
 
 // ── DASHBOARD CONTENT ─────────────────────────────────────────────────────────
 function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick }: any) {
+  const [collapsedCards, setCollapsedCards] = useState<Record<string,boolean>>({});
+  const toggleCard = (id: string) => setCollapsedCards(p => ({...p,[id]:!p[id]}));
+  const isCollapsed = (id: string) => !!collapsedCards[id];
+
+  const CollapseHeader = ({ id, children }: { id:string; children:React.ReactNode }) => (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }} onClick={()=>toggleCard(id)}>
+      <div style={{ flex:1 }}>{children}</div>
+      <span style={{ fontSize:12, color:"var(--text2)", marginLeft:8, flexShrink:0 }}>{isCollapsed(id)?"▶":"▼"}</span>
+    </div>
+  );
+
   return (
     <>
       {/* SAÚDE FINANCEIRA — topo */}
       <HealthCard score={healthScore} salary={salary}/>
+
+      {/* STREAK */}
+      <div onClick={onStreak} style={{ background:streakClaimed?"rgba(0,214,143,0.05)":"rgba(108,99,255,0.06)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.28)":"rgba(108,99,255,0.32)"}`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ fontSize:30 }}>{getStreakIcon(streakDays)}</span>
+          <div>
+            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:1 }}>Streak Diária</div>
+            <div style={{ fontSize:14, fontWeight:800, color:streakClaimed?"var(--green)":"#a78bfa" }}>
+              {streakClaimed ? `✅ ${streakDays} dias` : `${streakDays} dias · resgatar`}
+            </div>
+          </div>
+        </div>
+        {!streakClaimed&&<div style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.3)", color:"#a78bfa", fontSize:12, fontWeight:700, padding:"5px 11px", borderRadius:8, whiteSpace:"nowrap" }}>+{getStreakXP(streakDays+1)} XP</div>}
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:totalInvestido>0?10:14 }}>
+        {[
+          { label:"Salário Base",    value:fmt(salary),                              color:"var(--primary)", icon:"💼" },
+          { label:"Despesas Reais",  value:fmt(totalExpReais+totalCC),               color:"var(--red)",     icon:"💸" },
+          { label:"Renda Extra",     value:fmt(totalIncome),                         color:"var(--green)",   icon:"💵" },
+          { label:"Saldo Livre",     value:fmt(balance), color:balance>=0?"var(--green)":"var(--red)", icon:balance>=0?"✅":"⚠️" },
+        ].map((k,i)=>(
+          <div key={i} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 14px", borderTop:`3px solid ${k.color}` }}>
+            <div style={{ fontSize:17, marginBottom:3 }}>{k.icon}</div>
+            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>{k.label}</div>
+            <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:k.color, marginTop:2 }}>{k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* CAPITAL ALOCADO — COLAPSÁVEL */}
+      {(()=>{
+        const investTotal = byCategory.find((c:any)=>c.id===INVESTIR_ID)?.total||0;
+        if (investTotal === 0) return null;
+        const receita = salary + totalIncome;
+        const pct = receita > 0 ? Math.round(investTotal/receita*100) : 0;
+        const tier = levelInfo?.tier || "iniciante";
+        const targetPct = getTargetPct(tier);
+
+        type RiskProfile = { label:string; color:string; icon:string; tip:string; tipExtra?: string };
+        let riskProfile: RiskProfile;
+        if (tier === "avancado") {
+          if (pct >= 20) riskProfile = { label:"Agressivo", color:"#a78bfa", icon:"🚀", tip:"Você está no topo. Considere diversificar em FIIs, BDRs e fundos internacionais.", tipExtra:"Verifique se sua reserva de emergência está intacta." };
+          else if (pct >= 10) riskProfile = { label:"Moderado", color:"#00d68f", icon:"📈", tip:"Bom ritmo. Explore fundos de índice (ETFs) e previdência PGBL/VGBL.", tipExtra:`Target Avançado: ${targetPct.investir}% — você está em ${pct}%.` };
+          else riskProfile = { label:"Abaixo do target", color:"#ffb703", icon:"⚠️", tip:"Para seu nível, você pode aportar mais.", tipExtra:`Meta recomendada: ${targetPct.investir}%. Você está em ${pct}%.` };
+        } else if (tier === "investidor") {
+          if (pct >= 15) riskProfile = { label:"Acima do Target", color:"#a78bfa", icon:"🚀", tip:"Excelente! Considere CDBs de liquidez diária e LCI/LCA isentos.", tipExtra:"Não coloque mais de 30% em um único ativo." };
+          else if (pct >= 10) riskProfile = { label:"No Target", color:"#00d68f", icon:"✅", tip:`Perfeito para Investidor. Foque em Tesouro Selic para reserva.`, tipExtra:`Meta: ${targetPct.investir}% — você está em ${pct}%.` };
+          else riskProfile = { label:"Conservador", color:"#ffb703", icon:"🛡️", tip:"Priorize Tesouro Selic até completar reserva de emergência (6× despesas).", tipExtra:`Meta: ${targetPct.investir}% — você está em ${pct}%.` };
+        } else {
+          if (pct >= 10) riskProfile = { label:"Acima do esperado!", color:"#00d68f", icon:"🌱", tip:"Incrível! Certifique-se de ter reserva de emergência antes de mais risco.", tipExtra:"Chegando a 100 XP você vira Investidor." };
+          else if (pct >= 5) riskProfile = { label:"No caminho certo", color:"#6c63ff", icon:"💡", tip:"Ótimo começo. Tesouro Selic e CDBs de alta liquidez são perfeitos.", tipExtra:`Meta: ${targetPct.investir}% — você está em ${pct}%.` };
+          else riskProfile = { label:"Comece pequeno", color:"#ffb703", icon:"🌱", tip:"Mesmo R$50/mês com juros compostos valem muito em 10 anos.", tipExtra:"Automatize um aporte fixo todo dia de pagamento." };
+        }
+
+        const collapsed = isCollapsed("capital");
+
+        return (
+          <div style={{ background:"linear-gradient(135deg,rgba(0,214,143,0.07),rgba(0,214,143,0.03))", border:"1px solid rgba(0,214,143,0.28)", borderRadius:14, padding:"13px 16px", marginBottom:14 }}>
+            <CollapseHeader id="capital">
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:24 }}>📈</span>
+                <div>
+                  <div style={{ fontSize:10, color:"#00d68f", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Capital Alocado este Mês</div>
+                  <div style={{ fontSize:20, fontWeight:900, color:"#00d68f", fontVariantNumeric:"tabular-nums" }}>{fmt(investTotal)}</div>
+                </div>
+              </div>
+            </CollapseHeader>
+            {!collapsed && (
+              <div style={{ marginTop:10 }}>
+                <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700 }}>% DA RECEITA</div>
+                    <div style={{ fontSize:20, fontWeight:900, color:riskProfile.color }}>{pct}%</div>
+                  </div>
+                </div>
+                {receita > 0 && (
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"var(--text2)", marginBottom:4 }}>
+                      <span>Atual: {pct}%</span>
+                      <span>Target {levelInfo?.label?.toLowerCase()||"iniciante"}: {targetPct.investir}%</span>
+                    </div>
+                    <div style={{ height:6, background:"var(--bg3)", borderRadius:3, overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${Math.min(pct/targetPct.investir*100,100)}%`, background:"linear-gradient(90deg,#00d68f,#6c63ff)", borderRadius:3, transition:"width .6s" }}/>
+                    </div>
+                  </div>
+                )}
+                <div style={{ background:"rgba(0,0,0,0.18)", borderRadius:10, padding:"9px 12px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
+                    <span style={{ fontSize:16 }}>{riskProfile.icon}</span>
+                    <span style={{ fontSize:11, fontWeight:800, color:riskProfile.color }}>{riskProfile.label}</span>
+                  </div>
+                  <div style={{ fontSize:11, color:"var(--text2)", lineHeight:1.5 }}>{riskProfile.tip}</div>
+                  {riskProfile.tipExtra && (
+                    <div style={{ fontSize:10, color:"var(--text2)", marginTop:5, paddingTop:5, borderTop:"1px solid rgba(255,255,255,0.06)", fontStyle:"italic" }}>{riskProfile.tipExtra}</div>
+                  )}
+                </div>
+                <div style={{ marginTop:8, fontSize:10, color:"rgba(0,214,143,0.6)", display:"flex", alignItems:"flex-start", gap:5 }}>
+                  <span style={{ flexShrink:0 }}>ℹ️</span>
+                  <span>Investimento é uma <strong style={{ color:"rgba(0,214,143,0.8)" }}>conquista</strong>, não um gasto — mas entra no saldo para controle real.</span>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* FATURA DO CARTÃO — COLAPSÁVEL */}
+      {totalCC>0&&(
+        <div style={{ background:"var(--bg2)", border:"1px solid rgba(255,183,3,0.3)", borderRadius:14, padding:"12px 16px", marginBottom:14, borderTop:"3px solid var(--yellow)" }}>
+          <CollapseHeader id="fatura">
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div>
+                <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4, marginBottom:3 }}>💳 Fatura do Cartão</div>
+                <div style={{ fontSize:20, fontWeight:900, fontVariantNumeric:"tabular-nums", color:"var(--yellow)" }}>{fmt(totalCC)}</div>
+                <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{cc.length} lançamento{cc.length!==1?"s":""}</div>
+              </div>
+              <div style={{ fontSize:34 }}>💳</div>
+            </div>
+          </CollapseHeader>
+          {!isCollapsed("fatura") && (
+            <div style={{ marginTop:10 }}>
+              <button onClick={onCreditClick} style={{ width:"100%", background:"rgba(255,183,3,0.1)", border:"1px solid rgba(255,183,3,0.3)", color:"var(--yellow)", borderRadius:10, padding:"8px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                Ver detalhes →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* INVESTINDO NO SONHO — COLAPSÁVEL */}
+      {sonhoTotal>0&&(
+        <div style={{ background:"linear-gradient(135deg,rgba(6,182,212,0.08),rgba(139,92,246,0.08))", border:"1px solid rgba(6,182,212,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:14 }}>
+          <CollapseHeader id="sonho">
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:26 }}>✨</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:10, color:"#06b6d4", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Sonho</div>
+                <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(sonhoTotal)} este mês</div>
+                {sonhoPago
+                  ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
+                  : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
+                }
+              </div>
+            </div>
+          </CollapseHeader>
+          {!isCollapsed("sonho") && sonhoRecorrente&&(
+            <div style={{ marginTop:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
+                <span>Meta: {fmt(num(sonhoRecorrente.recurringGoal))}</span>
+                <span>{Math.round(sonhoProgresso)}% concluído</span>
+              </div>
+              <div className="progress-bar"><div className="progress-fill" style={{ width:`${sonhoProgresso}%`, background:"linear-gradient(90deg,#06b6d4,#8b5cf6)" }}/></div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* STATUS PAGAMENTO */}
+      <div className="card" style={{ marginBottom:14 }}>
+        <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📊 Status de Pagamento</div>
+        <div style={{ display:"flex", gap:10, marginBottom:10 }}>
+          <div style={{ flex:1, background:"rgba(0,214,143,.1)", border:"1px solid rgba(0,214,143,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
+            <div style={{ color:"var(--green)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPaid)}</div>
+            <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pago</div>
+          </div>
+          <div style={{ flex:1, background:"rgba(255,183,3,.1)", border:"1px solid rgba(255,183,3,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
+            <div style={{ color:"var(--yellow)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPending)}</div>
+            <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pendente</div>
+          </div>
+        </div>
+        <div className="progress-bar"><div className="progress-fill" style={{ width:`${(totalExpSemSonho+totalCC)>0?Math.min(totalPaid/(totalExpSemSonho+totalCC)*100,100):0}%`, background:"var(--green)" }}/></div>
+      </div>
+
+      {/* META RENDA */}
+      {extraNeeded>0&&(
+        <div className="card" style={{ marginBottom:14 }}>
+          <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>🎯 Meta de Renda Extra</div>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:6 }}>
+            <span>Necessário: {fmt(extraNeeded)}</span><span>Ganhou: {fmt(totalIncome)}</span>
+          </div>
+          <div className="progress-bar"><div className="progress-fill" style={{ width:`${Math.min(totalIncome/extraNeeded*100,100)}%`, background:"linear-gradient(90deg,var(--primary),var(--purple))" }}/></div>
+        </div>
+      )}
+
+      {/* POR CATEGORIA */}
+      <div className="card" style={{ marginBottom:14 }}>
+        <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📂 Por Categoria</div>
+        {byCategory.map((cat:any)=>(
+          <div key={cat.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+            <span style={{ fontSize:15, width:22 }}>{cat.emoji}</span>
+            <div style={{ flex:1 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, fontWeight:600 }}>
+                <span>{cat.name}</span>
+                <span style={{ color:cat.total>0?"var(--text)":"var(--text2)", fontVariantNumeric:"tabular-nums" }}>{fmt(cat.total)}</span>
+              </div>
+              <div className="progress-bar" style={{ marginTop:4 }}><div className="progress-fill" style={{ width:`${(totalExpSemSonho+totalCC)>0?Math.min(cat.total/(totalExpSemSonho+totalCC)*100,100):0}%`, background:cat.color }}/></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
 
       {/* STREAK */}
       <div onClick={onStreak} style={{ background:streakClaimed?"rgba(0,214,143,0.05)":"rgba(108,99,255,0.06)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.28)":"rgba(108,99,255,0.32)"}`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -670,112 +987,6 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
                 </div>
               </div>
             )}
-
-            {/* Perfil de risco + dica */}
-            <div style={{ background:"rgba(0,0,0,0.18)", borderRadius:10, padding:"9px 12px" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
-                <span style={{ fontSize:16 }}>{riskProfile.icon}</span>
-                <span style={{ fontSize:11, fontWeight:800, color:riskProfile.color }}>{riskProfile.label}</span>
-              </div>
-              <div style={{ fontSize:11, color:"var(--text2)", lineHeight:1.5 }}>{riskProfile.tip}</div>
-              {riskProfile.tipExtra && (
-                <div style={{ fontSize:10, color:"var(--text2)", marginTop:5, paddingTop:5, borderTop:"1px solid rgba(255,255,255,0.06)", fontStyle:"italic" }}>{riskProfile.tipExtra}</div>
-              )}
-            </div>
-
-            {/* Disclaimer */}
-            <div style={{ marginTop:8, fontSize:10, color:"rgba(0,214,143,0.6)", display:"flex", alignItems:"flex-start", gap:5 }}>
-              <span style={{ flexShrink:0 }}>ℹ️</span>
-              <span>Investimento é uma <strong style={{ color:"rgba(0,214,143,0.8)" }}>conquista</strong>, não um gasto — mas entra no seu saldo para um controle real do que saiu da conta.</span>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* CC */}
-      {totalCC>0&&(
-        <div style={{ background:"var(--bg2)", border:"1px solid rgba(255,183,3,0.3)", borderRadius:14, padding:"12px 16px", marginBottom:14, borderTop:"3px solid var(--yellow)", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }} onClick={onCreditClick}>
-          <div>
-            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4, marginBottom:3 }}>💳 Fatura do Cartão</div>
-            <div style={{ fontSize:20, fontWeight:900, fontVariantNumeric:"tabular-nums", color:"var(--yellow)" }}>{fmt(totalCC)}</div>
-            <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{cc.length} lançamento{cc.length!==1?"s":""} · Ver detalhes</div>
-          </div>
-          <div style={{ fontSize:34 }}>💳</div>
-        </div>
-      )}
-
-      {/* SONHO — aparece sempre que existir despesa na categoria Sonho */}
-      {sonhoTotal>0&&(
-        <div style={{ background:"linear-gradient(135deg,rgba(6,182,212,0.08),rgba(139,92,246,0.08))", border:"1px solid rgba(6,182,212,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:14 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:sonhoRecorrente?8:0 }}>
-            <span style={{ fontSize:26 }}>✨</span>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:10, color:"#06b6d4", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Sonho</div>
-              <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(sonhoTotal)} este mês</div>
-              {sonhoPago
-                ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
-                : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
-              }
-            </div>
-          </div>
-          {sonhoRecorrente&&(
-            <>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
-                <span>Meta: {fmt(num(sonhoRecorrente.recurringGoal))}</span>
-                <span>{Math.round(sonhoProgresso)}% concluído</span>
-              </div>
-              <div className="progress-bar"><div className="progress-fill" style={{ width:`${sonhoProgresso}%`, background:"linear-gradient(90deg,#06b6d4,#8b5cf6)" }}/></div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* STATUS PAGAMENTO */}
-      <div className="card" style={{ marginBottom:14 }}>
-        <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📊 Status de Pagamento</div>
-        <div style={{ display:"flex", gap:10, marginBottom:10 }}>
-          <div style={{ flex:1, background:"rgba(0,214,143,.1)", border:"1px solid rgba(0,214,143,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
-            <div style={{ color:"var(--green)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPaid)}</div>
-            <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pago</div>
-          </div>
-          <div style={{ flex:1, background:"rgba(255,183,3,.1)", border:"1px solid rgba(255,183,3,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
-            <div style={{ color:"var(--yellow)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPending)}</div>
-            <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pendente</div>
-          </div>
-        </div>
-        <div className="progress-bar"><div className="progress-fill" style={{ width:`${(totalExpSemSonho+totalCC)>0?Math.min(totalPaid/(totalExpSemSonho+totalCC)*100,100):0}%`, background:"var(--green)" }}/></div>
-      </div>
-
-      {/* META RENDA */}
-      {extraNeeded>0&&(
-        <div className="card" style={{ marginBottom:14 }}>
-          <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>🎯 Meta de Renda Extra</div>
-          <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:6 }}>
-            <span>Necessário: {fmt(extraNeeded)}</span><span>Ganhou: {fmt(totalIncome)}</span>
-          </div>
-          <div className="progress-bar"><div className="progress-fill" style={{ width:`${Math.min(totalIncome/extraNeeded*100,100)}%`, background:"linear-gradient(90deg,var(--primary),var(--purple))" }}/></div>
-        </div>
-      )}
-
-      {/* POR CATEGORIA */}
-      <div className="card" style={{ marginBottom:14 }}>
-        <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📂 Por Categoria</div>
-        {byCategory.map((cat:any)=>(
-          <div key={cat.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-            <span style={{ fontSize:15, width:22 }}>{cat.emoji}</span>
-            <div style={{ flex:1 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, fontWeight:600 }}>
-                <span>{cat.name}</span>
-                <span style={{ color:cat.total>0?"var(--text)":"var(--text2)", fontVariantNumeric:"tabular-nums" }}>{fmt(cat.total)}</span>
-              </div>
-              <div className="progress-bar" style={{ marginTop:4 }}><div className="progress-fill" style={{ width:`${(totalExpSemSonho+totalCC)>0?Math.min(cat.total/(totalExpSemSonho+totalCC)*100,100):0}%`, background:cat.color }}/></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
 
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
@@ -921,7 +1132,14 @@ export default function App() {
   // FIX #2: reset-month não zera XP — atualiza state após reset
   const handleReset = async () => {
     try {
-      const res = await fetch(`${API}/users/${user.id}/reset-month`, { method: "POST" });
+      // Envia o mês do cliente para respeitar o timezone do usuário
+      const clientMonth = new Date().toLocaleDateString("pt-BR-u-ca-iso8601").slice(0,7).replace("/","-") ||
+        `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}`;
+      const res = await fetch(`${API}/users/${user.id}/reset-month`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month: clientMonth }),
+      });
       const data = await res.json();
       if (!res.ok) {
         showToast(`❌ Erro ao arquivar: ${data.error || "tente novamente"}`);
@@ -1041,7 +1259,7 @@ export default function App() {
               onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
             />}
             {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
-            {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore} totalInvestido={totalInvestido} levelInfo={levelInfo}/>}
+            {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} userName={user.name} salary={salary} healthScore={healthScore} totalInvestido={totalInvestido} levelInfo={levelInfo}/>}
           </div>
         </div>
       </div>
@@ -1092,7 +1310,7 @@ export default function App() {
           onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
         />}
         {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
-        {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} salary={salary} healthScore={healthScore} totalInvestido={totalInvestido} levelInfo={levelInfo}/>}
+        {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} userName={user.name} salary={salary} healthScore={healthScore} totalInvestido={totalInvestido} levelInfo={levelInfo}/>}
       </main>
       <nav style={{ position:"fixed", bottom:0, left:0, right:0, background:"var(--bg2)", borderTop:"1px solid var(--border)", display:"flex", zIndex:50 }}>
         {NAV.map(n=>(
@@ -1449,45 +1667,45 @@ function PieChart({ data }: { data:{label:string;value:number;color:string;emoji
   );
 }
 
-// ── GRÁFICO HORIZONTAL DE BARRAS (estilo da imagem) ──────────────────────────
-function HBarChart({ data }: { data:{label:string;expenses:number;income:number;month:string}[] }) {
+// ── GRÁFICO HORIZONTAL DE BARRAS (3 barras: salário azul, renda extra verde, gastos vermelho) ──
+function HBarChart({ data }: { data:{label:string;expenses:number;income:number;salary:number;extraIncome:number;month:string}[] }) {
   if (!data.length) return (
     <div style={{ textAlign:"center", padding:"28px 0", color:"var(--text2)", fontSize:13 }}>
       Nenhum mês arquivado ainda.<br/>
       <span style={{ fontSize:11 }}>Use "Virar Mês" em ⚙️ Configurações ao fechar cada mês.</span>
     </div>
   );
-  const maxVal = Math.max(...data.flatMap(d=>[d.expenses,d.income]), 1);
+  const maxVal = Math.max(...data.flatMap(d=>[d.expenses, d.salary, d.extraIncome]), 1);
 
   return (
     <div style={{ overflowX:"auto" }}>
-      <div style={{ minWidth: Math.max(data.length * 72, 280), padding:"4px 0 0" }}>
-        {/* Linhas de grade */}
+      <div style={{ minWidth: Math.max(data.length * 90, 280), padding:"4px 0 0" }}>
         <div style={{ position:"relative", height:160, marginBottom:0 }}>
           {[0,0.25,0.5,0.75,1].map((p,i)=>(
             <div key={i} style={{ position:"absolute", left:0, right:0, bottom:`${p*100}%`, borderTop:`1px dashed ${p===0?"var(--border)":"rgba(255,255,255,0.06)"}`, display:"flex", alignItems:"center" }}>
               {p > 0 && <span style={{ fontSize:9, color:"var(--text2)", paddingRight:4, background:"var(--bg2)", lineHeight:1 }}>{fmt(maxVal*p).replace("R$\u00a0","").replace(",00","")}</span>}
             </div>
           ))}
-          {/* Barras */}
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"flex-end", gap:0, paddingBottom:1 }}>
             {data.map((d,i)=>{
-              const expH = Math.max(d.expenses/maxVal*154, d.expenses>0?3:0);
-              const incH = Math.max(d.income/maxVal*154,   d.income>0?3:0);
+              const expH   = Math.max(d.expenses/maxVal*154,    d.expenses>0?3:0);
+              const salH   = Math.max(d.salary/maxVal*154,      d.salary>0?3:0);
+              const extH   = Math.max(d.extraIncome/maxVal*154, d.extraIncome>0?3:0);
               return (
                 <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:0 }}>
-                  <div style={{ display:"flex", alignItems:"flex-end", gap:3, height:154 }}>
+                  <div style={{ display:"flex", alignItems:"flex-end", gap:2, height:154 }}>
+                    <div title={`Salário: ${fmt(d.salary)}`}
+                      style={{ width:14, height:salH, background:"#378ADD", borderRadius:"4px 4px 0 0", opacity:0.9, transition:"height .6s ease", flexShrink:0 }}/>
+                    <div title={`Renda Extra: ${fmt(d.extraIncome)}`}
+                      style={{ width:14, height:extH, background:"var(--green)", borderRadius:"4px 4px 0 0", opacity:0.85, transition:"height .6s ease", flexShrink:0 }}/>
                     <div title={`Despesas: ${fmt(d.expenses)}`}
-                      style={{ width:18, height:expH, background:"var(--red)", borderRadius:"4px 4px 0 0", opacity:0.85, transition:"height .6s ease", flexShrink:0 }}/>
-                    <div title={`Renda: ${fmt(d.income)}`}
-                      style={{ width:18, height:incH, background:"var(--green)", borderRadius:"4px 4px 0 0", opacity:0.85, transition:"height .6s ease", flexShrink:0 }}/>
+                      style={{ width:14, height:expH, background:"var(--red)", borderRadius:"4px 4px 0 0", opacity:0.85, transition:"height .6s ease", flexShrink:0 }}/>
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
-        {/* Labels meses */}
         <div style={{ display:"flex", borderTop:"1px solid var(--border)", paddingTop:6 }}>
           {data.map((d,i)=>(
             <div key={i} style={{ flex:1, textAlign:"center", fontSize:10, color:"var(--text2)", textTransform:"capitalize", lineHeight:1.3 }}>
@@ -1496,13 +1714,15 @@ function HBarChart({ data }: { data:{label:string;expenses:number;income:number;
           ))}
         </div>
       </div>
-      {/* Legenda */}
-      <div style={{ display:"flex", gap:16, justifyContent:"center", marginTop:10 }}>
+      <div style={{ display:"flex", gap:12, justifyContent:"center", marginTop:10, flexWrap:"wrap" }}>
         <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, color:"var(--text2)" }}>
-          <div style={{ width:12,height:12,background:"var(--red)",borderRadius:3, opacity:0.85 }}/> Despesas
+          <div style={{ width:12,height:12,background:"#378ADD",borderRadius:3 }}/> Salário fixo
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, color:"var(--text2)" }}>
-          <div style={{ width:12,height:12,background:"var(--green)",borderRadius:3, opacity:0.85 }}/> Renda
+          <div style={{ width:12,height:12,background:"var(--green)",borderRadius:3, opacity:0.85 }}/> Renda extra
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, color:"var(--text2)" }}>
+          <div style={{ width:12,height:12,background:"var(--red)",borderRadius:3, opacity:0.85 }}/> Despesas
         </div>
       </div>
     </div>
@@ -1510,13 +1730,202 @@ function HBarChart({ data }: { data:{label:string;expenses:number;income:number;
 }
 
 // ── COMPONENTE ANÁLISE IA ─────────────────────────────────────────────────────
-function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvestido, byCategory, cc, healthScore, levelInfo, xp }: any) {
+function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvestido, byCategory, cc, healthScore, levelInfo, xp, userId, userName }: any) {
   const [insights, setInsights] = useState<{type:string;label:string;text:string;sub?:string}[]|null>(null);
   const [loading, setLoading] = useState(false);
+  const [blocked, setBlocked] = useState<string|null>(null);
   const monthLabel = new Date().toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
-  // Chave única por mês — ex: "mg_ia_2026-03"
   const currentMonth = new Date().toISOString().slice(0,7);
-  const cacheKey = `mg_ia_${currentMonth}`;
+  const day = new Date().getDate();
+  const windowKey = `${currentMonth}-${day <= 15 ? 'A' : 'B'}`;
+  const cacheKey = `mg_ia_${windowKey}`;
+
+  useEffect(()=>{ const id="mg-shimmer-style"; if (!document.getElementById(id)) { const s=document.createElement("style"); s.id=id; s.textContent=`@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}`; document.head.appendChild(s); } },[]);
+
+  useEffect(()=>{
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) { const { data } = JSON.parse(raw); if (Array.isArray(data)) setInsights(data); }
+    } catch {}
+  },[cacheKey]);
+
+  const saveCache = (data: any[]) => {
+    try { localStorage.setItem(cacheKey, JSON.stringify({ data })); } catch {}
+    try { Object.keys(localStorage).filter(k=>k.startsWith("mg_ia_") && k!==cacheKey).forEach(k=>localStorage.removeItem(k)); } catch {}
+  };
+
+  const generate = async () => {
+    if (loading) return;
+    setLoading(true); setBlocked(null);
+    try {
+      const totalReceita = salary + totalIncome;
+      const pctCC = totalReceita > 0 ? Math.round(totalCC / totalReceita * 100) : 0;
+      const pctInvest = totalReceita > 0 ? Math.round(totalInvestido / totalReceita * 100) : 0;
+      const saldo = totalReceita - totalGasto;
+      const metaInvest = levelInfo?.tier === "iniciante" ? 5 : levelInfo?.tier === "investidor" ? 15 : 25;
+      const parcelamentos = cc.filter((c:any)=>(c.installments||1)>1);
+      const parcStr = parcelamentos.length > 0
+        ? parcelamentos.map((c:any)=>`${c.description}: ${c.installmentCurrent||1}/${c.installments}x de ${fmt(num(c.amount))}`).join("; ")
+        : "nenhum";
+
+      const prompt = `Você é um consultor financeiro direto e amigável do app MoneyGame. Analise estes dados e gere de 2 a 4 insights financeiros úteis em JSON.\n\nDADOS DO MÊS (${monthLabel}):\n- Salário base: R$ ${salary}\n- Renda extra: R$ ${totalIncome}\n- Receita total: R$ ${totalReceita}\n- Total gasto: R$ ${totalGasto}\n- Cartão: R$ ${totalCC} (${pctCC}% da receita)\n- Investido: R$ ${totalInvestido} (${pctInvest}% — meta do nível: ${metaInvest}%)\n- Saldo: R$ ${saldo}\n- Saúde financeira: ${healthScore}/100\n- Nível: ${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}\n- Parcelamentos: ${parcStr}\n\nRetorne SOMENTE um array JSON válido (sem markdown, sem texto extra):\n[{"type":"tip|alert|info|gold","label":"Título curto","text":"1-2 frases com números reais","sub":"dica curta opcional"}]\n\ntip=positivo/verde, alert=atenção/vermelho, info=informativo/roxo, gold=projeção/dourado.`;
+
+      const res = await fetch(`${API}/ai/insights`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, userId }),
+      });
+      const resData = await res.json();
+      if (res.status === 429) { setBlocked(resData.error || "Limite atingido"); setLoading(false); return; }
+      if (!res.ok) throw new Error(resData.error || "Erro no servidor");
+
+      const clean = (resData.text || "").replace(/```json|```/g,"").trim();
+      const parsed = JSON.parse(clean);
+      if (Array.isArray(parsed) && parsed.length > 0) { setInsights(parsed); saveCache(parsed); }
+      else throw new Error("Resposta inválida");
+    } catch (e: any) {
+      const fallback = [{type:"alert",label:"Erro ao gerar análise",text:`Verifique a ANTHROPIC_API_KEY no servidor. Detalhe: ${e.message}`,sub:""}];
+      setInsights(fallback);
+    }
+    setLoading(false);
+  };
+
+  // Gerar PDF do relatório
+  const generatePDF = () => {
+    if (!insights) return;
+    const totalReceita = salary + totalIncome;
+    const saldo = totalReceita - totalGasto;
+    const healthBand = getHealthBand(healthScore);
+
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
+<style>
+  body{font-family:Arial,sans-serif;margin:0;padding:0;background:#fff;color:#1a1a2e}
+  .page{max-width:800px;margin:0 auto;padding:40px}
+  .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #6c63ff;padding-bottom:16px;margin-bottom:24px}
+  .logo{font-size:24px;font-weight:900;color:#6c63ff}
+  .subtitle{font-size:12px;color:#666;margin-top:4px}
+  .badge{background:#6c63ff;color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700}
+  .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin:20px 0 10px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .kpi{background:#f7f7fb;border-radius:10px;padding:14px;text-align:center}
+  .kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px}
+  .kpi-value{font-size:20px;font-weight:900;margin-top:4px}
+  .insight{border-radius:10px;padding:14px 16px;margin-bottom:10px;border-left:4px solid}
+  .insight-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .insight-text{font-size:13px;line-height:1.6}
+  .insight-sub{font-size:11px;color:#666;margin-top:5px;font-style:italic}
+  .footer{margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#aaa;text-align:center}
+  .health-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#ff4d6a,#fb923c,#facc15,#a3e635,#00d68f);margin-top:6px}
+</style></head><body><div class="page">
+<div class="header">
+  <div><div class="logo">💰 MONEYGAME</div><div class="subtitle">Relatório Financeiro Mensal · Confidencial</div></div>
+  <div><div style="font-size:13px;font-weight:700">${monthLabel}</div><div style="font-size:11px;color:#888;margin-top:3px">${userName || "Usuário"}</div><div class="badge" style="margin-top:6px;display:inline-block">${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}</div></div>
+</div>
+
+<div class="section-title">VISÃO GERAL DO MÊS</div>
+<div class="kpis">
+  <div class="kpi"><div class="kpi-label">Receita Total</div><div class="kpi-value" style="color:#6c63ff">${fmt(totalReceita)}</div></div>
+  <div class="kpi"><div class="kpi-label">Total Gasto</div><div class="kpi-value" style="color:#ff4d6a">${fmt(totalGasto)}</div></div>
+  <div class="kpi"><div class="kpi-label">Saldo Livre</div><div class="kpi-value" style="color:${saldo>=0?'#00d68f':'#ff4d6a'}">${fmt(saldo)}</div></div>
+  <div class="kpi"><div class="kpi-label">Saúde</div><div class="kpi-value" style="color:${healthBand.color}">${healthScore}/100</div><div style="font-size:11px;color:#888">${healthBand.label}</div></div>
+</div>
+
+<div class="section-title">ANÁLISE IA — INSIGHTS DO MÊS</div>
+${insights.map(ins=>{
+  const colors: Record<string,{bg:string;border:string;label:string}> = {
+    alert:{bg:"#fff5f5",border:"#ff4d6a",label:"⚠️ ALERTA"},
+    tip:  {bg:"#f0fff8",border:"#00d68f",label:"✅ PONTO FORTE"},
+    info: {bg:"#f5f3ff",border:"#6c63ff",label:"💡 INSIGHT"},
+    gold: {bg:"#fffbeb",border:"#ffd700",label:"📊 PROJEÇÃO"},
+  };
+  const s = colors[ins.type] || colors.info;
+  return `<div class="insight" style="background:${s.bg};border-left-color:${s.border}">
+    <div class="insight-label" style="color:${s.border}">${s.label} · ${ins.label}</div>
+    <div class="insight-text">${ins.text}</div>
+    ${ins.sub?`<div class="insight-sub">${ins.sub}</div>`:''}
+  </div>`;
+}).join('')}
+
+<div class="footer">MoneyGame · Relatório gerado automaticamente · ${new Date().toLocaleDateString("pt-BR")} · Dados do período ${monthLabel}</div>
+</div></body></html>`;
+
+    const win = window.open('','_blank');
+    if (win) { win.document.write(html); win.document.close(); setTimeout(()=>win.print(),500); }
+  };
+
+  const typeStyle: Record<string,{bg:string;border:string;labelColor:string;barColor:string}> = {
+    alert: { bg:"rgba(255,77,106,0.07)",   border:"rgba(255,77,106,0.22)",   labelColor:"#ff4d6a", barColor:"#ff4d6a" },
+    tip:   { bg:"rgba(0,214,143,0.06)",    border:"rgba(0,214,143,0.2)",     labelColor:"#00d68f", barColor:"#00d68f" },
+    info:  { bg:"rgba(108,99,255,0.07)",   border:"rgba(108,99,255,0.22)",   labelColor:"#a78bfa", barColor:"#6c63ff" },
+    gold:  { bg:"rgba(255,215,0,0.06)",    border:"rgba(255,215,0,0.2)",     labelColor:"#ffd700", barColor:"#ffd700" },
+  };
+
+  // Info da grade de 15 dias
+  const windowLabel = day <= 15 ? `1–15 de ${monthLabel}` : `16–fim de ${monthLabel}`;
+  const nextWindowLabel = day <= 15 ? `dia 16` : `dia 1 do próximo mês`;
+
+  return (
+    <div style={{ marginBottom:14 }}>
+      {blocked && (
+        <div style={{ background:"rgba(255,183,3,0.08)", border:"1px solid rgba(255,183,3,0.3)", borderRadius:12, padding:"12px 14px", marginBottom:10, fontSize:12, color:"#ffb703", lineHeight:1.6 }}>
+          ⏳ <strong>Limite da grade atingido.</strong> {blocked}<br/>
+          <span style={{ fontSize:11, color:"var(--text2)" }}>Próxima análise disponível a partir do {nextWindowLabel}.</span>
+        </div>
+      )}
+
+      {!insights && !blocked && (
+        <button onClick={generate} disabled={loading}
+          style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,214,143,0.06))", border:"1px solid rgba(108,99,255,0.25)", borderRadius:16, padding:"18px 16px", cursor:loading?"default":"pointer", textAlign:"center", opacity:loading?0.8:1 }}>
+          <div style={{ fontSize:28, marginBottom:6 }}>{loading ? "⏳" : "🤖"}</div>
+          <div style={{ fontSize:15, fontWeight:900, color:"var(--text)", marginBottom:4 }}>
+            {loading ? "Analisando seus dados..." : `Análise IA — ${monthLabel}`}
+          </div>
+          <div style={{ fontSize:12, color:"var(--text2)" }}>
+            {loading ? "Isso pode levar alguns segundos" : `Disponível neste período: ${windowLabel}`}
+          </div>
+          {loading && (
+            <div style={{ marginTop:10, height:3, background:"var(--bg3)", borderRadius:2, overflow:"hidden", position:"relative" }}>
+              <div style={{ position:"absolute", top:0, left:0, width:"50%", height:"100%", background:"linear-gradient(90deg,transparent,#6c63ff,#00d68f,transparent)", animation:"shimmer 1.5s infinite" }}/>
+            </div>
+          )}
+        </button>
+      )}
+
+      {insights && (
+        <div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <div style={{ fontSize:13, fontWeight:700 }}>🤖 Análise IA — {monthLabel}</div>
+            <div style={{ display:"flex", gap:6 }}>
+              <button onClick={generatePDF}
+                style={{ fontSize:11, color:"#6c63ff", background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", borderRadius:7, padding:"3px 9px", cursor:"pointer" }}>
+                📄 PDF
+              </button>
+              <button onClick={()=>{ setInsights(null); try{localStorage.removeItem(cacheKey);}catch{} }}
+                style={{ fontSize:11, color:"var(--text2)", background:"none", border:"1px solid var(--border)", borderRadius:7, padding:"3px 9px", cursor:"pointer" }}>
+                🔄
+              </button>
+            </div>
+          </div>
+          {insights.map((ins,i)=>{
+            const s = typeStyle[ins.type] || typeStyle.info;
+            return (
+              <div key={i} style={{ background:s.bg, border:`1px solid ${s.border}`, borderRadius:13, padding:"12px 14px", marginBottom:8, borderLeft:`3px solid ${s.barColor}` }}>
+                <div style={{ fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1, color:s.labelColor, marginBottom:5 }}>
+                  {ins.type==="alert"?"⚠️":ins.type==="tip"?"✅":ins.type==="gold"?"📊":"💡"} {ins.label}
+                </div>
+                <div style={{ fontSize:13, color:"var(--text)", lineHeight:1.6 }}>{ins.text}</div>
+                {ins.sub && <div style={{ fontSize:11, color:"var(--text2)", marginTop:5, fontStyle:"italic" }}>{ins.sub}</div>}
+              </div>
+            );
+          })}
+          <div style={{ fontSize:10, color:"var(--text2)", textAlign:"center", marginTop:4 }}>
+            Análise do período {windowLabel} · Próxima a partir do {nextWindowLabel}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
   // Injeta keyframe shimmer uma vez
   useEffect(()=>{
@@ -1665,7 +2074,7 @@ tip=positivo/verde, alert=atenção/vermelho, info=informativo/roxo, gold=proje�
 }
 
 // ── ABA RELATÓRIOS ────────────────────────────────────────────────────────────
-function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expenses,cc,xp,userId,salary,healthScore,totalInvestido,levelInfo: lvInfo }: any) {
+function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expenses,cc,xp,userId,userName,salary,healthScore,totalInvestido,levelInfo: lvInfo }: any) {
   const [history, setHistory] = useState<any[]>([]);
   const [loadingH, setLoadingH] = useState(true);
 
@@ -1677,28 +2086,22 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
   const band = getHealthBand(healthScore);
   const monthLabel = new Date().toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
   const levelInfo = lvInfo || getLevelInfo(xp||0);
-
-  // Totais do mês
   const totalRegistros = expenses.length + cc.length;
   const totalProduzido = salary + totalIncome;
   const totalGasto = totalExpSemSonho + totalCC;
-
-  // Dados para pizza
   const pieData = byCategory.map((cat:any)=>({ label:cat.name, value:cat.total, color:cat.color, emoji:cat.emoji }));
-
-  // Dados para gráfico histórico
   const histChartData = history.slice().reverse().map((h:any)=>({
     label: new Date(h.month+"-02").toLocaleDateString("pt-BR",{month:"short",year:"2-digit"}).replace(". de "," "),
     expenses: h.totalExpenses || 0,
     income: h.totalIncome || 0,
+    salary: h.totalSalary || (h.totalIncome || 0),
+    extraIncome: h.totalExtraIncome || 0,
     month: h.month,
   }));
 
   return (
     <div>
       <h2 style={{ fontSize:17, fontWeight:800, marginBottom:14 }}>📈 Relatórios</h2>
-
-      {/* Cards resumo — registros + valor produzido */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
         <div className="card" style={{ borderTop:"3px solid var(--red)" }}>
           <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Gastos</div>
@@ -1720,7 +2123,6 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
         </div>
       </div>
 
-      {/* Saúde financeira */}
       <div className="card" style={{ marginBottom:14 }}>
         <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>💚 Saúde Financeira — {monthLabel}</div>
         <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:10 }}>
@@ -1739,17 +2141,15 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
           </div>
         </div>
         <div style={{ height:8, background:"var(--bg3)", borderRadius:4, overflow:"hidden" }}>
-          <div style={{ height:"100%", width:`${healthScore}%`, background:`linear-gradient(90deg,#ff4d6a,#fb923c,#facc15,#a3e635,#00d68f)`, transition:"width 1s ease" }}/>
+          <div style={{ height:"100%", width:`${healthScore}%`, background:"linear-gradient(90deg,#ff4d6a,#fb923c,#facc15,#a3e635,#00d68f)", transition:"width 1s ease" }}/>
         </div>
       </div>
 
-      {/* Gráfico pizza — gastos por pote */}
       <div className="card" style={{ marginBottom:14 }}>
         <div style={{ fontSize:13, fontWeight:700, marginBottom:14 }}>🥧 Gastos por Pote — {monthLabel}</div>
         <PieChart data={pieData}/>
       </div>
 
-      {/* Histórico de meses */}
       <div className="card" style={{ marginBottom:14 }}>
         <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📅 Histórico de Meses</div>
         {loadingH ? (
@@ -1772,8 +2172,9 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
                         </span>
                       </div>
                       <div style={{ display:"flex", gap:14, fontSize:11, color:"var(--text2)", marginTop:3 }}>
-                        <span>💸 {fmt(h.totalExpenses||0)}</span>
-                        <span>💵 {fmt(h.totalIncome||0)}</span>
+                        <span style={{ color:"#378ADD" }}>💼 {fmt(h.totalSalary||0)}</span>
+                        <span style={{ color:"var(--green)" }}>💵 {fmt(h.totalExtraIncome||0)}</span>
+                        <span style={{ color:"var(--red)" }}>💸 {fmt(h.totalExpenses||0)}</span>
                       </div>
                     </div>
                   );
@@ -1790,7 +2191,6 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
         )}
       </div>
 
-      {/* Análise IA — substitui o card de XP */}
       <AiInsightButton
         salary={salary}
         totalGasto={totalGasto}
@@ -1802,6 +2202,8 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
         healthScore={healthScore}
         levelInfo={levelInfo}
         xp={xp||0}
+        userId={userId}
+        userName={userName}
       />
     </div>
   );
@@ -2049,20 +2451,85 @@ function AddIncomeModal({ userId, onClose, onXp }: any) {
   );
 }
 
+function ChangePasswordModal({ user, onClose }: { user: any; onClose: () => void }) {
+  const [form, setForm] = useState({ current: "", newPw: "", confirm: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const submit = async () => {
+    setError("");
+    if (!form.current || !form.newPw || !form.confirm) { setError("Preencha todos os campos"); return; }
+    if (form.newPw.length < 6) { setError("Nova senha deve ter pelo menos 6 caracteres"); return; }
+    if (form.newPw !== form.confirm) { setError("As senhas não coincidem"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/users/${user.id}/password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: form.current, newPassword: form.newPw }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Erro ao alterar senha"); }
+      else { setSuccess(true); setTimeout(onClose, 1800); }
+    } catch { setError("Erro de conexão"); }
+    setLoading(false);
+  };
+
+  return (
+    <Modal title="🔑 Alterar Senha" onClose={onClose}>
+      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        {success ? (
+          <div style={{ textAlign:"center", padding:"20px 0" }}>
+            <div style={{ fontSize:40, marginBottom:8 }}>✅</div>
+            <div style={{ fontSize:16, fontWeight:800, color:"var(--green)" }}>Senha alterada com sucesso!</div>
+          </div>
+        ) : (
+          <>
+            <div>
+              <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5, letterSpacing:1 }}>SENHA ATUAL</label>
+              <input type="password" placeholder="Sua senha atual" value={form.current} onChange={e=>setForm(f=>({...f,current:e.target.value}))}/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5, letterSpacing:1 }}>NOVA SENHA</label>
+              <input type="password" placeholder="Mínimo 6 caracteres" value={form.newPw} onChange={e=>setForm(f=>({...f,newPw:e.target.value}))}/>
+            </div>
+            <div>
+              <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5, letterSpacing:1 }}>CONFIRMAR NOVA SENHA</label>
+              <input type="password" placeholder="Repita a nova senha" value={form.confirm} onChange={e=>setForm(f=>({...f,confirm:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            </div>
+            {error && <div style={{ fontSize:12, color:"var(--red)", padding:"8px 12px", background:"rgba(255,77,106,0.08)", borderRadius:8 }}>⚠️ {error}</div>}
+            <div style={{ display:"flex", gap:8, marginTop:4 }}>
+              <button className="btn-ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</button>
+              <button className="btn-primary" onClick={submit} disabled={loading} style={{ flex:1 }}>
+                {loading ? "Salvando..." : "🔑 Alterar Senha"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
   const [s, setS] = useState(String(salary||""));
   const [loading, setLoading] = useState(false);
+  const [showChangePw, setShowChangePw] = useState(false);
+
   const save = async () => {
     if (!s || parseFloat(s) < 0) return;
     setLoading(true);
     try {
-      // FIX #3: aguarda resposta e usa o salário confirmado pelo servidor
       const res = await fetch(`${API}/users/${user.id}/settings`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({salaryBase:parseFloat(s)})});
       const data = await res.json();
       if (res.ok) { onSave(parseFloat(data.salaryBase ?? s)); }
     } catch { onSave(parseFloat(s)); }
     setLoading(false);
   };
+
+  if (showChangePw) return <ChangePasswordModal user={user} onClose={()=>setShowChangePw(false)}/>;
+
   return (
     <Modal title="⚙️ Configurações" onClose={onClose}>
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
@@ -2071,9 +2538,12 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
           <input type="number" value={s} onChange={e=>setS(e.target.value)}/>
         </div>
         <button className="btn-primary" onClick={save} disabled={loading||!s} style={{ width:"100%" }}>{loading?"Salvando...":"Salvar"}</button>
-        <div style={{ borderTop:"1px solid var(--border)", paddingTop:14 }}>
-          <div style={{ fontSize:12, color:"var(--text2)", marginBottom:10 }}>⚠️ Zona de perigo</div>
-          <button onClick={onReset} style={{ width:"100%", background:"rgba(255,77,106,.15)", color:"var(--red)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(255,77,106,.3)" }}>
+        <div style={{ borderTop:"1px solid var(--border)", paddingTop:14, display:"flex", flexDirection:"column", gap:8 }}>
+          <button onClick={()=>setShowChangePw(true)} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
+            🔑 Alterar Senha
+          </button>
+          <div style={{ fontSize:12, color:"var(--text2)", marginBottom:2 }}>⚠️ Zona de perigo</div>
+          <button onClick={onReset} style={{ width:"100%", background:"rgba(255,77,106,.15)", color:"var(--red)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(255,77,106,.3)", cursor:"pointer" }}>
             🔄 Virar Mês — Arquivar e limpar
           </button>
         </div>
