@@ -14,19 +14,6 @@ function CoinIcon({ size = 40 }: { size?: number }) {
 }
 
 const API = "/api";
-
-function LogoIcon({ size = 40 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="5" y="10" width="30" height="20" rx="5" fill="#6c63ff"/>
-      <path d="M10 15H30V25H10V15Z" fill="#8b5cf6"/>
-      <circle cx="20" cy="20" r="3" fill="#fff"/>
-      <path d="M10 20L15 20M25 20L30 20" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
-      <path d="M15 15L15 25M25 15L25 25" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
-  );
-}
-
 const fmt = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
 const num = (s: any) => parseFloat(String(s || 0)) || 0;
 
@@ -130,7 +117,7 @@ function LevelUpModal({ levelNum, tier, onClose }: { levelNum:number; tier:strin
   const isNewTier = levelNum === TIER_BREAK || isMax;
   const info = isMax
     ? { emoji:"👑", title:"Missão Cumprida.", color:"#ffd700",
-        msg:"Você fez o que menos de 1% das pessoas conseguem: transformou disciplina em liberdade.\nO NaCarteira foi seu treino — a vida real é o seu campo agora.\nVocê superou o app." }
+        msg:"Você fez o que menos de 1% das pessoas conseguem: transformou disciplina em liberdade.\nO MoneyGame foi seu treino — a vida real é o seu campo agora.\nVocê superou o app." }
     : levelNum === TIER_BREAK
     ? { emoji:"📈", title:"Você é Investidor!", color:"#00d68f",
         msg:"Disciplina comprovada. Agora seu foco muda: mais capital para os investimentos, menos para Contas. Os juros compostos já estão trabalhando por você." }
@@ -557,8 +544,8 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
 
   if (mode==="intro") return (
     <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#0a0d14,#111420)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 20px", textAlign:"center" }}>
-      <div style={{ marginBottom:14 }}><LogoIcon size={68}/></div>
-      <h1 style={{ fontSize:34, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff,#ffd700)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:8 }}>NaCarteira</h1>
+      <div style={{ marginBottom:14 }}><CoinIcon size={68}/></div>
+      <h1 style={{ fontSize:34, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff,#ffd700)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:8 }}>MONEYGAME</h1>
       <p style={{ color:"var(--text2)", fontSize:14, marginBottom:30, maxWidth:300 }}>Gamifique seu controle financeiro com a metodologia dos 6 potes</p>
       <div style={{ width:"100%", maxWidth:340, display:"flex", flexDirection:"column", gap:10, marginBottom:36 }}>
         {[{emoji:"⚔️",title:"Suba de Nível",desc:"Ganhe XP a cada ação financeira"},{emoji:"🔥",title:"Streak Diária",desc:"Apareça todo dia e acumule recompensas"},{emoji:"📊",title:"Controle Total",desc:"Despesas, cartão, renda extra e sonhos"}].map((f,i)=>(
@@ -579,8 +566,8 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:"20px" }}>
       <div style={{ width:"100%", maxWidth:370 }}>
         <div style={{ textAlign:"center", marginBottom:24 }}>
-          <div style={{ marginBottom:8, display:"flex", justifyContent:"center" }}><LogoIcon size={44}/></div>
-          <h1 style={{ fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>NaCarteira</h1>
+          <div style={{ marginBottom:8, display:"flex", justifyContent:"center" }}><CoinIcon size={44}/></div>
+          <h1 style={{ fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>MONEYGAME</h1>
         </div>
         <div className="card">
           {forgotDone ? (
@@ -618,8 +605,8 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:"20px" }}>
       <div style={{ width:"100%", maxWidth:370 }}>
         <div style={{ textAlign:"center", marginBottom:24 }}>
-          <div style={{ marginBottom:8, display:"flex", justifyContent:"center" }}><LogoIcon size={44}/></div>
-          <h1 style={{ fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>NaCarteira</h1>
+          <div style={{ marginBottom:8, display:"flex", justifyContent:"center" }}><CoinIcon size={44}/></div>
+          <h1 style={{ fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>MONEYGAME</h1>
         </div>
         <div className="card">
           <div style={{ display:"flex", gap:8, marginBottom:18 }}>
@@ -915,7 +902,7 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
 }
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [user, setUser] = useState<User|null>(()=>{ try{return JSON.parse(sessionStorage.getItem("nc_user")||"null")}catch{return null} });
+  const [user, setUser] = useState<User|null>(()=>{ try{return JSON.parse(sessionStorage.getItem("mg_user")||"null")}catch{return null} });
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [tab, setTab] = useState("dashboard");
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -935,7 +922,6 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
   const [showReset, setShowReset] = useState(false);
-  const [lastAIInsight, setLastAIInsight] = useState(() => { const d = localStorage.getItem('nc_last_ai'); return d ? new Date(d) : null; });
   const [showStreak, setShowStreak] = useState(false);
   const [levelUpInfo, setLevelUpInfo] = useState<{levelNum:number;tier:string}|null>(null);
   const [isPC, setIsPC] = useState(typeof window!=="undefined" && window.innerWidth>=1024);
@@ -968,7 +954,7 @@ export default function App() {
   },[user, xp]);
 
   const login = (u:User) => {
-    sessionStorage.setItem("nc_user",JSON.stringify(u)); setUser(u);
+    sessionStorage.setItem("mg_user",JSON.stringify(u)); setUser(u);
     setSalary(num(u.salaryBase));
     setXp(num(u.xp));           // sempre — mesmo que seja 0
     setLevelNum(num(u.levelNum) || 1);
@@ -982,7 +968,7 @@ export default function App() {
     }
   };
 
-  const logout = () => { sessionStorage.removeItem("nc_user"); setUser(null); setSalary(0); };
+  const logout = () => { sessionStorage.removeItem("mg_user"); setUser(null); setSalary(0); };
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -1012,7 +998,7 @@ export default function App() {
     } catch {}
   },[user]);
 
-  useEffect(()=>{ if(user) { apiFetch(`${API}/auth/me/${user.id}`).then(r=>r.json()).then(uData => setUser(u => u ? {...u, ...uData} : u)); load(); } },[load, user?.id]);
+  useEffect(()=>{load();},[load]);
 
   useEffect(()=>{
     if (!expenses.length) return;
@@ -1108,8 +1094,8 @@ export default function App() {
         <aside style={{ width:235, background:"var(--bg2)", borderRight:"1px solid var(--border)", display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
           <div style={{ padding:"22px 18px 14px", borderBottom:"1px solid var(--border)" }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-              <LogoIcon size={26}/>
-              <span style={{ fontSize:16, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>NaCarteira</span>
+              <CoinIcon size={26}/>
+              <span style={{ fontSize:16, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>MONEYGAME</span>
             </div>
             <div style={{ fontSize:11, color:"var(--text2)", paddingLeft:36 }}>Olá, {user.name?.split(" ")[0]}!</div>
           </div>
@@ -1199,7 +1185,7 @@ export default function App() {
       <header style={{ background:"var(--bg2)", borderBottom:"1px solid var(--border)", padding:"13px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:50 }}>
         <div>
           <div style={{ fontSize:17, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", display:"flex", alignItems:"center", gap:6 }}>
-            <LogoIcon size={20}/> NaCarteira
+            <CoinIcon size={20}/> MONEYGAME
           </div>
           <div style={{ fontSize:11, color:"var(--text2)" }}>Olá, {user.name?.split(" ")[0]}! <span style={{ color:levelInfo.color, fontWeight:700 }}>⚔️ {levelInfo.label} NV.{levelNum}</span></div>
         </div>
@@ -1694,7 +1680,7 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
         ? parcelamentos.map((c:any)=>`${c.description}: ${c.installmentCurrent||1}/${c.installments}x de ${fmt(num(c.amount))}`).join("; ")
         : "nenhum";
 
-      const prompt = `Você é um consultor financeiro direto e amigável do app NaCarteira. Analise estes dados e gere de 2 a 4 insights financeiros úteis em JSON.\n\nDADOS DO MÊS (${monthLabel}):\n- Salário base: R$ ${salary}\n- Renda extra: R$ ${totalIncome}\n- Receita total: R$ ${totalReceita}\n- Total gasto: R$ ${totalGasto}\n- Cartão: R$ ${totalCC} (${pctCC}% da receita)\n- Investido: R$ ${totalInvestido} (${pctInvest}% — meta do nível: ${metaInvest}%)\n- Saldo: R$ ${saldo}\n- Saúde financeira: ${healthScore}/100\n- Nível: ${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}\n- Parcelamentos: ${parcStr}\n\nRetorne SOMENTE um array JSON válido (sem markdown, sem texto extra):\n[{"type":"tip|alert|info|gold","label":"Título curto","text":"1-2 frases com números reais","sub":"dica curta opcional"}]\n\ntip=positivo/verde, alert=atenção/vermelho, info=informativo/roxo, gold=projeção/dourado.`;
+      const prompt = `Você é um consultor financeiro direto e amigável do app MoneyGame. Analise estes dados e gere de 2 a 4 insights financeiros úteis em JSON.\n\nDADOS DO MÊS (${monthLabel}):\n- Salário base: R$ ${salary}\n- Renda extra: R$ ${totalIncome}\n- Receita total: R$ ${totalReceita}\n- Total gasto: R$ ${totalGasto}\n- Cartão: R$ ${totalCC} (${pctCC}% da receita)\n- Investido: R$ ${totalInvestido} (${pctInvest}% — meta do nível: ${metaInvest}%)\n- Saldo: R$ ${saldo}\n- Saúde financeira: ${healthScore}/100\n- Nível: ${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}\n- Parcelamentos: ${parcStr}\n\nRetorne SOMENTE um array JSON válido (sem markdown, sem texto extra):\n[{"type":"tip|alert|info|gold","label":"Título curto","text":"1-2 frases com números reais","sub":"dica curta opcional"}]\n\ntip=positivo/verde, alert=atenção/vermelho, info=informativo/roxo, gold=projeção/dourado.`;
 
       const res = await fetch(`${API}/ai/insights`, {
         method: "POST",
@@ -1744,7 +1730,7 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
   .health-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#ff4d6a,#fb923c,#facc15,#a3e635,#00d68f);margin-top:6px}
 </style></head><body><div class="page">
 <div class="header">
-  <div><div class="logo">💰 NaCarteira</div><div class="subtitle">Relatório Financeiro Mensal · Confidencial</div></div>
+  <div><div class="logo">💰 MONEYGAME</div><div class="subtitle">Relatório Financeiro Mensal · Confidencial</div></div>
   <div><div style="font-size:13px;font-weight:700">${monthLabel}</div><div style="font-size:11px;color:#888;margin-top:3px">${userName || "Usuário"}</div><div class="badge" style="margin-top:6px;display:inline-block">${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}</div></div>
 </div>
 
@@ -1772,7 +1758,7 @@ ${insights.map(ins=>{
   </div>`;
 }).join('')}
 
-<div class="footer">NaCarteira · Relatório gerado automaticamente · ${new Date().toLocaleDateString("pt-BR")} · Dados do período ${monthLabel}</div>
+<div class="footer">MoneyGame · Relatório gerado automaticamente · ${new Date().toLocaleDateString("pt-BR")} · Dados do período ${monthLabel}</div>
 </div></body></html>`;
 
     const win = window.open('','_blank');
