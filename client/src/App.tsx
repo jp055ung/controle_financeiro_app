@@ -55,13 +55,13 @@ function calcHealthScore(salary: number, totalExp: number, totalIncome: number, 
 }
 
 function getHealthBand(score: number): { label: string; color: string; bg: string; desc: string } {
-  if (score >= 83) return { label: "Ótima",      color: "#00d68f", bg: "rgba(0,214,143,0.12)",   desc: "Vida financeira sem estresse — segurança e liberdade." };
-  if (score >= 69) return { label: "Muito Boa",  color: "#4ade80", bg: "rgba(74,222,128,0.1)",   desc: "Domínio do dia a dia. Foque agora no patrimônio." };
-  if (score >= 61) return { label: "Boa",        color: "#a3e635", bg: "rgba(163,230,53,0.1)",   desc: "Básico bem feito. Continue registrando." };
-  if (score >= 57) return { label: "Ok",         color: "#facc15", bg: "rgba(250,204,21,0.1)",   desc: "Equilíbrio no limite. Pouco espaço para erro." };
-  if (score >= 50) return { label: "Baixa",      color: "#fb923c", bg: "rgba(251,146,60,0.1)",   desc: "Primeiros sinais de desequilíbrio. Atenção agora." };
-  if (score >= 37) return { label: "Muito Baixa",color: "#f97316", bg: "rgba(249,115,22,0.1)",   desc: "Risco de situação crítica. Revise seus gastos." };
-  return              { label: "Ruim",           color: "#ff4d6a", bg: "rgba(255,77,106,0.12)",  desc: "Círculo de fragilidade. É hora de agir." };
+  if (score >= 70) return { label: "Ótima",       color: "#00d68f", bg: "rgba(0,214,143,0.12)",   desc: "Vida financeira sem estresse — segurança e liberdade." };
+  if (score >= 55) return { label: "Muito Boa",   color: "#4ade80", bg: "rgba(74,222,128,0.1)",   desc: "Domínio do dia a dia. Foque agora no patrimônio." };
+  if (score >= 45) return { label: "Boa",         color: "#a3e635", bg: "rgba(163,230,53,0.1)",   desc: "Básico bem feito. Continue registrando." };
+  if (score >= 38) return { label: "Ok",          color: "#facc15", bg: "rgba(250,204,21,0.1)",   desc: "Equilíbrio no limite. Pouco espaço para erro." };
+  if (score >= 28) return { label: "Baixa",       color: "#fb923c", bg: "rgba(251,146,60,0.1)",   desc: "Primeiros sinais de desequilíbrio. Atenção agora." };
+  if (score >= 16) return { label: "Muito Baixa", color: "#f97316", bg: "rgba(249,115,22,0.1)",   desc: "Risco de situação crítica. Revise seus gastos." };
+  return              { label: "Ruim",            color: "#ff4d6a", bg: "rgba(255,77,106,0.12)",  desc: "Círculo de fragilidade. É hora de agir." };
 }
 
 const STREAK_PHRASES: Record<string, string[]> = {
@@ -511,14 +511,348 @@ function OnboardingSalary({ user, onDone }: { user:User; onDone:()=>void }) {
   );
 }
 
+// ── PIX / DOAÇÃO ──────────────────────────────────────────────────────────────
+const PIX_PAYLOAD = "00020126580014BR.GOV.BCB.PIX013646f62c5c-a818-4b23-8519-cc39a29eaeb95204000053039865802BR5925Joao Paulo da Silva Sarai6009SAO PAULO62140510ZWPgQDzyTm630404BC";
+const PIX_NAME = "João Paulo da Silva Saraiva";
+const PIX_BANK = "Nu Pagamentos S.A. (Nubank)";
+
+const DONATION_MSGS = [
+  ["Você também faz parte desse projeto ✨", "Criado por uma pessoa só, para quem quer superar sua situação financeira com método."],
+  ["Apoie um criador independente ☕", "O MoneyGame nasceu de uma necessidade real. Se ele está te ajudando, considere retribuir."],
+  ["Sua ajuda chega mais longe do que você imagina 🚀", "Com R$25 você mantém o servidor no ar por um mês inteiro."],
+  ["O dinheiro pode mudar de lado — comece aqui 💚", "Criado por alguém que também está nessa jornada. Juntos chegamos mais longe."],
+  ["Que tal um café para quem criou isso pra você? ☕", "Um gesto simples que mantém vivo um projeto feito com propósito."],
+  ["Há saída — e esse app prova isso todo dia 🌱", "Foi criado porque quem o fez também precisava de esperança financeira."],
+  ["Você merece clareza financeira. O criador merece seu apoio 💜", "Sem patrocínio, sem investidor. Só um projeto feito com método."],
+  ["Cada real aqui volta como funcionalidade pra você 🔄", "O apoio dos usuários financia melhorias e novas ferramentas."],
+];
+
+function DonationPopup({ onClose }: { onClose: () => void }) {
+  const idx = parseInt(localStorage.getItem("mg_donation_idx") || "0") % DONATION_MSGS.length;
+  const [title, sub] = DONATION_MSGS[idx];
+  const [copied, setCopied] = useState(false);
+
+  const copyPix = () => {
+    navigator.clipboard.writeText(PIX_PAYLOAD).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }).catch(() => {
+      // fallback para browsers sem clipboard API
+      const el = document.createElement("textarea");
+      el.value = PIX_PAYLOAD;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.88)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:300, padding:"0" }} onClick={onClose}>
+      <div style={{ background:"#111520", borderRadius:"24px 24px 0 0", width:"100%", maxWidth:480, overflow:"hidden", border:"0.5px solid rgba(130,10,209,0.5)", borderBottom:"none" }} onClick={e=>e.stopPropagation()}>
+        {/* Handle */}
+        <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 4px" }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:"rgba(255,255,255,0.15)" }}/>
+        </div>
+        {/* Header */}
+        <div style={{ background:"linear-gradient(135deg,#820AD1,#5b0a96)", padding:"20px 24px 18px", position:"relative" }}>
+          <button onClick={onClose} style={{ position:"absolute", top:14, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"white", width:28, height:28, borderRadius:"50%", fontSize:14, cursor:"pointer" }}>✕</button>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:1.5, color:"rgba(255,255,255,0.6)", textTransform:"uppercase", marginBottom:8 }}>Apoie o MoneyGame</div>
+          <div style={{ fontSize:18, fontWeight:700, color:"white", lineHeight:1.35, marginBottom:6, paddingRight:36 }}>{title}</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.7)", lineHeight:1.5 }}>{sub}</div>
+        </div>
+        <div style={{ padding:"20px 24px 28px", display:"flex", flexDirection:"column", gap:12 }}>
+          {/* Valor sugerido */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"rgba(130,10,209,0.1)", border:"0.5px solid rgba(130,10,209,0.3)", borderRadius:14, padding:"14px 18px" }}>
+            <div>
+              <div style={{ fontSize:11, color:"rgba(192,132,252,0.7)", fontWeight:600, marginBottom:4 }}>Contribuição sugerida</div>
+              <div style={{ fontSize:26, fontWeight:700, color:"#c084fc", lineHeight:1 }}>R$ 25</div>
+              <div style={{ fontSize:11, color:"rgba(192,132,252,0.6)", marginTop:3 }}>mantém o servidor por 1 mês</div>
+            </div>
+            <div style={{ fontSize:32 }}>☕</div>
+          </div>
+          {/* QR Code via API pública */}
+          <div style={{ background:"rgba(255,255,255,0.96)", borderRadius:14, padding:"16px", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(PIX_PAYLOAD)}`}
+              alt="QR Code Pix"
+              style={{ width:160, height:160, borderRadius:8 }}
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div style={{ fontSize:11, color:"#555", textAlign:"center" }}>Aponte a câmera do banco para o QR Code</div>
+          </div>
+          {/* Pix manual */}
+          <div style={{ background:"rgba(255,255,255,0.04)", border:"0.5px solid rgba(255,255,255,0.1)", borderRadius:14, padding:"14px 18px" }}>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)", marginBottom:8, fontWeight:600 }}>CHAVE PIX ALEATÓRIA · {PIX_BANK.toUpperCase()}</div>
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontFamily:"monospace", fontSize:10, color:"rgba(255,255,255,0.7)", wordBreak:"break-all", lineHeight:1.5 }}>
+                  {PIX_PAYLOAD.slice(0, 50)}…
+                </div>
+                <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>{PIX_NAME}</div>
+              </div>
+              <button onClick={copyPix} style={{ flexShrink:0, background:copied?"#00d68f":"#820AD1", border:"none", color:"white", fontSize:12, fontWeight:600, padding:"8px 14px", borderRadius:8, cursor:"pointer", transition:"background .3s", whiteSpace:"nowrap" }}>
+                {copied ? "✓ Copiado!" : "Copiar chave"}
+              </button>
+            </div>
+          </div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", textAlign:"center" }}>Sem assinatura. Você decide quanto e quando. 💜</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function useDonationPopup(createdAt?: string) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!createdAt) return;
+    const daysSince = (Date.now() - new Date(createdAt).getTime()) / 86400000;
+    if (daysSince < 3) return;
+    const lastTs = parseInt(localStorage.getItem("mg_donation_last") || "0");
+    if ((Date.now() - lastTs) / 86400000 < 7) return;
+    const monthKey = `mg_donation_month_${new Date().toISOString().slice(0,7)}`;
+    if (parseInt(localStorage.getItem(monthKey) || "0") >= 4) return;
+    const t = setTimeout(() => {
+      setShow(true);
+      localStorage.setItem("mg_donation_last", String(Date.now()));
+      localStorage.setItem(monthKey, String(parseInt(localStorage.getItem(monthKey)||"0") + 1));
+      const idx = parseInt(localStorage.getItem("mg_donation_idx") || "0");
+      localStorage.setItem("mg_donation_idx", String((idx + 1) % DONATION_MSGS.length));
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [createdAt]);
+  return { show, close: () => setShow(false) };
+}
+
+// ── RANKING ADMIN (página separada, protegida) ────────────────────────────────
+const ADMIN_SECRET = "mg_admin_2026"; // só usado para header — a senha real fica no servidor
+
+function AdminRanking() {
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem("mg_admin_auth") === "1");
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState("");
+
+  const tryLogin = async () => {
+    // Valida contra o servidor — se retornar 403 a senha está errada
+    const res = await fetch(`${API}/admin/ranking`, { headers: { "x-admin-secret": pwInput } });
+    if (res.ok) {
+      sessionStorage.setItem("mg_admin_auth", "1");
+      sessionStorage.setItem("mg_admin_secret", pwInput);
+      setAuthed(true);
+    } else {
+      setPwError("Senha incorreta");
+      setTimeout(() => setPwError(""), 2500);
+    }
+  };
+
+  if (!authed) return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:20 }}>
+      <div style={{ width:"100%", maxWidth:340, background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:20, padding:"32px 24px", textAlign:"center" }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>🔐</div>
+        <div style={{ fontSize:18, fontWeight:800, marginBottom:6 }}>Área Restrita</div>
+        <div style={{ fontSize:13, color:"var(--text2)", marginBottom:20 }}>Acesso exclusivo ao administrador</div>
+        <input type="password" placeholder="Senha de acesso" value={pwInput}
+          onChange={e=>setPwInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryLogin()}
+          style={{ marginBottom:10 }}/>
+        {pwError && <div style={{ color:"var(--red)", fontSize:12, marginBottom:8 }}>{pwError}</div>}
+        <button onClick={tryLogin} style={{ width:"100%", background:"var(--primary)", border:"none", color:"white", padding:"12px", borderRadius:12, fontSize:14, fontWeight:700, cursor:"pointer" }}>
+          Entrar
+        </button>
+      </div>
+    </div>
+  );
+
+  // Usa a senha que o admin digitou para as requisições
+  const secret = sessionStorage.getItem("mg_admin_secret") || ADMIN_SECRET;
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setUsers(d); else setError("Acesso negado"); })
+      .catch(() => setError("Erro de conexão"))
+      .finally(() => setLoading(false));
+  }, [secret]);
+
+  const deleteHistory = async (userId?: string) => {
+    const url = userId ? `${API}/admin/history/${userId}` : `${API}/admin/history`;
+    const label = userId ? `usuário #${userId}` : "TODOS os usuários";
+    if (!window.confirm(`Apagar histórico de meses de ${label}?`)) return;
+    const res = await fetch(url, { method: "DELETE", headers: { "x-admin-secret": secret } });
+    const data = await res.json();
+    setDelMsg(`✅ ${data.deleted} registros apagados de ${label}`);
+    setTimeout(() => setDelMsg(""), 4000);
+  };
+
+  const deleteUser = async (userId: string, userName: string) => {
+    if (!window.confirm(`Excluir PERMANENTEMENTE o usuário "${userName}" (#${userId}) e todos os seus dados?`)) return;
+    const res = await fetch(`${API}/admin/user/${userId}`, { method: "DELETE", headers: { "x-admin-secret": secret } });
+    const data = await res.json();
+    if (data.success) {
+      setUsers(u => u.filter(x => String(x.id) !== String(userId)));
+      setDelMsg(`✅ Usuário #${userId} excluído com sucesso`);
+      setTimeout(() => setDelMsg(""), 4000);
+    } else {
+      setDelMsg(`❌ Erro: ${data.error}`);
+    }
+  };
+
+  if (loading) return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", color:"var(--text2)" }}>
+      Carregando...
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", color:"var(--red)", fontSize:16 }}>
+      {error}
+    </div>
+  );
+
+  const totalUsers = users.length;
+  const totalXP = users.reduce((s, u) => s + (u.xp || 0), 0);
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--bg)", padding:"24px 20px" }}>
+      <div style={{ maxWidth:700, margin:"0 auto" }}>
+        <div style={{ marginBottom:20 }}>
+          <h1 style={{ fontSize:22, fontWeight:900, color:"var(--text)" }}>📊 Painel Admin — MoneyGame</h1>
+          <div style={{ fontSize:12, color:"var(--text2)", marginTop:4 }}>Apenas você vê esta página</div>
+        </div>
+
+        {/* Stats resumo */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:20 }}>
+          {[
+            { label:"Usuários", value:totalUsers, color:"var(--primary)" },
+            { label:"XP Total", value:totalXP.toLocaleString("pt-BR"), color:"#ffd700" },
+            { label:"Ativos (streak)", value:users.filter(u=>u.streakDays>0).length, color:"var(--green)" },
+          ].map((s,i)=>(
+            <div key={i} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:12, padding:"14px", textAlign:"center" }}>
+              <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>{s.label}</div>
+              <div style={{ fontSize:22, fontWeight:900, color:s.color }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Ações de limpeza */}
+        <div style={{ background:"var(--bg2)", border:"1px solid rgba(255,77,106,0.3)", borderRadius:12, padding:"14px 16px", marginBottom:20 }}>
+          <div style={{ fontSize:13, fontWeight:700, marginBottom:10, color:"var(--red)" }}>🗑 Gerenciar Histórico de Meses</div>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+            <input
+              type="text"
+              placeholder="ID do usuário (deixe vazio = todos)"
+              value={delUserId}
+              onChange={e=>setDelUserId(e.target.value)}
+              style={{ flex:1, minWidth:200, background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 12px", color:"var(--text)", fontSize:13 }}
+            />
+            <button
+              onClick={() => deleteHistory(delUserId || undefined)}
+              style={{ background:"rgba(255,77,106,0.15)", border:"1px solid rgba(255,77,106,0.4)", color:"var(--red)", padding:"9px 16px", borderRadius:8, fontSize:13, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
+              Apagar histórico
+            </button>
+          </div>
+          {delMsg && <div style={{ marginTop:8, fontSize:12, color:"var(--green)" }}>{delMsg}</div>}
+        </div>
+
+        {/* Lista de usuários */}
+        <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:12, overflow:"hidden" }}>
+          <div style={{ padding:"12px 16px", borderBottom:"1px solid var(--border)", fontSize:13, fontWeight:700, display:"flex", justifyContent:"space-between" }}>
+            <span>Usuários ({totalUsers})</span>
+            <span style={{ fontSize:11, color:"var(--text2)", fontWeight:400 }}>ordenado por XP</span>
+          </div>
+          {users.map((u, i) => (
+            <div key={u.id} style={{ padding:"11px 16px", borderBottom:i<users.length-1?"1px solid var(--border)":"none", display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:24, fontSize:12, fontWeight:700, color:"var(--text2)", flexShrink:0 }}>{i+1}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:600, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{u.name}</div>
+                <div style={{ fontSize:11, color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{u.email}</div>
+                <div style={{ fontSize:10, color:"var(--text2)", marginTop:2 }}>
+                  Nível {u.level} · Streak {u.streakDays}d · ID #{u.id}
+                  {u.createdAt && ` · Desde ${new Date(u.createdAt).toLocaleDateString("pt-BR")}`}
+                </div>
+              </div>
+              <div style={{ textAlign:"right", flexShrink:0, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+                <div style={{ fontSize:15, fontWeight:800, color:u.level==="avancado"?"#ffd700":u.level==="investidor"?"#00d68f":"var(--primary)", fontVariantNumeric:"tabular-nums" }}>
+                  {(u.xp||0).toLocaleString("pt-BR")} XP
+                </div>
+                <div style={{ fontSize:10, color:"var(--text2)" }}>NV.{u.levelNum}</div>
+                <button onClick={()=>deleteUser(String(u.id), u.name)}
+                  style={{ fontSize:10, color:"var(--red)", background:"rgba(255,77,106,0.1)", border:"1px solid rgba(255,77,106,0.3)", borderRadius:6, padding:"3px 8px", cursor:"pointer" }}>
+                  🗑 Excluir
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PWA INSTALL PROMPT ────────────────────────────────────────────────────────
+function usePWAInstall() {
+  const [prompt, setPrompt] = useState<any>(null);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    // Detecta se já está instalado
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setInstalled(true);
+      return;
+    }
+    const handler = (e: Event) => { e.preventDefault(); setPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler as any);
+    window.addEventListener('appinstalled', () => setInstalled(true));
+    return () => window.removeEventListener('beforeinstallprompt', handler as any);
+  }, []);
+
+  const install = async () => {
+    if (!prompt) return;
+    prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === 'accepted') setInstalled(true);
+    setPrompt(null);
+  };
+
+  return { canInstall: !!prompt && !installed, install, installed };
+}
+
+function PWAInstallBanner({ onInstall, onDismiss }: { onInstall:()=>void; onDismiss:()=>void }) {
+  return (
+    <div style={{ position:"fixed", bottom:80, left:12, right:12, zIndex:90, background:"var(--bg2)", border:"1px solid rgba(108,99,255,0.4)", borderRadius:16, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, boxShadow:"0 4px 24px rgba(0,0,0,0.4)" }}>
+      <div style={{ fontSize:28, flexShrink:0 }}>💰</div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>Instalar MoneyGame</div>
+        <div style={{ fontSize:11, color:"var(--text2)", marginTop:1 }}>Adicione à tela inicial — acesso rápido, funciona offline</div>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:5, flexShrink:0 }}>
+        <button onClick={onInstall} style={{ background:"var(--primary)", border:"none", color:"white", fontSize:11, fontWeight:700, padding:"6px 12px", borderRadius:8, cursor:"pointer", whiteSpace:"nowrap" }}>
+          Instalar
+        </button>
+        <button onClick={onDismiss} style={{ background:"none", border:"none", color:"var(--text2)", fontSize:11, cursor:"pointer", padding:"2px 0" }}>
+          Agora não
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── AUTH ──────────────────────────────────────────────────────────────────────
+const SECURITY_QUESTIONS = [
+  "Nome do seu filme ou série preferido(a)?",
+  "Nome do seu pet de infância?",
+  "Cidade onde você nasceu?",
+];
+
 function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
   const [mode, setMode] = useState<"login"|"register"|"intro"|"forgot">("intro");
-  const [form, setForm] = useState({ name:"", email:"", password:"" });
+  const [form, setForm] = useState({ name:"", email:"", password:"", securityQuestion: SECURITY_QUESTIONS[0], securityAnswer:"" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotStep, setForgotStep] = useState<1|2|3>(1);
   const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotDone, setForgotDone] = useState(false);
+  const [forgotQuestion, setForgotQuestion] = useState("");
+  const [forgotAnswer, setForgotAnswer] = useState("");
+  const [forgotNewPw, setForgotNewPw] = useState("");
 
   const submit = async () => {
     setLoading(true); setError("");
@@ -530,14 +864,27 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
     } catch { setError("Erro de conexão"); } finally { setLoading(false); }
   };
 
-  const submitForgot = async () => {
+  const submitForgotStep1 = async () => {
     if (!forgotEmail.trim()) { setError("Digite seu e-mail"); return; }
     setLoading(true); setError("");
     try {
       const res = await fetch(`${API}/auth/reset-password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:forgotEmail.trim()})});
       const data = await res.json();
       if (!res.ok) { setError(data.error||"E-mail não encontrado"); }
-      else { setForgotDone(true); }
+      else { setForgotQuestion(data.question); setForgotStep(2); }
+    } catch { setError("Erro de conexão"); }
+    setLoading(false);
+  };
+
+  const submitForgotStep2 = async () => {
+    if (!forgotAnswer.trim()) { setError("Digite sua resposta"); return; }
+    if (!forgotNewPw || forgotNewPw.length < 6) { setError("Nova senha: mínimo 6 caracteres"); return; }
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`${API}/auth/reset-password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:forgotEmail.trim(),answer:forgotAnswer,newPassword:forgotNewPw})});
+      const data = await res.json();
+      if (!res.ok) { setError(data.error||"Resposta incorreta"); }
+      else { setForgotStep(3); }
     } catch { setError("Erro de conexão"); }
     setLoading(false);
   };
@@ -570,29 +917,30 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
           <h1 style={{ fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>MONEYGAME</h1>
         </div>
         <div className="card">
-          {forgotDone ? (
+          {forgotStep===3 ? (
             <div style={{ textAlign:"center", padding:"12px 0" }}>
               <div style={{ fontSize:44, marginBottom:12 }}>✅</div>
-              <div style={{ fontSize:16, fontWeight:800, color:"var(--green)", marginBottom:8 }}>Senha resetada!</div>
-              <div style={{ fontSize:13, color:"var(--text2)", lineHeight:1.6, marginBottom:20 }}>
-                Sua senha foi redefinida para <strong style={{color:"var(--text)"}}>0000</strong>.<br/>
-                Entre com ela e troque em ⚙️ Configurações.
-              </div>
-              <button className="btn-primary" onClick={()=>{setMode("login");setForgotDone(false);setForgotEmail("");}} style={{ width:"100%" }}>
-                Ir para o login →
-              </button>
+              <div style={{ fontSize:16, fontWeight:800, color:"var(--green)", marginBottom:8 }}>Senha alterada!</div>
+              <div style={{ fontSize:13, color:"var(--text2)", marginBottom:20 }}>Entre com sua nova senha.</div>
+              <button className="btn-primary" onClick={()=>{setMode("login");setForgotStep(1);setForgotEmail("");setForgotAnswer("");setForgotNewPw("");}} style={{ width:"100%" }}>Ir para o login →</button>
+            </div>
+          ) : forgotStep===2 ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ fontSize:14, fontWeight:700 }}>🔐 Pergunta de segurança</div>
+              <div style={{ background:"var(--bg3)", borderRadius:10, padding:"10px 12px", fontSize:13, color:"var(--text2)" }}>{forgotQuestion}</div>
+              <input placeholder="Sua resposta" value={forgotAnswer} onChange={e=>setForgotAnswer(e.target.value)}/>
+              <input type="password" placeholder="Nova senha (mín. 6 caracteres)" value={forgotNewPw} onChange={e=>setForgotNewPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submitForgotStep2()}/>
+              {error&&<p style={{ color:"var(--red)", fontSize:13, margin:0 }}>{error}</p>}
+              <button className="btn-primary" onClick={submitForgotStep2} disabled={loading} style={{ width:"100%" }}>{loading?"Verificando...":"Redefinir senha"}</button>
+              <button className="btn-ghost" onClick={()=>{setForgotStep(1);setError("");}} style={{ width:"100%", fontSize:12 }}>← Voltar</button>
             </div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div style={{ fontSize:14, fontWeight:700, marginBottom:4 }}>🔑 Redefinir Senha</div>
-              <div style={{ fontSize:13, color:"var(--text2)", lineHeight:1.5 }}>
-                Digite seu e-mail cadastrado. Sua senha será redefinida para <strong style={{color:"var(--text)"}}>0000</strong> — troque depois em ⚙️ Configurações.
-              </div>
-              <input type="email" placeholder="Seu e-mail cadastrado" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submitForgot()}/>
-              {error&&<p style={{ color:"var(--red)", fontSize:13, textAlign:"center", margin:0 }}>{error}</p>}
-              <button className="btn-primary" onClick={submitForgot} disabled={loading} style={{ width:"100%" }}>
-                {loading ? "Aguarde..." : "Redefinir para 0000"}
-              </button>
+              <div style={{ fontSize:14, fontWeight:700 }}>🔑 Recuperar senha</div>
+              <div style={{ fontSize:13, color:"var(--text2)" }}>Digite seu e-mail e responda sua pergunta de segurança.</div>
+              <input type="email" placeholder="Seu e-mail cadastrado" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submitForgotStep1()}/>
+              {error&&<p style={{ color:"var(--red)", fontSize:13, margin:0 }}>{error}</p>}
+              <button className="btn-primary" onClick={submitForgotStep1} disabled={loading} style={{ width:"100%" }}>{loading?"Buscando...":"Continuar →"}</button>
               <button className="btn-ghost" onClick={()=>{setMode("login");setError("");}} style={{ width:"100%", fontSize:12 }}>← Voltar ao login</button>
             </div>
           )}
@@ -617,14 +965,19 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             {mode==="register"&&<input placeholder="Seu nome" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>}
             <input type="email" placeholder="E-mail" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))}/>
-            <input type="password" placeholder="Senha" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            <input type="password" placeholder="Senha" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&mode==="login"&&submit()}/>
+            {mode==="register"&&(
+              <>
+                <div style={{ fontSize:11, color:"var(--text2)", fontWeight:700, letterSpacing:1, marginTop:4 }}>PERGUNTA DE SEGURANÇA</div>
+                <select value={form.securityQuestion} onChange={e=>setForm(f=>({...f,securityQuestion:e.target.value}))} style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 12px", color:"var(--text)", fontSize:13 }}>
+                  {SECURITY_QUESTIONS.map(q=><option key={q} value={q}>{q}</option>)}
+                </select>
+                <input placeholder="Sua resposta (guarde bem!)" value={form.securityAnswer} onChange={e=>setForm(f=>({...f,securityAnswer:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+              </>
+            )}
             {error&&<p style={{ color:"var(--red)", fontSize:13, textAlign:"center", margin:0 }}>{error}</p>}
             <button className="btn-primary" onClick={submit} disabled={loading} style={{ width:"100%", marginTop:4 }}>{loading?"Aguarde...":mode==="login"?"Entrar":"Criar conta"}</button>
-            {mode==="login" && (
-              <button onClick={()=>{setMode("forgot");setError("");}} style={{ background:"none", border:"none", color:"var(--text2)", fontSize:12, cursor:"pointer", padding:"4px 0" }}>
-                Esqueci minha senha
-              </button>
-            )}
+            {mode==="login"&&<button onClick={()=>{setMode("forgot");setError("");}} style={{ background:"none", border:"none", color:"var(--text2)", fontSize:12, cursor:"pointer", padding:"4px 0" }}>Esqueci minha senha</button>}
             <button className="btn-ghost" onClick={()=>setMode("intro")} style={{ width:"100%", fontSize:12 }}>← Voltar</button>
           </div>
         </div>
@@ -679,7 +1032,7 @@ function HealthCard({ score, salary }: { score:number; salary:number }) {
 }
 
 // ── DASHBOARD CONTENT ─────────────────────────────────────────────────────────
-function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick }: any) {
+function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick,onDonate,onSettings,onExpenses,onIncome,onReports }: any) {
   const [collapsedCards, setCollapsedCards] = useState<Record<string,boolean>>({});
   const toggleCard = (id: string) => setCollapsedCards(p => ({...p,[id]:!p[id]}));
   const isCollapsed = (id: string) => !!collapsedCards[id];
@@ -693,6 +1046,12 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
 
   return (
     <>
+      {/* BANNER DOAÇÃO — topo, discreto */}
+      <div onClick={onDonate} style={{ background:"rgba(130,10,209,0.07)", border:"0.5px solid rgba(130,10,209,0.25)", borderRadius:12, padding:"9px 14px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span style={{ fontSize:12, color:"#c084fc", fontWeight:600 }}>☕ Apoie quem criou o MoneyGame</span>
+        <span style={{ fontSize:11, color:"rgba(192,132,252,0.6)", fontWeight:500 }}>Pix rápido →</span>
+      </div>
+
       {/* SAÚDE FINANCEIRA — topo */}
       <HealthCard score={healthScore} salary={salary}/>
 
@@ -713,12 +1072,13 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
       {/* KPIs */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:totalInvestido>0?10:14 }}>
         {[
-          { label:"Salário Base",    value:fmt(salary),                              color:"var(--primary)", icon:"💼" },
-          { label:"Despesas Reais",  value:fmt(totalExpReais+totalCC),               color:"var(--red)",     icon:"💸" },
-          { label:"Renda Extra",     value:fmt(totalIncome),                         color:"var(--green)",   icon:"💵" },
-          { label:"Saldo Livre",     value:fmt(balance), color:balance>=0?"var(--green)":"var(--red)", icon:balance>=0?"✅":"⚠️" },
+          { label:"Salário Base",    value:fmt(salary),                              color:"var(--primary)", icon:"💼", action:onSettings },
+          { label:"Despesas Reais",  value:fmt(totalExpReais+totalCC),               color:"var(--red)",     icon:"💸", action:onExpenses },
+          { label:"Renda Extra",     value:fmt(totalIncome),                         color:"var(--green)",   icon:"💵", action:onIncome },
+          { label:"Saldo Livre",     value:fmt(balance), color:balance>=0?"var(--green)":"var(--red)", icon:balance>=0?"✅":"⚠️", action:onReports },
         ].map((k,i)=>(
-          <div key={i} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 14px", borderTop:`3px solid ${k.color}` }}>
+          <div key={i} onClick={k.action} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 14px", borderTop:`3px solid ${k.color}`, cursor:"pointer", transition:"opacity .15s" }}
+            onMouseEnter={e=>(e.currentTarget.style.opacity=".8")} onMouseLeave={e=>(e.currentTarget.style.opacity="1")}>
             <div style={{ fontSize:17, marginBottom:3 }}>{k.icon}</div>
             <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>{k.label}</div>
             <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:k.color, marginTop:2 }}>{k.value}</div>
@@ -854,54 +1214,71 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         </div>
       )}
 
-      {/* STATUS PAGAMENTO */}
-      <div className="card" style={{ marginBottom:14 }}>
-        <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📊 Status de Pagamento</div>
-        <div style={{ display:"flex", gap:10, marginBottom:10 }}>
-          <div style={{ flex:1, background:"rgba(0,214,143,.1)", border:"1px solid rgba(0,214,143,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
-            <div style={{ color:"var(--green)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPaid)}</div>
-            <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pago</div>
-          </div>
-          <div style={{ flex:1, background:"rgba(255,183,3,.1)", border:"1px solid rgba(255,183,3,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
-            <div style={{ color:"var(--yellow)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPending)}</div>
-            <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pendente</div>
-          </div>
-        </div>
-        <div className="progress-bar"><div className="progress-fill" style={{ width:`${(totalExpSemSonho+totalCC)>0?Math.min(totalPaid/(totalExpSemSonho+totalCC)*100,100):0}%`, background:"var(--green)" }}/></div>
-      </div>
-
-      {/* META RENDA */}
-      {extraNeeded>0&&(
-        <div className="card" style={{ marginBottom:14 }}>
-          <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>🎯 Meta de Renda Extra</div>
-          <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:6 }}>
-            <span>Necessário: {fmt(extraNeeded)}</span><span>Ganhou: {fmt(totalIncome)}</span>
-          </div>
-          <div className="progress-bar"><div className="progress-fill" style={{ width:`${Math.min(totalIncome/extraNeeded*100,100)}%`, background:"linear-gradient(90deg,var(--primary),var(--purple))" }}/></div>
-        </div>
-      )}
-
-      {/* POR CATEGORIA */}
-      <div className="card" style={{ marginBottom:14 }}>
-        <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📂 Por Categoria</div>
-        {byCategory.map((cat:any)=>(
-          <div key={cat.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-            <span style={{ fontSize:15, width:22 }}>{cat.emoji}</span>
-            <div style={{ flex:1 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, fontWeight:600 }}>
-                <span>{cat.name}</span>
-                <span style={{ color:cat.total>0?"var(--text)":"var(--text2)", fontVariantNumeric:"tabular-nums" }}>{fmt(cat.total)}</span>
+      {/* MAIS INFORMAÇÕES — colapsável */}
+      {(()=>{
+        const [open, setOpen] = React.useState(false);
+        return (
+          <div style={{ marginBottom:14 }}>
+            <button onClick={()=>setOpen(o=>!o)} style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", color:"var(--text)" }}>
+              <span style={{ fontSize:13, fontWeight:700 }}>📋 Mais informações</span>
+              <span style={{ fontSize:12, color:"var(--text2)" }}>{open?"▲":"▼"}</span>
+            </button>
+            {open && (
+              <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:10 }}>
+                {/* STATUS PAGAMENTO */}
+                <div className="card">
+                  <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📊 Status de Pagamento</div>
+                  <div style={{ display:"flex", gap:10, marginBottom:10 }}>
+                    <div style={{ flex:1, background:"rgba(0,214,143,.1)", border:"1px solid rgba(0,214,143,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
+                      <div style={{ color:"var(--green)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPaid)}</div>
+                      <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pago</div>
+                    </div>
+                    <div style={{ flex:1, background:"rgba(255,183,3,.1)", border:"1px solid rgba(255,183,3,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
+                      <div style={{ color:"var(--yellow)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPending)}</div>
+                      <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pendente</div>
+                    </div>
+                  </div>
+                  <div className="progress-bar"><div className="progress-fill" style={{ width:`${(totalExpSemSonho+totalCC)>0?Math.min(totalPaid/(totalExpSemSonho+totalCC)*100,100):0}%`, background:"var(--green)" }}/></div>
+                </div>
+                {/* META RENDA */}
+                {extraNeeded>0&&(
+                  <div className="card">
+                    <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>🎯 Meta de Renda Extra</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:6 }}>
+                      <span>Necessário: {fmt(extraNeeded)}</span><span>Ganhou: {fmt(totalIncome)}</span>
+                    </div>
+                    <div className="progress-bar"><div className="progress-fill" style={{ width:`${Math.min(totalIncome/extraNeeded*100,100)}%`, background:"linear-gradient(90deg,var(--primary),var(--purple))" }}/></div>
+                  </div>
+                )}
+                {/* POR CATEGORIA */}
+                <div className="card">
+                  <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📂 Por Categoria</div>
+                  {byCategory.map((cat:any)=>(
+                    <div key={cat.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                      <span style={{ fontSize:15, width:22 }}>{cat.emoji}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, fontWeight:600 }}>
+                          <span>{cat.name}</span>
+                          <span style={{ color:cat.total>0?"var(--text)":"var(--text2)", fontVariantNumeric:"tabular-nums" }}>{fmt(cat.total)}</span>
+                        </div>
+                        <div className="progress-bar" style={{ marginTop:4 }}><div className="progress-fill" style={{ width:`${(totalExpSemSonho+totalCC)>0?Math.min(cat.total/(totalExpSemSonho+totalCC)*100,100):0}%`, background:cat.color }}/></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="progress-bar" style={{ marginTop:4 }}><div className="progress-fill" style={{ width:`${(totalExpSemSonho+totalCC)>0?Math.min(cat.total/(totalExpSemSonho+totalCC)*100,100):0}%`, background:cat.color }}/></div>
-            </div>
+            )}
           </div>
-        ))}
-      </div>
+        );
+      })()}
     </>
   );
 }
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
+  // Rota admin separada
+  if (window.location.pathname === "/admin") return <AdminRanking />;
+
   const [user, setUser] = useState<User|null>(()=>{ try{return JSON.parse(sessionStorage.getItem("mg_user")||"null")}catch{return null} });
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [tab, setTab] = useState("dashboard");
@@ -925,6 +1302,10 @@ export default function App() {
   const [showStreak, setShowStreak] = useState(false);
   const [levelUpInfo, setLevelUpInfo] = useState<{levelNum:number;tier:string}|null>(null);
   const [isPC, setIsPC] = useState(typeof window!=="undefined" && window.innerWidth>=1024);
+  const [showDonation, setShowDonation] = useState(false);
+  const donation = useDonationPopup((user as any)?.createdAt);
+  const pwa = usePWAInstall();
+  const [pwaPromptDismissed, setPwaPromptDismissed] = useState(() => !!localStorage.getItem("mg_pwa_dismissed"));
 
   useEffect(()=>{ const h=()=>setIsPC(window.innerWidth>=1024); window.addEventListener("resize",h); return()=>window.removeEventListener("resize",h); },[]);
 
@@ -1002,7 +1383,7 @@ export default function App() {
 
   useEffect(()=>{
     if (!expenses.length) return;
-    const dueSoon = expenses.filter(e=>{ if (!e.dueDate||e.paid) return false; const diff=Math.ceil((new Date(e.dueDate).getTime()-new Date().getTime())/86400000); return diff>=0&&diff<=3; });
+    const dueSoon = expenses.filter(e=>{ if (!e.dueDate||e.paid) return false; const d=new Date(e.dueDate); const now=new Date(); const adjusted=new Date(now.getFullYear(),now.getMonth(),d.getDate()); const diff=Math.ceil((adjusted.getTime()-now.getTime())/86400000); return diff>=0&&diff<=3; });
     if (dueSoon.length>0) setTimeout(()=>showToast(`⚠️ ${dueSoon.length} conta(s) vencem em breve!`),1500);
   },[expenses]);
 
@@ -1010,7 +1391,7 @@ export default function App() {
   if (showOnboarding) return <Onboarding user={user} onDone={()=>{setShowOnboarding(false);load();}}/>;
 
   // CÁLCULOS
-  const totalInvestido = expenses.filter(e=>Number(e.categoryId)===INVESTIR_ID).reduce((s,e)=>s+num(e.amount),0);
+  const totalInvestido = expenses.filter(e=>Number(e.categoryId)===INVESTIR_ID && e.paid).reduce((s,e)=>s+num(e.amount),0);
   // Todas as despesas entram no total — Sonho e Investir são conquistas mas contam como saída
   const totalExpAll = expenses.reduce((s,e)=>s+num(e.amount),0);
   // Alias para compatibilidade com dashboard/reports
@@ -1029,7 +1410,7 @@ export default function App() {
   const levelInfo = getLevelInfo(xp);
   // FIX #1: Sonho — busca por categoryId === SONHO_ID
   const sonhoExp = expenses.filter(e=>Number(e.categoryId)===SONHO_ID);
-  const sonhoTotal = sonhoExp.reduce((s,e)=>s+num(e.amount),0);
+  const sonhoTotal = sonhoExp.filter(e=>e.paid).reduce((s,e)=>s+num(e.amount),0);
   const sonhoPago = sonhoExp.some(e=>!!e.paid);
   const sonhoRecorrente = sonhoExp.find(e=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
   const sonhoProgresso = sonhoRecorrente ? Math.min(sonhoTotal/num(sonhoRecorrente.recurringGoal)*100,100) : 0;
@@ -1081,10 +1462,17 @@ export default function App() {
       {showSettings&&<SettingsModal user={user} salary={salary} onSave={(s:number)=>{setSalary(s);showToast("✅ Salário atualizado!");setShowSettings(false);}} onClose={()=>setShowSettings(false)} onReset={()=>{setShowSettings(false);setShowReset(true);}}/>}
       {showMethodology&&<MethodologyModal xp={xp} onClose={()=>setShowMethodology(false)}/>}
       {showReset&&<ResetModal onClose={()=>setShowReset(false)} onConfirm={handleReset}/>}
+      {(showDonation||donation.show)&&<DonationPopup onClose={()=>{setShowDonation(false);donation.close();}}/>}
+      {pwa.canInstall && !pwaPromptDismissed && (
+        <PWAInstallBanner
+          onInstall={pwa.install}
+          onDismiss={()=>{ setPwaPromptDismissed(true); localStorage.setItem("mg_pwa_dismissed","1"); }}
+        />
+      )}
     </>
   );
 
-  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit") };
+  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit"),onDonate:()=>setShowDonation(true),onSettings:()=>setShowSettings(true),onExpenses:()=>setTab("expenses"),onIncome:()=>setTab("income"),onReports:()=>setTab("reports") };
 
   // ── PC LAYOUT ─────────────────────────────────────────────────────────────
   if (isPC) return (
@@ -1124,6 +1512,8 @@ export default function App() {
           <div style={{ padding:"10px 10px 20px", borderTop:"1px solid var(--border)", display:"flex", flexDirection:"column", gap:6 }}>
             <button onClick={()=>setShowMethodology(true)} style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}>📚 Metodologia</button>
             <button onClick={()=>setShowSettings(true)} style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}>⚙️ Configurações</button>
+            <button onClick={()=>setShowDonation(true)} style={{ width:"100%", background:"rgba(130,10,209,0.1)", border:"1px solid rgba(130,10,209,0.3)", color:"#c084fc", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer", fontWeight:600 }}>☕ Apoie o MoneyGame</button>
+            {pwa.canInstall && <button onClick={pwa.install} style={{ width:"100%", background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.3)", color:"var(--primary)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer", fontWeight:600 }}>📲 Instalar App</button>}
             <button onClick={logout} style={{ width:"100%", background:"rgba(255,77,106,0.08)", border:"1px solid rgba(255,77,106,0.2)", color:"var(--red)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}>🚪 Sair</button>
           </div>
         </aside>
@@ -1190,6 +1580,7 @@ export default function App() {
           <div style={{ fontSize:11, color:"var(--text2)" }}>Olá, {user.name?.split(" ")[0]}! <span style={{ color:levelInfo.color, fontWeight:700 }}>⚔️ {levelInfo.label} NV.{levelNum}</span></div>
         </div>
         <div style={{ display:"flex", gap:7 }}>
+          {pwa.canInstall && <button onClick={pwa.install} title="Instalar app" style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.4)", color:"var(--primary)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>📲</button>}
           <button onClick={()=>setShowMethodology(true)} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>📚</button>
           <button onClick={()=>setShowSettings(true)} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>⚙️</button>
           <button onClick={logout} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>🚪</button>
@@ -1284,7 +1675,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                       </div>
                       <div style={{ fontSize:10, color:isDueSoon?"var(--yellow)":"var(--text2)" }}>
                         {exp.subcategory&&`${exp.subcategory} · `}
-                        {exp.dueDate&&`Vence: ${new Date(exp.dueDate).toLocaleDateString("pt-BR")}`}
+                        {exp.dueDate&&`Vence: ${(()=>{ const d=new Date(exp.dueDate!); const now=new Date(); const adjusted=new Date(now.getFullYear(),now.getMonth(),d.getDate()); return adjusted.toLocaleDateString("pt-BR"); })()}`}
                         {isDueSoon&&" ⚠️"}{exp.recurring?" 🔄":""}
                       </div>
                     </div>
@@ -1642,7 +2033,7 @@ function HBarChart({ data }: { data:{label:string;expenses:number;income:number;
 }
 
 // ── COMPONENTE ANÁLISE IA ─────────────────────────────────────────────────────
-function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvestido, byCategory, cc, healthScore, levelInfo, xp, userId, userName }: any) {
+function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvestido, byCategory, cc, healthScore, levelInfo, xp, userId, userName, history }: any) {
   const [insights, setInsights] = useState<{type:string;label:string;text:string;sub?:string}[]|null>(null);
   const [loading, setLoading] = useState(false);
   const [blocked, setBlocked] = useState<string|null>(null);
@@ -1709,6 +2100,42 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
     const saldo = totalReceita - totalGasto;
     const healthBand = getHealthBand(healthScore);
 
+    // Gastos por pote — barras coloridas
+    const potesRows = byCategory
+      .filter((c:any) => c.total > 0)
+      .map((c:any) => {
+        const pct = totalGasto > 0 ? Math.round(c.total / totalGasto * 100) : 0;
+        const barW = Math.round(pct * 2.8); // max ~280px
+        return `<tr>
+          <td style="padding:6px 8px;font-size:12px;width:130px;white-space:nowrap">${c.emoji} ${c.name}</td>
+          <td style="padding:6px 8px">
+            <div style="background:#f0f0f5;border-radius:4px;height:14px;width:280px">
+              <div style="background:${c.color};border-radius:4px;height:14px;width:${barW}px"></div>
+            </div>
+          </td>
+          <td style="padding:6px 8px;font-size:12px;font-weight:700;text-align:right;white-space:nowrap">${fmt(c.total)}</td>
+          <td style="padding:6px 8px;font-size:11px;color:#888;text-align:right">${pct}%</td>
+        </tr>`;
+      }).join('');
+
+    // Histórico de meses — barras SVG inline
+    const histRows = (history || []).slice().reverse();
+    const maxHist = Math.max(...histRows.flatMap((h:any) => [h.totalSalary||0, h.totalExtraIncome||0, h.totalExpenses||0]), 1);
+    const histBars = histRows.map((h:any) => {
+      const label = new Date(h.month+"-02").toLocaleDateString("pt-BR",{month:"short",year:"2-digit"});
+      const salH  = Math.round((h.totalSalary||0) / maxHist * 80);
+      const extH  = Math.round((h.totalExtraIncome||0) / maxHist * 80);
+      const expH  = Math.round((h.totalExpenses||0) / maxHist * 80);
+      return `<td style="text-align:center;padding:0 6px;vertical-align:bottom;font-size:10px">
+        <div style="display:flex;align-items:flex-end;gap:2px;justify-content:center;height:84px">
+          <div style="width:10px;height:${salH}px;background:#378ADD;border-radius:2px 2px 0 0" title="Salário"></div>
+          <div style="width:10px;height:${extH}px;background:#00d68f;border-radius:2px 2px 0 0" title="Extra"></div>
+          <div style="width:10px;height:${expH}px;background:#ff4d6a;border-radius:2px 2px 0 0" title="Gastos"></div>
+        </div>
+        <div style="margin-top:4px;color:#888">${label}</div>
+      </td>`;
+    }).join('');
+
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>
 <style>
   body{font-family:Arial,sans-serif;margin:0;padding:0;background:#fff;color:#1a1a2e}
@@ -1717,7 +2144,7 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
   .logo{font-size:24px;font-weight:900;color:#6c63ff}
   .subtitle{font-size:12px;color:#666;margin-top:4px}
   .badge{background:#6c63ff;color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700}
-  .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin:20px 0 10px}
+  .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin:20px 0 10px;border-top:1px solid #eee;padding-top:16px}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
   .kpi{background:#f7f7fb;border-radius:10px;padding:14px;text-align:center}
   .kpi-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px}
@@ -1727,14 +2154,16 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
   .insight-text{font-size:13px;line-height:1.6}
   .insight-sub{font-size:11px;color:#666;margin-top:5px;font-style:italic}
   .footer{margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#aaa;text-align:center}
-  .health-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#ff4d6a,#fb923c,#facc15,#a3e635,#00d68f);margin-top:6px}
+  table{border-collapse:collapse;width:100%}
+  .legend{display:flex;gap:16px;margin-top:8px;font-size:11px;color:#666}
+  .legend-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:middle}
 </style></head><body><div class="page">
 <div class="header">
   <div><div class="logo">💰 MONEYGAME</div><div class="subtitle">Relatório Financeiro Mensal · Confidencial</div></div>
   <div><div style="font-size:13px;font-weight:700">${monthLabel}</div><div style="font-size:11px;color:#888;margin-top:3px">${userName || "Usuário"}</div><div class="badge" style="margin-top:6px;display:inline-block">${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}</div></div>
 </div>
 
-<div class="section-title">VISÃO GERAL DO MÊS</div>
+<div class="section-title" style="border-top:none;padding-top:0">VISÃO GERAL DO MÊS</div>
 <div class="kpis">
   <div class="kpi"><div class="kpi-label">Receita Total</div><div class="kpi-value" style="color:#6c63ff">${fmt(totalReceita)}</div></div>
   <div class="kpi"><div class="kpi-label">Total Gasto</div><div class="kpi-value" style="color:#ff4d6a">${fmt(totalGasto)}</div></div>
@@ -1742,8 +2171,20 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
   <div class="kpi"><div class="kpi-label">Saúde</div><div class="kpi-value" style="color:${healthBand.color}">${healthScore}/100</div><div style="font-size:11px;color:#888">${healthBand.label}</div></div>
 </div>
 
+<div class="section-title">GASTOS POR POTE</div>
+<table>${potesRows}</table>
+
+${histRows.length > 0 ? `
+<div class="section-title">HISTÓRICO DE MESES</div>
+<table><tr>${histBars}</tr></table>
+<div class="legend">
+  <span><span class="legend-dot" style="background:#378ADD"></span>Salário fixo</span>
+  <span><span class="legend-dot" style="background:#00d68f"></span>Renda extra</span>
+  <span><span class="legend-dot" style="background:#ff4d6a"></span>Despesas</span>
+</div>` : ''}
+
 <div class="section-title">ANÁLISE IA — INSIGHTS DO MÊS</div>
-${insights.map(ins=>{
+${insights.map((ins:any)=>{
   const colors: Record<string,{bg:string;border:string;label:string}> = {
     alert:{bg:"#fff5f5",border:"#ff4d6a",label:"⚠️ ALERTA"},
     tip:  {bg:"#f0fff8",border:"#00d68f",label:"✅ PONTO FORTE"},
@@ -1764,6 +2205,8 @@ ${insights.map(ins=>{
     const win = window.open('','_blank');
     if (win) { win.document.write(html); win.document.close(); setTimeout(()=>win.print(),500); }
   };
+
+
 
   const typeStyle: Record<string,{bg:string;border:string;labelColor:string;barColor:string}> = {
     alert: { bg:"rgba(255,77,106,0.07)",   border:"rgba(255,77,106,0.22)",   labelColor:"#ff4d6a", barColor:"#ff4d6a" },
@@ -1899,7 +2342,7 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
             <div style={{ fontSize:12, color:"var(--text2)", marginTop:3, lineHeight:1.4 }}>{band.desc}</div>
           </div>
           <div>
-            {[{min:83,label:"Ótima",c:"#00d68f"},{min:69,label:"Muito Boa",c:"#4ade80"},{min:61,label:"Boa",c:"#a3e635"},{min:57,label:"Ok",c:"#facc15"},{min:50,label:"Baixa",c:"#fb923c"},{min:37,label:"Muito Baixa",c:"#f97316"},{min:0,label:"Ruim",c:"#ff4d6a"}].map((b,i)=>(
+            {[{min:70,label:"Ótima",c:"#00d68f"},{min:55,label:"Muito Boa",c:"#4ade80"},{min:45,label:"Boa",c:"#a3e635"},{min:38,label:"Ok",c:"#facc15"},{min:28,label:"Baixa",c:"#fb923c"},{min:16,label:"Muito Baixa",c:"#f97316"},{min:0,label:"Ruim",c:"#ff4d6a"}].map((b,i)=>(
               <div key={i} style={{ display:"flex", alignItems:"center", gap:5, marginBottom:2 }}>
                 <div style={{ width:8, height:8, borderRadius:2, background:b.c, flexShrink:0, opacity:healthScore>=b.min?1:0.3 }}/>
                 <span style={{ fontSize:11, color:healthScore>=b.min?"var(--text)":"var(--text2)", fontWeight:healthScore>=b.min?700:400 }}>{b.label}</span>
@@ -1971,6 +2414,7 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
         xp={xp||0}
         userId={userId}
         userName={userName}
+        history={history}
       />
     </div>
   );
@@ -2283,6 +2727,12 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
   const [s, setS] = useState(String(salary||""));
   const [loading, setLoading] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
+  const [showSecQ, setShowSecQ] = useState(false);
+  const [secQ, setSecQ] = useState(SECURITY_QUESTIONS[0]);
+  const [secA, setSecA] = useState("");
+  const [secMsg, setSecMsg] = useState("");
+  const [shared, setShared] = useState(false);
+  const pwa = usePWAInstall();
 
   const save = async () => {
     if (!s || parseFloat(s) < 0) return;
@@ -2293,6 +2743,101 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
       if (res.ok) { onSave(parseFloat(data.salaryBase ?? s)); }
     } catch { onSave(parseFloat(s)); }
     setLoading(false);
+  };
+
+  const saveSecQ = async () => {
+    if (!secA.trim()) { setSecMsg("❌ Digite sua resposta"); return; }
+    const res = await fetch(`${API}/users/${user.id}/security-question`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:secQ,answer:secA})});
+    const data = await res.json();
+    setSecMsg(data.success ? "✅ Salvo com sucesso!" : "❌ Erro ao salvar");
+    setTimeout(()=>setSecMsg(""),3000);
+  };
+
+  const share = async () => {
+    const msg = "Depois desse app eu descobri para onde meu dinheiro vai todo mês 😅\n\nTá me ajudando a organizar tudo com método. Vale demais!\n\n👉 moneygame.up.railway.app";
+    try {
+      if (navigator.share) { await navigator.share({ title:"MoneyGame", text:msg, url:"https://moneygame.up.railway.app" }); }
+      else { await navigator.clipboard.writeText(msg); setShared(true); setTimeout(()=>setShared(false),2500); }
+    } catch {}
+  };
+
+  if (showChangePw) return <ChangePasswordModal user={user} onClose={()=>setShowChangePw(false)}/>;
+
+  return (
+    <Modal title="⚙️ Configurações" onClose={onClose}>
+      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        <div>
+          <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:6, letterSpacing:1 }}>SALÁRIO BASE (R$)</label>
+          <input type="number" value={s} onChange={e=>setS(e.target.value)}/>
+        </div>
+        <button className="btn-primary" onClick={save} disabled={loading||!s} style={{ width:"100%" }}>{loading?"Salvando...":"Salvar"}</button>
+
+        <div style={{ borderTop:"1px solid var(--border)", paddingTop:12, display:"flex", flexDirection:"column", gap:8 }}>
+          {/* Instalar */}
+          {pwa.canInstall ? (
+            <button onClick={pwa.install} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
+              📲 Instalar App (Android / PC)
+            </button>
+          ) : (
+            <div style={{ background:"rgba(108,99,255,0.06)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 14px" }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"var(--primary)", marginBottom:3 }}>📲 Instalar no iPhone</div>
+              <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.6 }}>Safari → <strong style={{color:"var(--text)"}}>Compartilhar</strong> → <strong style={{color:"var(--text)"}}>Adicionar à Tela de Início</strong></div>
+            </div>
+          )}
+
+          {/* Pergunta de segurança */}
+          <button onClick={()=>setShowSecQ(o=>!o)} style={{ width:"100%", background:"rgba(0,214,143,0.06)", color:"var(--green)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(0,214,143,0.2)", cursor:"pointer" }}>
+            🔐 {showSecQ ? "Fechar pergunta de segurança" : "Configurar pergunta de segurança"}
+          </button>
+          {showSecQ && (
+            <div style={{ background:"var(--bg3)", borderRadius:12, padding:"12px", display:"flex", flexDirection:"column", gap:8 }}>
+              <select value={secQ} onChange={e=>setSecQ(e.target.value)} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 10px", color:"var(--text)", fontSize:12 }}>
+                {SECURITY_QUESTIONS.map(q=><option key={q} value={q}>{q}</option>)}
+              </select>
+              <input placeholder="Sua resposta" value={secA} onChange={e=>setSecA(e.target.value)}/>
+              <button onClick={saveSecQ} style={{ background:"var(--green)", border:"none", color:"#000", padding:"9px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer" }}>Salvar pergunta</button>
+              {secMsg && <div style={{ fontSize:12, textAlign:"center" }}>{secMsg}</div>}
+            </div>
+          )}
+
+          <button onClick={share} style={{ width:"100%", background:"rgba(0,214,143,0.08)", color:"var(--green)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(0,214,143,0.2)", cursor:"pointer" }}>
+            {shared ? "✅ Copiado!" : "🔗 Compartilhar com amigos"}
+          </button>
+          <button onClick={()=>setShowChangePw(true)} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
+            🔑 Alterar Senha
+          </button>
+          <div style={{ fontSize:12, color:"var(--text2)" }}>⚠️ Zona de perigo</div>
+          <button onClick={onReset} style={{ width:"100%", background:"rgba(255,77,106,.15)", color:"var(--red)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(255,77,106,.3)", cursor:"pointer" }}>
+            🔄 Virar Mês — Arquivar e limpar
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+  const save = async () => {
+    if (!s || parseFloat(s) < 0) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/users/${user.id}/settings`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({salaryBase:parseFloat(s)})});
+      const data = await res.json();
+      if (res.ok) { onSave(parseFloat(data.salaryBase ?? s)); }
+    } catch { onSave(parseFloat(s)); }
+    setLoading(false);
+  };
+
+  const share = async () => {
+    const msg = "Depois desse app eu descobri para onde meu dinheiro vai todo mês 😅\n\nTá me ajudando a organizar tudo com método. Vale demais!\n\n👉 moneygame.up.railway.app";
+    try {
+      if (navigator.share) {
+        await navigator.share({ title:"MoneyGame", text:msg, url:"https://moneygame.up.railway.app" });
+      } else {
+        await navigator.clipboard.writeText(msg);
+        setShared(true);
+        setTimeout(()=>setShared(false), 2500);
+      }
+    } catch {}
   };
 
   if (showChangePw) return <ChangePasswordModal user={user} onClose={()=>setShowChangePw(false)}/>;
@@ -2306,6 +2851,23 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
         </div>
         <button className="btn-primary" onClick={save} disabled={loading||!s} style={{ width:"100%" }}>{loading?"Salvando...":"Salvar"}</button>
         <div style={{ borderTop:"1px solid var(--border)", paddingTop:14, display:"flex", flexDirection:"column", gap:8 }}>
+          {/* Instalar / Compartilhar */}
+          {pwa.canInstall && (
+            <button onClick={pwa.install} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
+              📲 Instalar App na tela inicial
+            </button>
+          )}
+          {!pwa.canInstall && (
+            <div style={{ background:"rgba(108,99,255,0.06)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 14px" }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"var(--primary)", marginBottom:4 }}>📲 Instalar no iPhone</div>
+              <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.6 }}>
+                Toque em <strong style={{color:"var(--text)"}}>Compartilhar</strong> no Safari → <strong style={{color:"var(--text)"}}>Adicionar à Tela de Início</strong>
+              </div>
+            </div>
+          )}
+          <button onClick={share} style={{ width:"100%", background:"rgba(0,214,143,0.08)", color:"var(--green)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(0,214,143,0.25)", cursor:"pointer" }}>
+            {shared ? "✅ Mensagem copiada!" : "🔗 Compartilhar com amigos"}
+          </button>
           <button onClick={()=>setShowChangePw(true)} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
             🔑 Alterar Senha
           </button>
@@ -2368,13 +2930,13 @@ function MethodologyModal({ onClose, xp }: any) {
   const potes = (levelInfo.tier === "investidor" || levelInfo.tier === "avancado") ? POTES_INVESTIDOR : POTES_INICIANTE;
 
   const SAUDE_BANDS = [
-    { range:"83 a 100", label:"Ótima",       color:"#00d68f", bg:"rgba(0,214,143,0.12)",  desc:"Vida financeira sem estresse. Finanças proporcionam segurança e liberdade." },
-    { range:"69 a 82",  label:"Muito Boa",   color:"#4ade80", bg:"rgba(74,222,128,0.1)",  desc:"Domínio do dia a dia, mas precisa dar o salto do patrimônio." },
-    { range:"61 a 68",  label:"Boa",         color:"#a3e635", bg:"rgba(163,230,53,0.08)", desc:"Básico bem feito." },
-    { range:"57 a 60",  label:"Ok",          color:"#facc15", bg:"rgba(250,204,21,0.08)", desc:"Equilíbrio financeiro no limite — com pouco espaço para erro." },
-    { range:"50 a 56",  label:"Baixa",       color:"#fb923c", bg:"rgba(251,146,60,0.08)", desc:"Primeiros sinais de desequilíbrio." },
-    { range:"37 a 49",  label:"Muito Baixa", color:"#f97316", bg:"rgba(249,115,22,0.08)", desc:"Risco de atingir uma situação crítica." },
-    { range:"0 a 36",   label:"Ruim",        color:"#ff4d6a", bg:"rgba(255,77,106,0.12)", desc:"Círculo de fragilidade, estresse e desorganização financeira." },
+    { range:"70 a 100", label:"Ótima",       color:"#00d68f", bg:"rgba(0,214,143,0.12)",  desc:"Vida financeira sem estresse. Finanças proporcionam segurança e liberdade." },
+    { range:"55 a 69",  label:"Muito Boa",   color:"#4ade80", bg:"rgba(74,222,128,0.1)",  desc:"Domínio do dia a dia, mas precisa dar o salto do patrimônio." },
+    { range:"45 a 54",  label:"Boa",         color:"#a3e635", bg:"rgba(163,230,53,0.08)", desc:"Básico bem feito." },
+    { range:"38 a 44",  label:"Ok",          color:"#facc15", bg:"rgba(250,204,21,0.08)", desc:"Equilíbrio financeiro no limite — com pouco espaço para erro." },
+    { range:"28 a 37",  label:"Baixa",       color:"#fb923c", bg:"rgba(251,146,60,0.08)", desc:"Primeiros sinais de desequilíbrio." },
+    { range:"16 a 27",  label:"Muito Baixa", color:"#f97316", bg:"rgba(249,115,22,0.08)", desc:"Risco de atingir uma situação crítica." },
+    { range:"0 a 15",   label:"Ruim",        color:"#ff4d6a", bg:"rgba(255,77,106,0.12)", desc:"Círculo de fragilidade, estresse e desorganização financeira." },
   ];
 
   return (
