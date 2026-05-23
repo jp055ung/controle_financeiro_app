@@ -40,6 +40,7 @@ async function runMigrations() {
     salaryBase DECIMAL(10,2) DEFAULT 0,
     level VARCHAR(20) DEFAULT 'iniciante', levelNum INT DEFAULT 1,
     xp INT DEFAULT 0, streakDays INT DEFAULT 0, lastCheckin TIMESTAMP NULL,
+    nickname VARCHAR(40) NULL, emoji VARCHAR(10) DEFAULT '💸',
     createdAt TIMESTAMP DEFAULT NOW()
   )`);
 
@@ -83,6 +84,11 @@ async function runMigrations() {
     "ALTER TABLE users ADD COLUMN salaryBase DECIMAL(10,2) DEFAULT 0",
     "ALTER TABLE users ADD COLUMN level VARCHAR(20) DEFAULT 'iniciante'",
     "ALTER TABLE users ADD COLUMN levelNum INT DEFAULT 1",
+    "ALTER TABLE users ADD COLUMN nickname VARCHAR(40) NULL",
+    "ALTER TABLE users ADD COLUMN emoji VARCHAR(10) DEFAULT '💸'",
+    "ALTER TABLE users ADD COLUMN createdAt TIMESTAMP DEFAULT NOW()",
+    "ALTER TABLE users ADD COLUMN security_question VARCHAR(200) NULL",
+    "ALTER TABLE users ADD COLUMN security_answer VARCHAR(200) NULL",
     "ALTER TABLE expenses ADD COLUMN recurring INT DEFAULT 0",
     "ALTER TABLE expenses ADD COLUMN recurringMonths INT NULL",
     "ALTER TABLE expenses ADD COLUMN recurringGoal DECIMAL(10,2) NULL",
@@ -106,13 +112,15 @@ async function runMigrations() {
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, securityQuestion, securityAnswer } = req.body;
     if (!name?.trim() || !email?.trim() || !password) return res.status(400).json({ error: "Preencha todos os campos" });
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
     const [ex] = await p.execute("SELECT id FROM users WHERE email=?", [email]) as any;
     if (ex.length > 0) return res.status(400).json({ error: "Email ja cadastrado" });
     const hashedPw = hashPassword(password);
-    await p.execute("INSERT INTO users (name,email,password,salaryBase,xp,streakDays,levelNum,level) VALUES (?,?,?,0,0,0,1,'iniciante')", [name, email, hashedPw]);
+    const sq = securityQuestion?.trim() || null;
+    const sa = securityAnswer ? securityAnswer.trim().toLowerCase() : null;
+    await p.execute("INSERT INTO users (name,email,password,salaryBase,xp,streakDays,levelNum,level,security_question,security_answer) VALUES (?,?,?,0,0,0,1,'iniciante',?,?)", [name, email, hashedPw, sq, sa]);
     const [rows] = await p.execute("SELECT * FROM users WHERE email=?", [email]) as any;
     const u = rows[0];
     res.json({ user: { id:u.id, name:u.name, email:u.email, salaryBase:0, xp:0, level:'iniciante', levelNum:1, streakDays:0, isNewUser:true } });
@@ -155,15 +163,38 @@ app.put("/api/users/:id/settings", async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ── RESET DE SENHA (esqueci minha senha → redefine para 0000) ─────────────────
+// ── PERGUNTA DE SEGURANÇA: salvar/atualizar ───────────────────────────────────
+app.put("/api/users/:id/security-question", async (req, res) => {
+  try {
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const { question, answer } = req.body;
+    if (!question?.trim() || !answer?.trim()) return res.status(400).json({ error: "Preencha todos os campos" });
+    const normalizedAnswer = answer.trim().toLowerCase();
+    await p.execute("UPDATE users SET security_question=?, security_answer=? WHERE id=?", [question.trim(), normalizedAnswer, req.params.id]);
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ── RECUPERAR SENHA VIA PERGUNTA DE SEGURANÇA ─────────────────────────────────
 app.post("/api/auth/reset-password", async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, answer, newPassword } = req.body;
     if (!email?.trim()) return res.status(400).json({ error: "E-mail obrigatório" });
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const [rows] = await p.execute("SELECT id FROM users WHERE email=?", [email.trim()]) as any;
+    const [rows] = await p.execute("SELECT id, security_question, security_answer FROM users WHERE email=?", [email.trim()]) as any;
     if (!rows.length) return res.status(404).json({ error: "E-mail não encontrado" });
-    await p.execute("UPDATE users SET password=? WHERE email=?", [hashPassword("0000"), email.trim()]);
+    const u = rows[0];
+    // Passo 1: só e-mail → retorna a pergunta
+    if (!answer && !newPassword) {
+      if (!u.security_question) return res.status(400).json({ error: "Nenhuma pergunta de segurança cadastrada. Contate o suporte." });
+      return res.json({ question: u.security_question });
+    }
+    // Passo 2: e-mail + resposta + nova senha → valida e troca
+    if (!answer?.trim()) return res.status(400).json({ error: "Resposta obrigatória" });
+    if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: "Nova senha deve ter pelo menos 6 caracteres" });
+    if (!u.security_answer) return res.status(400).json({ error: "Pergunta de segurança não cadastrada" });
+    if (u.security_answer !== answer.trim().toLowerCase()) return res.status(401).json({ error: "Resposta incorreta" });
+    await p.execute("UPDATE users SET password=? WHERE id=?", [hashPassword(newPassword), u.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -486,11 +517,10 @@ app.post("/api/users/:userId/reset-month", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
     const uid = req.params.userId;
-    // Usa o mês enviado pelo frontend (timezone do usuário) ou fallback para servidor
     const month = req.body.month || new Date().toISOString().slice(0, 7);
 
     const [expRows] = await p.execute("SELECT name, CAST(amount AS CHAR) as amount, categoryId, paid FROM expenses WHERE userId=?", [uid]) as any;
-    const [ccRows]  = await p.execute("SELECT description, CAST(amount AS CHAR) as amount, paid FROM creditCardExpenses WHERE userId=?", [uid]) as any;
+    const [ccRows]  = await p.execute("SELECT description, CAST(amount AS CHAR) as amount, paid, installments, installmentCurrent FROM creditCardExpenses WHERE userId=?", [uid]) as any;
     const [incRows] = await p.execute("SELECT description, CAST(amount AS CHAR) as amount FROM extraIncomes WHERE userId=?", [uid]) as any;
 
     const totalExp = (expRows||[]).reduce((s: number, e: any) => s + parseFloat(e.amount||0), 0);
@@ -511,11 +541,27 @@ app.post("/api/users/:userId/reset-month", async (req, res) => {
        totalExp+totalCC, totalIncomeWithSalary, salaryBase, totalInc]
     );
 
-    // Limpa — NÃO toca xp, streakDays, salaryBase
+    // Despesas não recorrentes → deletar. Recorrentes → resetar paid=0
     await p.execute("DELETE FROM expenses WHERE userId=? AND (recurring=0 OR recurring IS NULL)", [uid]);
-    await p.execute("DELETE FROM creditCardExpenses WHERE userId=?", [uid]);
-    await p.execute("DELETE FROM extraIncomes WHERE userId=?", [uid]);
     await p.execute("UPDATE expenses SET paid=0 WHERE userId=? AND recurring=1", [uid]);
+
+    // Cartão: parcelas pagas → avança ou deleta. Parcelas não pagas → mantém (são dívidas do próximo mês)
+    const [ccAll] = await p.execute("SELECT id, installments, installmentCurrent, paid FROM creditCardExpenses WHERE userId=?", [uid]) as any;
+    for (const c of (ccAll||[])) {
+      const inst = c.installments || 1;
+      const cur  = c.installmentCurrent || 1;
+      if (c.paid) {
+        // Parcela foi paga: avança ou deleta se era a última
+        if (cur < inst) {
+          await p.execute("UPDATE creditCardExpenses SET installmentCurrent=installmentCurrent+1, paid=0 WHERE id=?", [c.id]);
+        } else {
+          await p.execute("DELETE FROM creditCardExpenses WHERE id=?", [c.id]);
+        }
+      }
+      // Se não foi paga: mantém como está (dívida que passa para o próximo mês)
+    }
+
+    await p.execute("DELETE FROM extraIncomes WHERE userId=?", [uid]);
 
     const [uRows] = await p.execute("SELECT id, name, salaryBase FROM users WHERE id=?", [uid]) as any;
     res.json({ success:true, month, user: uRows[0]||{} });
@@ -545,8 +591,61 @@ app.get("/api/users/:userId/history", async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ── ANÁLISE IA ────────────────────────────────────────────────────────────────
-// Controle de geração: somente a cada 15 dias (1º e 16º de cada mês)
+// ── RANKING (somente admin vê — protegido por ADMIN_SECRET env var) ───────────
+app.get("/api/admin/ranking", async (req, res) => {
+  try {
+    const secret = process.env.ADMIN_SECRET || "mg_admin_2026";
+    if (req.headers["x-admin-secret"] !== secret) return res.status(403).json({ error: "Proibido" });
+    const p = getPool(); if (!p) return res.json([]);
+    const [rows] = await p.execute(
+      `SELECT id, name, email, xp, levelNum, level, streakDays, salaryBase, createdAt
+       FROM users ORDER BY xp DESC LIMIT 100`
+    ) as any;
+    res.json(rows || []);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ── ADMIN: apagar histórico de meses de um usuário ────────────────────────────
+app.delete("/api/admin/history/:userId", async (req, res) => {
+  try {
+    const secret = process.env.ADMIN_SECRET || "mg_admin_2026";
+    if (req.headers["x-admin-secret"] !== secret) return res.status(403).json({ error: "Proibido" });
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const uid = req.params.userId;
+    const [result] = await p.execute("DELETE FROM monthArchive WHERE userId=?", [uid]) as any;
+    res.json({ success: true, deleted: result.affectedRows, userId: uid });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ── ADMIN: apagar histórico de TODOS os usuários ──────────────────────────────
+app.delete("/api/admin/history", async (req, res) => {
+  try {
+    const secret = process.env.ADMIN_SECRET || "mg_admin_2026";
+    if (req.headers["x-admin-secret"] !== secret) return res.status(403).json({ error: "Proibido" });
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const [result] = await p.execute("DELETE FROM monthArchive") as any;
+    res.json({ success: true, deleted: result.affectedRows });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ── ADMIN: excluir usuário permanentemente ────────────────────────────────────
+app.delete("/api/admin/user/:userId", async (req, res) => {
+  try {
+    const secret = process.env.ADMIN_SECRET || "mg_admin_2026";
+    if (req.headers["x-admin-secret"] !== secret) return res.status(403).json({ error: "Proibido" });
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const uid = req.params.userId;
+    await p.execute("DELETE FROM ai_usage WHERE userId=?", [uid]);
+    await p.execute("DELETE FROM monthArchive WHERE userId=?", [uid]);
+    await p.execute("DELETE FROM extraIncomes WHERE userId=?", [uid]);
+    await p.execute("DELETE FROM creditCardExpenses WHERE userId=?", [uid]);
+    await p.execute("DELETE FROM expenses WHERE userId=?", [uid]);
+    await p.execute("DELETE FROM users WHERE id=?", [uid]);
+    res.json({ success: true, userId: uid });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+
 // Guarda último uso no banco para não depender do cliente
 app.post("/api/ai/insights", async (req, res) => {
   try {
