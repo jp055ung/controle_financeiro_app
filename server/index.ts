@@ -714,11 +714,84 @@ app.post("/api/ai/insights", async (req, res) => {
   }
 });
 
+// ── CHAT INTELIGENTE — parser de linguagem natural para lançamentos ──────────
+const AI_CATS = [
+  { id:1, name:"Pagar-se" }, { id:2, name:"Doar" }, { id:3, name:"Investir" },
+  { id:4, name:"Contas" }, { id:5, name:"Objetivo" }, { id:6, name:"Sonho" },
+  { id:7, name:"Abundar" }, { id:8, name:"Variáveis" },
+];
+
+app.post("/api/ai/parse-transaction", async (req, res) => {
+  try {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY não configurada no servidor" });
+
+    const { text } = req.body;
+    if (!text || !String(text).trim()) return res.status(400).json({ error: "text obrigatorio" });
+
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0,10);
+    const weekday = today.toLocaleDateString("pt-BR", { weekday:"long" });
+
+    const catsList = AI_CATS.map(c=>`${c.id}=${c.name}`).join(", ");
+    const systemPrompt = `Você extrai lançamentos financeiros de textos em português coloquial (Brasil) e devolve APENAS um JSON válido, sem markdown, sem texto extra.
+
+Hoje é ${todayStr} (${weekday}). Resolva datas relativas ("sexta passada", "ontem", "dia 10") com base nessa data.
+
+Categorias de despesa disponíveis (use o id): ${catsList}. Se não for óbvio, use 8 (Variáveis).
+
+Formato de saída (array, pode ter 1 ou mais itens; se não houver nenhum lançamento identificável, devolva array vazio):
+[{"type":"expense"|"income","categoryId":number|null,"name":"string curta","amount":number,"date":"YYYY-MM-DD"|null,"subcategory":"string"|null}]
+
+Regras:
+- "type":"income" para renda extra/ganhos/recebimentos. "type":"expense" para gastos/despesas.
+- "categoryId" só para expense (null em income).
+- "amount" sempre número positivo em reais (sem "R$", sem separador de milhar).
+- Cada gasto mencionado separadamente vira um item — ex: "gastei 100 no cinema e 59 na pipoca" = 2 itens.
+- "name" curto e descritivo (ex: "Cinema", "Pipoca", "Freela design").
+- Responda SOMENTE o array JSON.`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 700,
+        system: systemPrompt,
+        messages: [{ role: "user", content: String(text) }],
+      }),
+    });
+
+    const data = await response.json() as any;
+    if (!response.ok) return res.status(502).json({ error: data?.error?.message || "Erro na API Anthropic" });
+
+    const raw = (data.content?.map((b: any) => b.text || "").join("") || "").trim();
+    const cleaned = raw.replace(/^```json\s*|^```\s*|```$/g, "").trim();
+
+    let transactions: any[] = [];
+    try {
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed)) transactions = parsed;
+    } catch {
+      return res.json({ transactions: [], reply: "Não consegui entender direito. Pode tentar reescrever com o valor em reais?" });
+    }
+
+    res.json({ transactions });
+  } catch (e: any) {
+    console.error("AI parse-transaction:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── STATIC + FALLBACK ─────────────────────────────────────────────────────────
 app.get("*", (_req, res) => {
   const indexPath = path.join(process.cwd(), "dist", "client", "index.html");
   res.sendFile(indexPath, (err) => {
-    if (err) res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>MoneyGame</title></head><body><div id="root"></div></body></html>`);
+    if (err) res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>NaCarteira</title></head><body><div id="root"></div></body></html>`);
   });
 });
 
@@ -770,7 +843,7 @@ async function checkMonthRollover() {
 
 const PORT = parseInt(String(process.env.PORT || "3000"), 10);
 app.listen(PORT, "0.0.0.0", async () => {
-  console.log(`🪙 MoneyGame porta ${PORT}`);
+  console.log(`💜 NaCarteira porta ${PORT}`);
   try { await runMigrations(); } catch (e: any) { console.error("Migration warning:", e.message); }
   // Checagem a cada hora
   setInterval(checkMonthRollover, 60 * 60 * 1000);
