@@ -49,7 +49,7 @@ body {
 
 /* ─── HIERARQUIA TIPOGRÁFICA FINANCEIRA ────────────────────────────────────── */
 
-/* Títulos grandes (ex: MONEYGAME, números KPI) — Sora Bold */
+/* Títulos grandes (ex: NACARTEIRA, números KPI) — Sora Bold */
 h1, h2, h3,
 .display, .kpi-value, .streak-number {
   font-family: var(--font-display);

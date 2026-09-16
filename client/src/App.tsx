@@ -1,16 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
-function CoinIcon({ size = 40 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="20" cy="20" r="19" fill="url(#cg)" stroke="#c8910a" strokeWidth="1.5"/>
-      <circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
-      <text x="20" y="26" textAnchor="middle" fontSize="16" fontWeight="900" fontFamily="'Figtree',sans-serif" fill="#7a4a00">$</text>
-      <defs><linearGradient id="cg" x1="8" y1="4" x2="32" y2="36" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#ffe066"/><stop offset="40%" stopColor="#ffd700"/><stop offset="100%" stopColor="#d4900a"/>
-      </linearGradient></defs>
-    </svg>
-  );
+// ── MARCA NaCarteira ──────────────────────────────────────────────────────────
+function LogoMark({ size = 40 }: { size?: number }) {
+  return <img src="/brand/logo-mark.png" alt="NaCarteira" width={size} height={size} style={{ objectFit:"contain", display:"block" }}/>;
+}
+function LogoWordmark({ height = 28 }: { height?: number }) {
+  return <img src="/brand/logo-wordmark.png" alt="NaCarteira" style={{ height, width:"auto", display:"block" }}/>;
 }
 
 const API = "/api";
@@ -117,7 +112,7 @@ function LevelUpModal({ levelNum, tier, onClose }: { levelNum:number; tier:strin
   const isNewTier = levelNum === TIER_BREAK || isMax;
   const info = isMax
     ? { emoji:"👑", title:"Missão Cumprida.", color:"#ffd700",
-        msg:"Você fez o que menos de 1% das pessoas conseguem: transformou disciplina em liberdade.\nO MoneyGame foi seu treino — a vida real é o seu campo agora.\nVocê superou o app." }
+        msg:"Você fez o que menos de 1% das pessoas conseguem: transformou disciplina em liberdade.\nO NaCarteira foi seu treino — a vida real é o seu campo agora.\nVocê superou o app." }
     : levelNum === TIER_BREAK
     ? { emoji:"📈", title:"Você é Investidor!", color:"#00d68f",
         msg:"Disciplina comprovada. Agora seu foco muda: mais capital para os investimentos, menos para Contas. Os juros compostos já estão trabalhando por você." }
@@ -518,7 +513,7 @@ const PIX_BANK = "Nu Pagamentos S.A. (Nubank)";
 
 const DONATION_MSGS = [
   ["Você também faz parte desse projeto ✨", "Criado por uma pessoa só, para quem quer superar sua situação financeira com método."],
-  ["Apoie um criador independente ☕", "O MoneyGame nasceu de uma necessidade real. Se ele está te ajudando, considere retribuir."],
+  ["Apoie um criador independente ☕", "O NaCarteira nasceu de uma necessidade real. Se ele está te ajudando, considere retribuir."],
   ["Sua ajuda chega mais longe do que você imagina 🚀", "Com R$25 você mantém o servidor no ar por um mês inteiro."],
   ["O dinheiro pode mudar de lado — comece aqui 💚", "Criado por alguém que também está nessa jornada. Juntos chegamos mais longe."],
   ["Que tal um café para quem criou isso pra você? ☕", "Um gesto simples que mantém vivo um projeto feito com propósito."],
@@ -559,7 +554,7 @@ function DonationPopup({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div style={{ background:"linear-gradient(135deg,#820AD1,#5b0a96)", padding:"20px 24px 18px", position:"relative" }}>
           <button onClick={onClose} style={{ position:"absolute", top:14, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"white", width:28, height:28, borderRadius:"50%", fontSize:14, cursor:"pointer" }}>✕</button>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:1.5, color:"rgba(255,255,255,0.6)", textTransform:"uppercase", marginBottom:8 }}>Apoie o MoneyGame</div>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:1.5, color:"rgba(255,255,255,0.6)", textTransform:"uppercase", marginBottom:8 }}>Apoie o NaCarteira</div>
           <div style={{ fontSize:18, fontWeight:700, color:"white", lineHeight:1.35, marginBottom:6, paddingRight:36 }}>{title}</div>
           <div style={{ fontSize:13, color:"rgba(255,255,255,0.7)", lineHeight:1.5 }}>{sub}</div>
         </div>
@@ -667,6 +662,14 @@ function AdminRanking() {
 
   // Usa a senha que o admin digitou para as requisições
   const secret = sessionStorage.getItem("mg_admin_secret") || ADMIN_SECRET;
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [delUserId, setDelUserId] = useState("");
+  const [delMsg, setDelMsg] = useState("");
+
+  useEffect(() => {
+    fetch(`${API}/admin/ranking`, { headers: { "x-admin-secret": secret } })
       .then(r => r.json())
       .then(d => { if (Array.isArray(d)) setUsers(d); else setError("Acesso negado"); })
       .catch(() => setError("Erro de conexão"))
@@ -715,7 +718,7 @@ function AdminRanking() {
     <div style={{ minHeight:"100vh", background:"var(--bg)", padding:"24px 20px" }}>
       <div style={{ maxWidth:700, margin:"0 auto" }}>
         <div style={{ marginBottom:20 }}>
-          <h1 style={{ fontSize:22, fontWeight:900, color:"var(--text)" }}>📊 Painel Admin — MoneyGame</h1>
+          <h1 style={{ fontSize:22, fontWeight:900, color:"var(--text)" }}>📊 Painel Admin — NaCarteira</h1>
           <div style={{ fontSize:12, color:"var(--text2)", marginTop:4 }}>Apenas você vê esta página</div>
         </div>
 
@@ -821,7 +824,7 @@ function PWAInstallBanner({ onInstall, onDismiss }: { onInstall:()=>void; onDism
     <div style={{ position:"fixed", bottom:80, left:12, right:12, zIndex:90, background:"var(--bg2)", border:"1px solid rgba(108,99,255,0.4)", borderRadius:16, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, boxShadow:"0 4px 24px rgba(0,0,0,0.4)" }}>
       <div style={{ fontSize:28, flexShrink:0 }}>💰</div>
       <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>Instalar MoneyGame</div>
+        <div style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>Instalar NaCarteira</div>
         <div style={{ fontSize:11, color:"var(--text2)", marginTop:1 }}>Adicione à tela inicial — acesso rápido, funciona offline</div>
       </div>
       <div style={{ display:"flex", flexDirection:"column", gap:5, flexShrink:0 }}>
@@ -891,8 +894,7 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
 
   if (mode==="intro") return (
     <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#0a0d14,#111420)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 20px", textAlign:"center" }}>
-      <div style={{ marginBottom:14 }}><CoinIcon size={68}/></div>
-      <h1 style={{ fontSize:34, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff,#ffd700)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:8 }}>MONEYGAME</h1>
+      <div style={{ marginBottom:22 }}><LogoWordmark height={56}/></div>
       <p style={{ color:"var(--text2)", fontSize:14, marginBottom:30, maxWidth:300 }}>Gamifique seu controle financeiro com a metodologia dos 6 potes</p>
       <div style={{ width:"100%", maxWidth:340, display:"flex", flexDirection:"column", gap:10, marginBottom:36 }}>
         {[{emoji:"⚔️",title:"Suba de Nível",desc:"Ganhe XP a cada ação financeira"},{emoji:"🔥",title:"Streak Diária",desc:"Apareça todo dia e acumule recompensas"},{emoji:"📊",title:"Controle Total",desc:"Despesas, cartão, renda extra e sonhos"}].map((f,i)=>(
@@ -912,9 +914,8 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
   if (mode==="forgot") return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:"20px" }}>
       <div style={{ width:"100%", maxWidth:370 }}>
-        <div style={{ textAlign:"center", marginBottom:24 }}>
-          <div style={{ marginBottom:8, display:"flex", justifyContent:"center" }}><CoinIcon size={44}/></div>
-          <h1 style={{ fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>MONEYGAME</h1>
+        <div style={{ textAlign:"center", marginBottom:24, display:"flex", justifyContent:"center" }}>
+          <LogoWordmark height={38}/>
         </div>
         <div className="card">
           {forgotStep===3 ? (
@@ -952,9 +953,8 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
   return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:"20px" }}>
       <div style={{ width:"100%", maxWidth:370 }}>
-        <div style={{ textAlign:"center", marginBottom:24 }}>
-          <div style={{ marginBottom:8, display:"flex", justifyContent:"center" }}><CoinIcon size={44}/></div>
-          <h1 style={{ fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>MONEYGAME</h1>
+        <div style={{ textAlign:"center", marginBottom:24, display:"flex", justifyContent:"center" }}>
+          <LogoWordmark height={38}/>
         </div>
         <div className="card">
           <div style={{ display:"flex", gap:8, marginBottom:18 }}>
@@ -1032,7 +1032,84 @@ function HealthCard({ score, salary }: { score:number; salary:number }) {
 }
 
 // ── DASHBOARD CONTENT ─────────────────────────────────────────────────────────
-function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick,onDonate,onSettings,onExpenses,onIncome,onReports }: any) {
+// ── CHAT INTELIGENTE (entrada de gastos/ganhos por linguagem natural) ────────
+function SmartChat({ userId, onDone }: { userId:number; onDone:(xpGain:number)=>Promise<void>|void }) {
+  const [messages, setMessages] = useState<{ role:"user"|"assistant"; text:string }[]>([
+    { role:"assistant", text:"Oi! Me conta o que você gastou ou recebeu, do seu jeito.\nEx: \"sexta passada fui ao cinema, gastei 100 no ingresso e 59 na pipoca\"" }
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(()=>{ endRef.current?.scrollIntoView({ behavior:"smooth" }); },[messages]);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setMessages(m=>[...m,{ role:"user", text }]);
+    setInput(""); setLoading(true);
+    try {
+      const res = await fetch(`${API}/ai/parse-transaction`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ userId, text }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessages(m=>[...m,{ role:"assistant", text: data.error==="ANTHROPIC_API_KEY não configurada no servidor" ? "A IA ainda não está configurada neste servidor. Peça para o admin adicionar a chave da Anthropic." : "Não consegui processar agora. Tenta de novo em instantes?" }]);
+        setLoading(false); return;
+      }
+      const items = Array.isArray(data.transactions) ? data.transactions : [];
+      if (items.length === 0) {
+        setMessages(m=>[...m,{ role:"assistant", text: data.reply || "Não identifiquei nenhum valor aí. Pode repetir com o valor em reais? Ex: \"gastei 45 no mercado\"" }]);
+        setLoading(false); return;
+      }
+      let totalXp = 0;
+      const done: string[] = [];
+      for (const it of items) {
+        const amt = parseFloat(it.amount);
+        if (isNaN(amt) || amt<=0) continue;
+        if (it.type === "income") {
+          await fetch(`${API}/users/${userId}/extra-income`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ description: it.name||"Renda extra", amount: amt }) });
+          totalXp += calcXpIncome(amt);
+          done.push(`💵 ${it.name||"Renda"} — ${fmt(amt)}`);
+        } else {
+          const catId = CATS.some(c=>c.id===it.categoryId) ? it.categoryId : 8;
+          await fetch(`${API}/users/${userId}/expenses`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ categoryId:catId, name: it.name||"Gasto", amount: amt, subcategory: it.subcategory||null, dueDate: it.date||null }) });
+          totalXp += calcXpExpense(amt);
+          const catEmoji = CATS.find(c=>c.id===catId)?.emoji||"💸";
+          done.push(`${catEmoji} ${it.name||"Gasto"} — ${fmt(amt)}`);
+        }
+      }
+      await onDone(totalXp);
+      setMessages(m=>[...m,{ role:"assistant", text: done.length ? `Prontinho, registrei:\n${done.join("\n")}${totalXp>0?`\n\n+${totalXp} XP ⚔️`:""}` : "Não consegui confirmar os valores. Pode tentar de novo?" }]);
+    } catch {
+      setMessages(m=>[...m,{ role:"assistant", text:"Erro de conexão. Verifique sua internet e tente de novo." }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:16, padding:"14px 16px", marginBottom:14 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+        <LogoMark size={20}/>
+        <span style={{ fontSize:13, fontWeight:800, color:"var(--text)" }}>Conte seu gasto ou ganho</span>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:220, overflowY:"auto", marginBottom:10 }}>
+        {messages.map((m,i)=>(
+          <div key={i} style={{ alignSelf: m.role==="user"?"flex-end":"flex-start", background: m.role==="user"?"var(--primary)":"var(--bg3)", color: m.role==="user"?"#fff":"var(--text)", padding:"8px 12px", borderRadius:12, fontSize:13, maxWidth:"88%", whiteSpace:"pre-line", lineHeight:1.45 }}>{m.text}</div>
+        ))}
+        {loading && <div style={{ alignSelf:"flex-start", fontSize:12, color:"var(--text2)", padding:"2px 4px" }}>digitando…</div>}
+        <div ref={endRef}/>
+      </div>
+      <div style={{ display:"flex", gap:8 }}>
+        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder='Ex: "gastei 45 no mercado hoje"' disabled={loading} style={{ flex:1 }}/>
+        <button className="btn-primary" onClick={send} disabled={loading||!input.trim()} style={{ padding:"0 16px", flexShrink:0 }}>{loading?"⏳":"Enviar"}</button>
+      </div>
+    </div>
+  );
+}
+
+function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick,onDonate,onSettings,onExpenses,onIncome,onReports,userId,onChatDone }: any) {
   const [collapsedCards, setCollapsedCards] = useState<Record<string,boolean>>({});
   const toggleCard = (id: string) => setCollapsedCards(p => ({...p,[id]:!p[id]}));
   const isCollapsed = (id: string) => !!collapsedCards[id];
@@ -1046,9 +1123,12 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
 
   return (
     <>
-      {/* BANNER DOAÇÃO — topo, discreto */}
+      {/* CHAT INTELIGENTE — entrada principal de gastos/ganhos */}
+      <SmartChat userId={userId} onDone={onChatDone}/>
+
+      {/* BANNER DOAÇÃO — discreto, abaixo do chat */}
       <div onClick={onDonate} style={{ background:"rgba(130,10,209,0.07)", border:"0.5px solid rgba(130,10,209,0.25)", borderRadius:12, padding:"9px 14px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <span style={{ fontSize:12, color:"#c084fc", fontWeight:600 }}>☕ Apoie quem criou o MoneyGame</span>
+        <span style={{ fontSize:12, color:"#c084fc", fontWeight:600 }}>☕ Apoie quem criou o NaCarteira</span>
         <span style={{ fontSize:11, color:"rgba(192,132,252,0.6)", fontWeight:500 }}>Pix rápido →</span>
       </div>
 
@@ -1472,7 +1552,7 @@ export default function App() {
     </>
   );
 
-  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit"),onDonate:()=>setShowDonation(true),onSettings:()=>setShowSettings(true),onExpenses:()=>setTab("expenses"),onIncome:()=>setTab("income"),onReports:()=>setTab("reports") };
+  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit"),onDonate:()=>setShowDonation(true),onSettings:()=>setShowSettings(true),onExpenses:()=>setTab("expenses"),onIncome:()=>setTab("income"),onReports:()=>setTab("reports"),userId:user.id,onChatDone:async(xpGain:number)=>{ if(xpGain>0) await gainXpRaw(xpGain); await load(); } };
 
   // ── PC LAYOUT ─────────────────────────────────────────────────────────────
   if (isPC) return (
@@ -1481,9 +1561,8 @@ export default function App() {
       <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:"var(--bg)" }}>
         <aside style={{ width:235, background:"var(--bg2)", borderRight:"1px solid var(--border)", display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
           <div style={{ padding:"22px 18px 14px", borderBottom:"1px solid var(--border)" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-              <CoinIcon size={26}/>
-              <span style={{ fontSize:16, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>MONEYGAME</span>
+            <div style={{ display:"flex", alignItems:"center", marginBottom:4 }}>
+              <LogoWordmark height={24}/>
             </div>
             <div style={{ fontSize:11, color:"var(--text2)", paddingLeft:36 }}>Olá, {user.name?.split(" ")[0]}!</div>
           </div>
@@ -1512,7 +1591,7 @@ export default function App() {
           <div style={{ padding:"10px 10px 20px", borderTop:"1px solid var(--border)", display:"flex", flexDirection:"column", gap:6 }}>
             <button onClick={()=>setShowMethodology(true)} style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}>📚 Metodologia</button>
             <button onClick={()=>setShowSettings(true)} style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}>⚙️ Configurações</button>
-            <button onClick={()=>setShowDonation(true)} style={{ width:"100%", background:"rgba(130,10,209,0.1)", border:"1px solid rgba(130,10,209,0.3)", color:"#c084fc", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer", fontWeight:600 }}>☕ Apoie o MoneyGame</button>
+            <button onClick={()=>setShowDonation(true)} style={{ width:"100%", background:"rgba(130,10,209,0.1)", border:"1px solid rgba(130,10,209,0.3)", color:"#c084fc", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer", fontWeight:600 }}>☕ Apoie o NaCarteira</button>
             {pwa.canInstall && <button onClick={pwa.install} style={{ width:"100%", background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.3)", color:"var(--primary)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer", fontWeight:600 }}>📲 Instalar App</button>}
             <button onClick={logout} style={{ width:"100%", background:"rgba(255,77,106,0.08)", border:"1px solid rgba(255,77,106,0.2)", color:"var(--red)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}>🚪 Sair</button>
           </div>
@@ -1574,13 +1653,13 @@ export default function App() {
       {sharedModals}
       <header style={{ background:"var(--bg2)", borderBottom:"1px solid var(--border)", padding:"13px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:50 }}>
         <div>
-          <div style={{ fontSize:17, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", display:"flex", alignItems:"center", gap:6 }}>
-            <CoinIcon size={20}/> MONEYGAME
+          <div style={{ display:"flex", alignItems:"center" }}>
+            <LogoWordmark height={22}/>
           </div>
           <div style={{ fontSize:11, color:"var(--text2)" }}>Olá, {user.name?.split(" ")[0]}! <span style={{ color:levelInfo.color, fontWeight:700 }}>⚔️ {levelInfo.label} NV.{levelNum}</span></div>
         </div>
         <div style={{ display:"flex", gap:7 }}>
-          {pwa.canInstall && <button onClick={pwa.install} title="Instalar app" style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.4)", color:"var(--primary)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>📲</button>}
+          {pwa.canInstall && <button onClick={pwa.install} title="Baixar Aplicativo" style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.4)", color:"var(--primary)", padding:"8px 11px", borderRadius:10, fontSize:12, fontWeight:700 }}>📲</button>}
           <button onClick={()=>setShowMethodology(true)} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>📚</button>
           <button onClick={()=>setShowSettings(true)} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>⚙️</button>
           <button onClick={logout} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>🚪</button>
@@ -2071,7 +2150,7 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
         ? parcelamentos.map((c:any)=>`${c.description}: ${c.installmentCurrent||1}/${c.installments}x de ${fmt(num(c.amount))}`).join("; ")
         : "nenhum";
 
-      const prompt = `Você é um consultor financeiro direto e amigável do app MoneyGame. Analise estes dados e gere de 2 a 4 insights financeiros úteis em JSON.\n\nDADOS DO MÊS (${monthLabel}):\n- Salário base: R$ ${salary}\n- Renda extra: R$ ${totalIncome}\n- Receita total: R$ ${totalReceita}\n- Total gasto: R$ ${totalGasto}\n- Cartão: R$ ${totalCC} (${pctCC}% da receita)\n- Investido: R$ ${totalInvestido} (${pctInvest}% — meta do nível: ${metaInvest}%)\n- Saldo: R$ ${saldo}\n- Saúde financeira: ${healthScore}/100\n- Nível: ${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}\n- Parcelamentos: ${parcStr}\n\nRetorne SOMENTE um array JSON válido (sem markdown, sem texto extra):\n[{"type":"tip|alert|info|gold","label":"Título curto","text":"1-2 frases com números reais","sub":"dica curta opcional"}]\n\ntip=positivo/verde, alert=atenção/vermelho, info=informativo/roxo, gold=projeção/dourado.`;
+      const prompt = `Você é um consultor financeiro direto e amigável do app NaCarteira. Analise estes dados e gere de 2 a 4 insights financeiros úteis em JSON.\n\nDADOS DO MÊS (${monthLabel}):\n- Salário base: R$ ${salary}\n- Renda extra: R$ ${totalIncome}\n- Receita total: R$ ${totalReceita}\n- Total gasto: R$ ${totalGasto}\n- Cartão: R$ ${totalCC} (${pctCC}% da receita)\n- Investido: R$ ${totalInvestido} (${pctInvest}% — meta do nível: ${metaInvest}%)\n- Saldo: R$ ${saldo}\n- Saúde financeira: ${healthScore}/100\n- Nível: ${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}\n- Parcelamentos: ${parcStr}\n\nRetorne SOMENTE um array JSON válido (sem markdown, sem texto extra):\n[{"type":"tip|alert|info|gold","label":"Título curto","text":"1-2 frases com números reais","sub":"dica curta opcional"}]\n\ntip=positivo/verde, alert=atenção/vermelho, info=informativo/roxo, gold=projeção/dourado.`;
 
       const res = await fetch(`${API}/ai/insights`, {
         method: "POST",
@@ -2159,7 +2238,7 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
   .legend-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:middle}
 </style></head><body><div class="page">
 <div class="header">
-  <div><div class="logo">💰 MONEYGAME</div><div class="subtitle">Relatório Financeiro Mensal · Confidencial</div></div>
+  <div><div class="logo">💜 NACARTEIRA</div><div class="subtitle">Relatório Financeiro Mensal · Confidencial</div></div>
   <div><div style="font-size:13px;font-weight:700">${monthLabel}</div><div style="font-size:11px;color:#888;margin-top:3px">${userName || "Usuário"}</div><div class="badge" style="margin-top:6px;display:inline-block">${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}</div></div>
 </div>
 
@@ -2199,7 +2278,7 @@ ${insights.map((ins:any)=>{
   </div>`;
 }).join('')}
 
-<div class="footer">MoneyGame · Relatório gerado automaticamente · ${new Date().toLocaleDateString("pt-BR")} · Dados do período ${monthLabel}</div>
+<div class="footer">NaCarteira · Relatório gerado automaticamente · ${new Date().toLocaleDateString("pt-BR")} · Dados do período ${monthLabel}</div>
 </div></body></html>`;
 
     const win = window.open('','_blank');
@@ -2754,9 +2833,9 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
   };
 
   const share = async () => {
-    const msg = "Depois desse app eu descobri para onde meu dinheiro vai todo mês 😅\n\nTá me ajudando a organizar tudo com método. Vale demais!\n\n👉 moneygame.up.railway.app";
+    const msg = "Depois desse app eu descobri para onde meu dinheiro vai todo mês 😅\n\nTá me ajudando a organizar tudo com método. Vale demais!\n\n👉 nacarteira.up.railway.app";
     try {
-      if (navigator.share) { await navigator.share({ title:"MoneyGame", text:msg, url:"https://moneygame.up.railway.app" }); }
+      if (navigator.share) { await navigator.share({ title:"NaCarteira", text:msg, url:"https://nacarteira.up.railway.app" }); }
       else { await navigator.clipboard.writeText(msg); setShared(true); setTimeout(()=>setShared(false),2500); }
     } catch {}
   };
@@ -2773,16 +2852,36 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
         <button className="btn-primary" onClick={save} disabled={loading||!s} style={{ width:"100%" }}>{loading?"Salvando...":"Salvar"}</button>
 
         <div style={{ borderTop:"1px solid var(--border)", paddingTop:12, display:"flex", flexDirection:"column", gap:8 }}>
-          {/* Instalar */}
+          {/* Baixar Aplicativo */}
           {pwa.canInstall ? (
-            <button onClick={pwa.install} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
-              📲 Instalar App (Android / PC)
+            <button onClick={pwa.install} style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(108,99,255,0.08))", color:"var(--primary)", padding:"13px", borderRadius:12, fontSize:14, fontWeight:800, border:"1px solid rgba(108,99,255,0.35)", cursor:"pointer", letterSpacing:0.3 }}>
+              📲 Baixar Aplicativo
             </button>
           ) : (
-            <div style={{ background:"rgba(108,99,255,0.06)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 14px" }}>
-              <div style={{ fontSize:12, fontWeight:700, color:"var(--primary)", marginBottom:3 }}>📲 Instalar no iPhone</div>
-              <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.6 }}>Safari → <strong style={{color:"var(--text)"}}>Compartilhar</strong> → <strong style={{color:"var(--text)"}}>Adicionar à Tela de Início</strong></div>
-            </div>
+            <button onClick={()=>{
+              const el = document.createElement('div');
+              el.innerHTML = '';
+              // Mostra modal inline de instrução iOS
+              const overlay = document.createElement('div');
+              overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:20px';
+              overlay.innerHTML = `<div style="background:#1a1d2e;border-radius:20px 20px 20px 20px;padding:28px 24px;width:100%;max-width:400px;text-align:center;border:1px solid rgba(108,99,255,0.3)">
+                <div style="font-size:36px;margin-bottom:12px">📲</div>
+                <div style="font-size:16px;font-weight:800;color:#eef0ff;margin-bottom:8px">Baixar Aplicativo</div>
+                <div style="font-size:13px;color:#9ca3af;margin-bottom:20px;line-height:1.6">No iPhone, toque no botão abaixo na barra do Safari:</div>
+                <div style="background:rgba(108,99,255,0.1);border:1px solid rgba(108,99,255,0.25);border-radius:12px;padding:14px;margin-bottom:20px">
+                  <div style="font-size:13px;color:#eef0ff;line-height:1.8">
+                    1. Toque em <strong style="color:#a78bfa">⬆️ Compartilhar</strong><br/>
+                    2. Role e toque em <strong style="color:#a78bfa">Adicionar à Tela de Início</strong><br/>
+                    3. Toque em <strong style="color:#a78bfa">Adicionar</strong>
+                  </div>
+                </div>
+                <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;background:#6c63ff;border:none;color:white;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Entendido</button>
+              </div>`;
+              document.body.appendChild(overlay);
+              overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+            }} style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(108,99,255,0.08))", color:"var(--primary)", padding:"13px", borderRadius:12, fontSize:14, fontWeight:800, border:"1px solid rgba(108,99,255,0.35)", cursor:"pointer", letterSpacing:0.3 }}>
+              📲 Baixar Aplicativo
+            </button>
           )}
 
           {/* Pergunta de segurança */}
@@ -2816,70 +2915,6 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
   );
 }
 
-  const save = async () => {
-    if (!s || parseFloat(s) < 0) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/users/${user.id}/settings`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({salaryBase:parseFloat(s)})});
-      const data = await res.json();
-      if (res.ok) { onSave(parseFloat(data.salaryBase ?? s)); }
-    } catch { onSave(parseFloat(s)); }
-    setLoading(false);
-  };
-
-  const share = async () => {
-    const msg = "Depois desse app eu descobri para onde meu dinheiro vai todo mês 😅\n\nTá me ajudando a organizar tudo com método. Vale demais!\n\n👉 moneygame.up.railway.app";
-    try {
-      if (navigator.share) {
-        await navigator.share({ title:"MoneyGame", text:msg, url:"https://moneygame.up.railway.app" });
-      } else {
-        await navigator.clipboard.writeText(msg);
-        setShared(true);
-        setTimeout(()=>setShared(false), 2500);
-      }
-    } catch {}
-  };
-
-  if (showChangePw) return <ChangePasswordModal user={user} onClose={()=>setShowChangePw(false)}/>;
-
-  return (
-    <Modal title="⚙️ Configurações" onClose={onClose}>
-      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-        <div>
-          <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:6, letterSpacing:1 }}>SALÁRIO BASE (R$)</label>
-          <input type="number" value={s} onChange={e=>setS(e.target.value)}/>
-        </div>
-        <button className="btn-primary" onClick={save} disabled={loading||!s} style={{ width:"100%" }}>{loading?"Salvando...":"Salvar"}</button>
-        <div style={{ borderTop:"1px solid var(--border)", paddingTop:14, display:"flex", flexDirection:"column", gap:8 }}>
-          {/* Instalar / Compartilhar */}
-          {pwa.canInstall && (
-            <button onClick={pwa.install} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
-              📲 Instalar App na tela inicial
-            </button>
-          )}
-          {!pwa.canInstall && (
-            <div style={{ background:"rgba(108,99,255,0.06)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 14px" }}>
-              <div style={{ fontSize:12, fontWeight:700, color:"var(--primary)", marginBottom:4 }}>📲 Instalar no iPhone</div>
-              <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.6 }}>
-                Toque em <strong style={{color:"var(--text)"}}>Compartilhar</strong> no Safari → <strong style={{color:"var(--text)"}}>Adicionar à Tela de Início</strong>
-              </div>
-            </div>
-          )}
-          <button onClick={share} style={{ width:"100%", background:"rgba(0,214,143,0.08)", color:"var(--green)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(0,214,143,0.25)", cursor:"pointer" }}>
-            {shared ? "✅ Mensagem copiada!" : "🔗 Compartilhar com amigos"}
-          </button>
-          <button onClick={()=>setShowChangePw(true)} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
-            🔑 Alterar Senha
-          </button>
-          <div style={{ fontSize:12, color:"var(--text2)", marginBottom:2 }}>⚠️ Zona de perigo</div>
-          <button onClick={onReset} style={{ width:"100%", background:"rgba(255,77,106,.15)", color:"var(--red)", padding:"12px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(255,77,106,.3)", cursor:"pointer" }}>
-            🔄 Virar Mês — Arquivar e limpar
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
 
 function ResetModal({ onClose, onConfirm }: any) {
   const [loading, setLoading] = useState(false);
