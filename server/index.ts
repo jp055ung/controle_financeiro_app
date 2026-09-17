@@ -20,7 +20,7 @@ function verifyPassword(password: string, hash: string): boolean {
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(process.cwd(), "dist", "client")));
+app.use(express.static(path.join(process.cwd(), "dist")));
 
 let pool: mysql.Pool | null = null;
 function getPool() {
@@ -789,7 +789,7 @@ Regras:
 
 // ── STATIC + FALLBACK ─────────────────────────────────────────────────────────
 app.get("*", (_req, res) => {
-  const indexPath = path.join(process.cwd(), "dist", "client", "index.html");
+const indexPath = path.join(process.cwd(), "dist", "index.html");
   res.sendFile(indexPath, (err) => {
     if (err) res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>NaCarteira</title></head><body><div id="root"></div></body></html>`);
   });
