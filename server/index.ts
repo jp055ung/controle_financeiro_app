@@ -730,40 +730,44 @@ app.post("/api/ai/parse-transaction", async (req, res) => {
     if (!text || !String(text).trim()) return res.status(400).json({ error: "text obrigatorio" });
 
     const today = new Date();
-    const todayStr = today.toISOString().slice(0,10);
-    const weekday = today.toLocaleDateString("pt-BR", { weekday:"long" });
-
+    const dateRows: string[] = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0,10);
+      const wd = d.toLocaleDateString("pt-BR", { weekday:"long" });
+      const label = i===0 ? " = hoje" : i===1 ? " = ontem" : i===2 ? " = anteontem" : i>=6&&i<=13 ? " (semana passada)" : "";
+      dateRows.push(`${iso} = ${wd}${label}`);
+    }
     const catsList = AI_CATS.map(c=>`${c.id}=${c.name}`).join(", ");
-    const systemPrompt = `Você extrai lançamentos financeiros de textos em português coloquial (Brasil) e devolve APENAS um JSON válido, sem markdown, sem texto extra.
 
-Hoje é ${todayStr} (${weekday}). Resolva datas relativas ("sexta passada", "ontem", "dia 10") com base nessa data.
+    const systemPrompt = `Você é o motor de extração do chat da Vieira, gestor financeiro do app NaCarteira. Extrai lançamentos financeiros de textos em português coloquial (Brasil) e devolve APENAS um JSON válido (objeto), sem markdown, sem texto fora do JSON.
+
+TABELA DE DATAS (use para resolver "ontem", "quarta", "semana passada" etc. — CONSULTE a tabela, não calcule de cabeça):
+${dateRows.join("\n")}
+Se o usuário citar um dia da semana sem dizer "passada"/"que vem", use a ocorrência mais recente dessa tabela. Se a data ficar genuinamente ambígua (ex: só "essa semana", sem dia), NÃO chute — devolva transactions:[] e pergunte em "reply".
 
 Categorias de despesa disponíveis (use o id): ${catsList}. Se não for óbvio, use 8 (Variáveis).
 
-Formato de saída (array, pode ter 1 ou mais itens; se não houver nenhum lançamento identificável, devolva array vazio):
-[{"type":"expense"|"income","categoryId":number|null,"name":"string curta","amount":number,"date":"YYYY-MM-DD"|null,"subcategory":"string"|null}]
+FORMATO DE SAÍDA (sempre um objeto):
+{"transactions":[{"type":"expense"|"income"|"credit","categoryId":number|null,"name":"string curta","amount":number,"date":"YYYY-MM-DD"|null,"dueDate":"YYYY-MM-DD"|null,"subcategory":"string"|null,"recurring":boolean,"installments":number|null,"dueDay":number|null}],"reply":"string"|null}
 
 Regras:
-- "type":"income" para renda extra/ganhos/recebimentos. "type":"expense" para gastos/despesas.
-- "categoryId" só para expense (null em income).
-- "amount" sempre número positivo em reais (sem "R$", sem separador de milhar).
+- "type":"income" = renda/ganho/recebimento. "type":"expense" = gasto normal (débito, dinheiro, pix, boleto avulso). "type":"credit" = APENAS quando o usuário disser explicitamente "crédito"/"cartão de crédito"/"no cartão"/"parcelado no cartão". Se ele mencionar parcelamento (ex: "em 2x") SEM deixar claro a forma de pagamento (pode ser boleto, débito recorrente, cartão), NÃO assuma — devolva transactions:[] e pergunte em "reply" qual a forma de pagamento.
+- "categoryId": só para expense (null em income e credit).
+- "amount": para expense/income é o valor do lançamento. Para credit é o valor TOTAL da compra (ex: "1000 em 2x" → amount:1000, installments:2 — não divida você, o servidor divide).
+- "installments": só relevante para credit (padrão 1 se à vista no cartão). "dueDay": dia do mês de vencimento do cartão, só se o usuário informar.
+- "dueDate": vencimento da conta (YYYY-MM-DD), só se o usuário informar explicitamente — nunca invente.
+- "date": data do gasto/ganho em si. Se não informada, use hoje (${today.toISOString().slice(0,10)}).
+- "recurring": true se o usuário indicar que é um gasto fixo/mensal/recorrente (ex: "todo mês", "fixo", "sempre pago"). Caso contrário false.
 - Cada gasto mencionado separadamente vira um item — ex: "gastei 100 no cinema e 59 na pipoca" = 2 itens.
 - "name" curto e descritivo (ex: "Cinema", "Pipoca", "Freela design").
-- Responda SOMENTE o array JSON.`;
+- "reply": use para confirmar dúvidas (data ambígua, forma de pagamento não clara, valor não identificado) — escreva como a Vieira falaria, direto e cordial, uma pergunta objetiva. Deixe null quando os itens em "transactions" já estão completos e não precisa de reply.
+- Responda SOMENTE o objeto JSON, nada mais.`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 700,
-        system: systemPrompt,
-        messages: [{ role: "user", content: String(text) }],
-      }),
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 900, system: systemPrompt, messages: [{ role: "user", content: String(text) }] }),
     });
 
     const data = await response.json() as any;
@@ -773,38 +777,24 @@ Regras:
     const cleaned = raw.replace(/^```json\s*|^```\s*|```$/g, "").trim();
 
     let transactions: any[] = [];
+    let reply: string | null = null;
     try {
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed)) transactions = parsed;
+      else if (parsed && typeof parsed === "object") {
+        transactions = Array.isArray(parsed.transactions) ? parsed.transactions : [];
+        reply = typeof parsed.reply === "string" ? parsed.reply : null;
+      }
     } catch {
       return res.json({ transactions: [], reply: "Não consegui entender direito. Pode tentar reescrever com o valor em reais?" });
     }
 
-    res.json({ transactions });
+    res.json({ transactions, reply });
   } catch (e: any) {
     console.error("AI parse-transaction:", e.message);
     res.status(500).json({ error: e.message });
   }
 });
-
-// ── STATIC + FALLBACK ─────────────────────────────────────────────────────────
-app.get("*", (_req, res) => {
-const indexPath = path.join(process.cwd(), "dist", "index.html");
-  res.sendFile(indexPath, (err) => {
-    if (err) res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>NaCarteira</title></head><body><div id="root"></div></body></html>`);
-  });
-});
-
-// ── AUTO VIRADA DE MÊS ────────────────────────────────────────────────────────
-// Roda a cada hora — verifica se é o primeiro dia do mês e arquiva para todos os usuários
-async function checkMonthRollover() {
-  const p = getPool();
-  if (!p) return;
-  try {
-    const now = new Date();
-    if (now.getDate() !== 1 || now.getHours() !== 0) return; // Só roda no dia 1 às 00:xx
-
-    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const prevMonthKey = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2,'0')}`;
 
     const [users] = await p.execute("SELECT id, salaryBase FROM users") as any;
