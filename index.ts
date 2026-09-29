@@ -104,6 +104,12 @@ async function runMigrations() {
     "ALTER TABLE monthArchive ADD COLUMN totalIncome DECIMAL(10,2) DEFAULT 0",
     "ALTER TABLE monthArchive ADD COLUMN totalSalary DECIMAL(10,2) DEFAULT 0",
     "ALTER TABLE monthArchive ADD COLUMN totalExtraIncome DECIMAL(10,2) DEFAULT 0",
+    "ALTER TABLE expenses ADD COLUMN expenseDate DATE NULL",
+    "ALTER TABLE creditCardExpenses ADD COLUMN expenseDate DATE NULL",
+    "ALTER TABLE creditCardExpenses ADD COLUMN recurring INT DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN investTip TEXT NULL",
+    "ALTER TABLE users ADD COLUMN investTipDate DATE NULL",
+    "ALTER TABLE expenses ADD COLUMN recurringGoalPaidTotal DECIMAL(10,2) DEFAULT 0",
   ];
   for (const sql of alters) { try { await p.execute(sql); } catch {} }
   console.log("✅ Migrações OK");
@@ -345,7 +351,7 @@ app.get("/api/users/:userId/expenses", async (req, res) => {
 app.post("/api/users/:userId/expenses", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const { categoryId, name, amount, subcategory, dueDate, recurring, recurringMonths, recurringGoal } = req.body;
+    const { categoryId, name, amount, subcategory, dueDate, recurring, recurringMonths, recurringGoal, expenseDate } = req.body;
     const catId = parseInt(categoryId);
     const amt = parseFloat(amount);
     if (isNaN(catId) || catId <= 0) return res.status(400).json({ error: "categoryId invalido" });
@@ -354,11 +360,12 @@ app.post("/api/users/:userId/expenses", async (req, res) => {
     const recur = (recurring === 1 || recurring === true || recurring === '1') ? 1 : 0;
     let due: Date | null = null;
     if (dueDate) { try { due = new Date(dueDate); } catch {} }
+    const expDate = expenseDate || new Date().toISOString().slice(0,10);
     await p.execute(
-      "INSERT INTO expenses (userId,categoryId,name,amount,subcategory,dueDate,paid,recurring,recurringMonths,recurringGoal) VALUES (?,?,?,?,?,?,0,?,?,?)",
+      "INSERT INTO expenses (userId,categoryId,name,amount,subcategory,dueDate,paid,recurring,recurringMonths,recurringGoal,expenseDate) VALUES (?,?,?,?,?,?,0,?,?,?,?)",
       [req.params.userId, catId, name.trim(), amt, subcategory||null, due, recur,
        recurringMonths ? parseInt(recurringMonths) : null,
-       recurringGoal ? parseFloat(recurringGoal) : null]
+       recurringGoal ? parseFloat(recurringGoal) : null, expDate]
     );
     const [rows] = await p.execute("SELECT * FROM expenses WHERE userId=? ORDER BY categoryId, createdAt", [req.params.userId]) as any;
     res.json(rows);
@@ -368,7 +375,20 @@ app.post("/api/users/:userId/expenses", async (req, res) => {
 app.patch("/api/expenses/:id/paid", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    await p.execute("UPDATE expenses SET paid=? WHERE id=?", [req.body.paid ? 1 : 0, req.params.id]);
+    const newPaid = req.body.paid ? 1 : 0;
+    const [rows] = await p.execute("SELECT paid, amount, categoryId, recurring FROM expenses WHERE id=?", [req.params.id]) as any;
+    const row = rows[0];
+    await p.execute("UPDATE expenses SET paid=? WHERE id=?", [newPaid, req.params.id]);
+    // Sonho (categoryId 6) recorrente: acumula histórico real investido, não reseta por mês
+    if (row && Number(row.categoryId) === 6 && row.recurring) {
+      const delta = newPaid - (row.paid ? 1 : 0);
+      if (delta !== 0) {
+        await p.execute(
+          "UPDATE expenses SET recurringGoalPaidTotal = GREATEST(0, IFNULL(recurringGoalPaidTotal,0) + ?) WHERE id=?",
+          [delta * Number(row.amount), req.params.id]
+        );
+      }
+    }
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -393,14 +413,16 @@ app.get("/api/users/:userId/credit-card", async (req, res) => {
 app.post("/api/users/:userId/credit-card", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const { description, subcategory, amount, installments, dueDay } = req.body;
+    const { description, subcategory, amount, installments, dueDay, recurring, expenseDate } = req.body;
     const inst = Math.max(1, parseInt(installments) || 1);
     const totalAmt = parseFloat(amount);
     if (isNaN(totalAmt) || totalAmt <= 0) return res.status(400).json({ error: "amount invalido" });
     const parcelAmt = Math.round(totalAmt / inst * 100) / 100;
+    const recur = (recurring === 1 || recurring === true || recurring === '1') ? 1 : 0;
+    const expDate = expenseDate || new Date().toISOString().slice(0,10);
     await p.execute(
-      "INSERT INTO creditCardExpenses (userId,description,amount,totalAmount,installments,installmentCurrent,subcategory,paid,dueDay) VALUES (?,?,?,?,?,1,?,0,?)",
-      [req.params.userId, description, parcelAmt, inst > 1 ? totalAmt : null, inst, subcategory||null, dueDay||null]
+      "INSERT INTO creditCardExpenses (userId,description,amount,totalAmount,installments,installmentCurrent,subcategory,paid,dueDay,recurring,expenseDate) VALUES (?,?,?,?,?,1,?,0,?,?,?)",
+      [req.params.userId, description, parcelAmt, inst > 1 ? totalAmt : null, inst, subcategory||null, dueDay||null, recur, expDate]
     );
     const [rows] = await p.execute("SELECT * FROM creditCardExpenses WHERE userId=? ORDER BY createdAt", [req.params.userId]) as any;
     res.json(rows);
@@ -410,7 +432,7 @@ app.post("/api/users/:userId/credit-card", async (req, res) => {
 app.patch("/api/credit-card/:id", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const { paid, amount, description, dueDay, advanceInstallment } = req.body;
+    const { paid, amount, description, dueDay, advanceInstallment, expenseDate, recurring } = req.body;
     if (paid !== undefined) {
       await p.execute("UPDATE creditCardExpenses SET paid=? WHERE id=?", [paid ? 1 : 0, req.params.id]);
     }
@@ -423,6 +445,12 @@ app.patch("/api/credit-card/:id", async (req, res) => {
     }
     if (dueDay !== undefined) {
       await p.execute("UPDATE creditCardExpenses SET dueDay=? WHERE id=?", [dueDay||null, req.params.id]);
+    }
+    if (expenseDate !== undefined) {
+      await p.execute("UPDATE creditCardExpenses SET expenseDate=? WHERE id=?", [expenseDate||null, req.params.id]);
+    }
+    if (recurring !== undefined) {
+      await p.execute("UPDATE creditCardExpenses SET recurring=? WHERE id=?", [recurring ? 1 : 0, req.params.id]);
     }
     if (advanceInstallment) {
       const [rows] = await p.execute("SELECT installments, installmentCurrent FROM creditCardExpenses WHERE id=?", [req.params.id]) as any;
@@ -459,11 +487,17 @@ app.post("/api/users/:userId/credit-card/pay-all", async (req, res) => {
 app.patch("/api/expenses/:id/edit", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const { name, amount } = req.body;
+    const { name, amount, expenseDate, dueDate } = req.body;
     if (name !== undefined) await p.execute("UPDATE expenses SET name=? WHERE id=?", [name, req.params.id]);
     if (amount !== undefined) {
       const amt = parseFloat(amount);
       if (!isNaN(amt) && amt > 0) await p.execute("UPDATE expenses SET amount=? WHERE id=?", [amt, req.params.id]);
+    }
+    if (expenseDate !== undefined) {
+      await p.execute("UPDATE expenses SET expenseDate=? WHERE id=?", [expenseDate||null, req.params.id]);
+    }
+    if (dueDate !== undefined) {
+      await p.execute("UPDATE expenses SET dueDate=? WHERE id=?", [dueDate||null, req.params.id]);
     }
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -483,8 +517,9 @@ app.post("/api/users/:userId/extra-income", async (req, res) => {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
     const amt = parseFloat(req.body.amount);
     if (isNaN(amt) || amt <= 0) return res.status(400).json({ error: "amount invalido" });
-    await p.execute("INSERT INTO extraIncomes (userId,description,amount,date) VALUES (?,?,?,NOW())",
-      [req.params.userId, req.body.description, amt]);
+    const dt = req.body.date || new Date().toISOString().slice(0,10);
+    await p.execute("INSERT INTO extraIncomes (userId,description,amount,date) VALUES (?,?,?,?)",
+      [req.params.userId, req.body.description, amt, dt]);
     const [rows] = await p.execute("SELECT * FROM extraIncomes WHERE userId=?", [req.params.userId]) as any;
     res.json(rows);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -715,6 +750,60 @@ app.post("/api/ai/insights", async (req, res) => {
 });
 
 // ── CHAT INTELIGENTE — parser de linguagem natural para lançamentos ──────────
+// ── RESOLVEDOR DE DATAS (determinístico, sem IA) ──────────────────────────────
+function normalizeStr(s: string) { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim(); }
+
+function resolveDateExpr(expr: string | null | undefined, today: Date): string | null {
+  if (!expr) return null;
+  const e = normalizeStr(expr);
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const iso = (dt: Date) => dt.toISOString().slice(0,10);
+  const addDays = (dt: Date, n: number) => { const r = new Date(dt); r.setDate(r.getDate()+n); return r; };
+
+  if (e === "hoje" || e === "agora") return iso(d);
+  if (e === "ontem") return iso(addDays(d,-1));
+  if (e === "anteontem" || e === "antes de ontem") return iso(addDays(d,-2));
+  if (e === "amanha") return iso(addDays(d,1));
+  if (e === "depois de amanha") return iso(addDays(d,2));
+
+  const weekdayNames = ["domingo","segunda","terca","quarta","quinta","sexta","sabado"];
+  for (let i=0;i<weekdayNames.length;i++) {
+    const wd = weekdayNames[i];
+    if (e.startsWith(wd)) {
+      const isPast = /passad/.test(e);
+      const isFuture = /que vem|proxim/.test(e);
+      const todayWd = d.getDay();
+      if (isFuture) {
+        let fdiff = (i - todayWd + 7) % 7;
+        if (fdiff === 0) fdiff = 7;
+        return iso(addDays(d, fdiff));
+      }
+      let diff = (todayWd - i + 7) % 7; // ocorrência mais recente (0 = hoje)
+      if (isPast) diff += 7; // semana anterior à mais recente
+      return iso(addDays(d, -diff));
+    }
+  }
+
+  let m = e.match(/^dia\s?(\d{1,2})$/);
+  if (m) {
+    const day = parseInt(m[1]);
+    let cand = new Date(d.getFullYear(), d.getMonth(), day);
+    if (cand.getTime() > d.getTime()) cand = new Date(d.getFullYear(), d.getMonth()-1, day);
+    return iso(cand);
+  }
+  m = e.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (m) {
+    const day = parseInt(m[1]), month = parseInt(m[2])-1;
+    let year = m[3] ? parseInt(m[3]) : d.getFullYear();
+    if (year < 100) year += 2000;
+    let cand = new Date(year, month, day);
+    if (!m[3] && cand.getTime() > d.getTime()) cand = new Date(year-1, month, day);
+    return iso(cand);
+  }
+
+  return null; // não reconhecido pela lógica determinística
+}
+
 const AI_CATS = [
   { id:1, name:"Pagar-se" }, { id:2, name:"Doar" }, { id:3, name:"Investir" },
   { id:4, name:"Contas" }, { id:5, name:"Objetivo" }, { id:6, name:"Sonho" },
@@ -726,44 +815,46 @@ app.post("/api/ai/parse-transaction", async (req, res) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY não configurada no servidor" });
 
-    const { text } = req.body;
+    const { text, history } = req.body;
     if (!text || !String(text).trim()) return res.status(400).json({ error: "text obrigatorio" });
 
-    // Tabela de referência de datas — a IA CONSULTA em vez de calcular (evita erro de dia da semana)
     const today = new Date();
-    const dateRows: string[] = [];
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(today); d.setDate(d.getDate() - i);
-      const iso = d.toISOString().slice(0,10);
-      const wd = d.toLocaleDateString("pt-BR", { weekday:"long" });
-      const label = i===0 ? " = hoje" : i===1 ? " = ontem" : i===2 ? " = anteontem" : i>=6&&i<=13 ? " (semana passada)" : "";
-      dateRows.push(`${iso} = ${wd}${label}`);
-    }
+    const todayIso = today.toISOString().slice(0,10);
+    const todayWd = today.toLocaleDateString("pt-BR", { weekday:"long" });
     const catsList = AI_CATS.map(c=>`${c.id}=${c.name}`).join(", ");
 
     const systemPrompt = `Você é o motor de extração do chat da Vieira, gestor financeiro do app NaCarteira. Extrai lançamentos financeiros de textos em português coloquial (Brasil) e devolve APENAS um JSON válido (objeto), sem markdown, sem texto fora do JSON.
 
-TABELA DE DATAS (use para resolver "ontem", "quarta", "semana passada" etc. — CONSULTE a tabela, não calcule de cabeça):
-${dateRows.join("\n")}
-Se o usuário citar um dia da semana sem dizer "passada"/"que vem", use a ocorrência mais recente dessa tabela. Se a data ficar genuinamente ambígua (ex: só "essa semana", sem dia), NÃO chute — devolva transactions:[] e pergunte em "reply".
+Hoje é ${todayIso} (${todayWd}). Você NÃO calcula datas — só identifica a EXPRESSÃO de data usada no texto (ex: "ontem", "segunda", "segunda passada", "15/03", "dia 10"), em "dateExpr". Um código separado resolve a data exata a partir dessa expressão — por isso é essencial que "dateExpr" reproduza fielmente a expressão original (não normalize, não calcule).
 
 Categorias de despesa disponíveis (use o id): ${catsList}. Se não for óbvio, use 8 (Variáveis).
 
 FORMATO DE SAÍDA (sempre um objeto):
-{"transactions":[{"type":"expense"|"income"|"credit","categoryId":number|null,"name":"string curta","amount":number,"date":"YYYY-MM-DD"|null,"dueDate":"YYYY-MM-DD"|null,"subcategory":"string"|null,"recurring":boolean,"installments":number|null,"dueDay":number|null}],"reply":"string"|null}
+{"transactions":[{"type":"expense"|"income"|"credit","categoryId":number|null,"name":"string curta","amount":number,"dateExpr":"string"|null,"dueDateExpr":"string"|null,"subcategory":"string"|null,"recurring":boolean,"installments":number|null,"dueDay":number|null}],"reply":"string"|null}
 
 Regras:
-- "type":"income" = renda/ganho/recebimento. "type":"expense" = gasto normal (débito, dinheiro, pix, boleto avulso). "type":"credit" = APENAS quando o usuário disser explicitamente "crédito"/"cartão de crédito"/"no cartão"/"parcelado no cartão". Se ele mencionar parcelamento (ex: "em 2x") SEM deixar claro a forma de pagamento (pode ser boleto, débito recorrente, cartão), NÃO assuma — devolva transactions:[] e pergunte em "reply" qual a forma de pagamento.
+- "type":"income" = renda/ganho/recebimento. "type":"expense" = gasto normal (débito, dinheiro, pix, boleto avulso). "type":"credit" = APENAS quando o usuário disser explicitamente "crédito"/"cartão de crédito"/"no cartão"/"parcelado no cartão". Se ele mencionar parcelamento (ex: "em 2x") SEM deixar claro a forma de pagamento, NÃO assuma — devolva transactions:[] e pergunte em "reply" qual a forma de pagamento (boleto, débito, cartão de crédito etc.).
 - "categoryId": só para expense (null em income e credit).
-- "amount": para expense/income é o valor do lançamento. Para credit é o valor TOTAL da compra (ex: "1000 em 2x" → amount:1000, installments:2 — não divida você, o servidor divide).
+- "amount": para expense/income é o valor do lançamento. Para credit é o valor TOTAL da compra (ex: "1000 em 2x" → amount:1000, installments:2 — o servidor divide, não divida você).
 - "installments": só relevante para credit (padrão 1 se à vista no cartão). "dueDay": dia do mês de vencimento do cartão, só se o usuário informar.
-- "dueDate": vencimento da conta (YYYY-MM-DD), só se o usuário informar explicitamente — nunca invente.
-- "date": data do gasto/ganho em si. Se não informada, use hoje (${today.toISOString().slice(0,10)}).
-- "recurring": true se o usuário indicar que é um gasto fixo/mensal/recorrente (ex: "todo mês", "fixo", "sempre pago"). Caso contrário false.
+- "dueDateExpr": expressão de vencimento — só preencha quando o usuário disser EXPLICITAMENTE algo como "vence em X"/"vence dia X"/"vence [dia da semana]". Nunca infira. Se não disser nada sobre vencimento, deixe null.
+- "dateExpr": expressão da data do gasto/ganho em si. Se o usuário não mencionar nenhuma data, deixe null (o servidor assume hoje).
+- "recurring": true se o usuário indicar que é um gasto fixo/mensal/recorrente/indeterminado (ex: "todo mês", "fixo", "sempre pago"). Diferente de parcelamento (que tem fim definido). Caso contrário false.
 - Cada gasto mencionado separadamente vira um item — ex: "gastei 100 no cinema e 59 na pipoca" = 2 itens.
 - "name" curto e descritivo (ex: "Cinema", "Pipoca", "Freela design").
-- "reply": use para confirmar dúvidas (data ambígua, forma de pagamento não clara, valor não identificado) — escreva como a Vieira falaria, direto e cordial, uma pergunta objetiva. Deixe null quando os itens em "transactions" já estão completos e não precisa de reply.
+- "reply": use para confirmar dúvidas (forma de pagamento não clara, valor não identificado) — escreva como a Vieira falaria, direto e cordial, uma pergunta objetiva. Deixe null quando os itens em "transactions" já estão completos.
+- Se houver histórico da conversa antes desta mensagem, use-o para interpretar respostas a perguntas que você mesma fez (ex: você perguntou a forma de pagamento e o usuário respondeu só "crédito").
 - Responda SOMENTE o objeto JSON, nada mais.`;
+
+    const msgs: any[] = [];
+    if (Array.isArray(history)) {
+      for (const h of history.slice(-4)) {
+        if (h && (h.role === "user" || h.role === "assistant") && typeof h.text === "string") {
+          msgs.push({ role: h.role, content: h.text });
+        }
+      }
+    }
+    msgs.push({ role: "user", content: String(text) });
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -776,7 +867,7 @@ Regras:
         model: "claude-haiku-4-5-20251001",
         max_tokens: 900,
         system: systemPrompt,
-        messages: [{ role: "user", content: String(text) }],
+        messages: msgs,
       }),
     });
 
@@ -790,7 +881,7 @@ Regras:
     let reply: string | null = null;
     try {
       const parsed = JSON.parse(cleaned);
-      if (Array.isArray(parsed)) transactions = parsed; // compat com formato antigo
+      if (Array.isArray(parsed)) transactions = parsed;
       else if (parsed && typeof parsed === "object") {
         transactions = Array.isArray(parsed.transactions) ? parsed.transactions : [];
         reply = typeof parsed.reply === "string" ? parsed.reply : null;
@@ -799,11 +890,61 @@ Regras:
       return res.json({ transactions: [], reply: "Não consegui entender direito. Pode tentar reescrever com o valor em reais?" });
     }
 
+    // Resolve as datas em código — a IA só identificou a expressão usada
+    for (const it of transactions) {
+      if (it.dateExpr) {
+        const resolved = resolveDateExpr(it.dateExpr, today);
+        if (!resolved) {
+          return res.json({ transactions: [], reply: `Não entendi a data "${it.dateExpr}" direito. Pode me dizer de outro jeito (ex: "ontem", "segunda", "15/03")?` });
+        }
+        it.date = resolved;
+      } else {
+        it.date = todayIso;
+      }
+      if (it.dueDateExpr) {
+        const resolvedDue = resolveDateExpr(it.dueDateExpr, today);
+        it.dueDate = resolvedDue || null;
+      } else {
+        it.dueDate = null;
+      }
+    }
+
     res.json({ transactions, reply });
   } catch (e: any) {
     console.error("AI parse-transaction:", e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── DICA DE INVESTIMENTO POR IA (gerada 1x por semana e guardada) ─────────────
+app.get("/api/users/:userId/invest-tip", async (req, res) => {
+  try {
+    const p = getPool(); if (!p) return res.json({ tip: null });
+    const [rows] = await p.execute("SELECT investTip, investTipDate FROM users WHERE id=?", [req.params.userId]) as any;
+    const u = rows[0]; if (!u) return res.json({ tip: null });
+    if (u.investTip && u.investTipDate) {
+      const ageDays = (Date.now() - new Date(u.investTipDate).getTime()) / 86400000;
+      if (ageDays < 7) return res.json({ tip: u.investTip, cached: true });
+    }
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.json({ tip: u.investTip || null });
+    const pct = parseInt(String(req.query.pct || "0")) || 0;
+    const tier = String(req.query.tier || "iniciante").slice(0, 20);
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 120,
+        system: "Escreva UMA frase curta (máx. 200 caracteres) em português do Brasil, tom motivador e prático, para quem está começando a investir. Inspire-se em ideias clássicas de educação financeira (pague-se primeiro, juros compostos, constância, reserva de emergência antes de risco, tempo no mercado). Não prometa retorno nem recomende ativo específico além de renda fixa básica. Sem aspas, sem emoji. Varie o texto.",
+        messages: [{ role: "user", content: `Perfil: ${tier}. Investindo ${pct}% da receita este mês.` }],
+      }),
+    });
+    const d = await r.json() as any;
+    const tip = String(d?.content?.[0]?.text || "").trim().slice(0, 300);
+    if (tip) await p.execute("UPDATE users SET investTip=?, investTipDate=CURDATE() WHERE id=?", [tip, req.params.userId]);
+    res.json({ tip: tip || u.investTip || null });
+  } catch (e: any) { console.error("invest-tip:", e.message); res.json({ tip: null }); }
 });
 
 // ── STATIC + FALLBACK ─────────────────────────────────────────────────────────
