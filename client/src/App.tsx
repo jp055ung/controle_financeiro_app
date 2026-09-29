@@ -822,7 +822,7 @@ function usePWAInstall() {
 function PWAInstallBanner({ onInstall, onDismiss }: { onInstall:()=>void; onDismiss:()=>void }) {
   return (
     <div style={{ position:"fixed", bottom:80, left:12, right:12, zIndex:90, background:"var(--bg2)", border:"1px solid rgba(108,99,255,0.4)", borderRadius:16, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, boxShadow:"0 4px 24px rgba(0,0,0,0.4)" }}>
-      <div style={{ fontSize:28, flexShrink:0 }}>💰</div>
+      <div style={{ flexShrink:0 }}><LogoMark size={32}/></div>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>Instalar NaCarteira</div>
         <div style={{ fontSize:11, color:"var(--text2)", marginTop:1 }}>Adicione à tela inicial — acesso rápido, funciona offline</div>
@@ -894,7 +894,7 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
 
   if (mode==="intro") return (
     <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#0a0d14,#111420)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 20px", textAlign:"center" }}>
-      <div style={{ marginBottom:22 }}><LogoWordmark height={56}/></div>
+      <div style={{ marginBottom:22 }}><LogoWordmark height={112}/></div>
       <p style={{ color:"var(--text2)", fontSize:14, marginBottom:30, maxWidth:300 }}>Gamifique seu controle financeiro com a metodologia dos 6 potes</p>
       <div style={{ width:"100%", maxWidth:340, display:"flex", flexDirection:"column", gap:10, marginBottom:36 }}>
         {[{emoji:"⚔️",title:"Suba de Nível",desc:"Ganhe XP a cada ação financeira"},{emoji:"🔥",title:"Streak Diária",desc:"Apareça todo dia e acumule recompensas"},{emoji:"📊",title:"Controle Total",desc:"Despesas, cartão, renda extra e sonhos"}].map((f,i)=>(
@@ -915,7 +915,7 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:"20px" }}>
       <div style={{ width:"100%", maxWidth:370 }}>
         <div style={{ textAlign:"center", marginBottom:24, display:"flex", justifyContent:"center" }}>
-          <LogoWordmark height={38}/>
+          <LogoWordmark height={76}/>
         </div>
         <div className="card">
           {forgotStep===3 ? (
@@ -954,7 +954,7 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:"20px" }}>
       <div style={{ width:"100%", maxWidth:370 }}>
         <div style={{ textAlign:"center", marginBottom:24, display:"flex", justifyContent:"center" }}>
-          <LogoWordmark height={38}/>
+          <LogoWordmark height={76}/>
         </div>
         <div className="card">
           <div style={{ display:"flex", gap:8, marginBottom:18 }}>
@@ -1039,6 +1039,12 @@ function Bold({ text }: { text:string }) {
   return <>{parts.map((p,i)=> p.startsWith("**") && p.endsWith("**") ? <b key={i}>{p.slice(2,-2)}</b> : <React.Fragment key={i}>{p}</React.Fragment>)}</>;
 }
 
+function fmtDateBR(iso?: string|null) {
+  if (!iso) return "";
+  const [y,m,d] = iso.split("-");
+  return `${d}/${m}`;
+}
+
 function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; messages:{role:"user"|"assistant";text:string}[]; setMessages:React.Dispatch<React.SetStateAction<{role:"user"|"assistant";text:string}[]>>; onDone:(xpGain:number)=>Promise<void>|void }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1057,12 +1063,13 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+    const history = messages.slice(-4); // contexto pra IA entender respostas a perguntas dela
     push("user", text);
     setInput(""); setLoading(true);
     try {
       const res = await fetch(`${API}/ai/parse-transaction`, {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ userId, text }),
+        body:JSON.stringify({ userId, text, history }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -1079,22 +1086,25 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
       for (const it of items) {
         const amt = parseFloat(it.amount);
         if (isNaN(amt) || amt<=0) continue;
+        const dataStr = fmtDateBR(it.date);
+        const vencStr = it.dueDate ? ` · vence ${fmtDateBR(it.dueDate)}` : "";
         if (it.type === "income") {
-          await fetch(`${API}/users/${userId}/extra-income`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ description: it.name||"Renda extra", amount: amt }) });
+          await fetch(`${API}/users/${userId}/extra-income`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ description: it.name||"Renda extra", amount: amt, date: it.date||null }) });
           totalXp += calcXpIncome(amt);
-          done.push(`💵 ${it.name||"Renda"} — ${fmt(amt)}`);
+          done.push(`💵 ${it.name||"Renda"} — ${fmt(amt)} (${dataStr})`);
         } else if (it.type === "credit") {
           const inst = Math.max(1, parseInt(it.installments) || 1);
           const parcelAmt = Math.round(amt/inst*100)/100;
-          await fetch(`${API}/users/${userId}/credit-card`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ description: it.name||"Compra no crédito", subcategory: it.subcategory||"Outros", amount: amt, installments: inst, dueDay: it.dueDay||null }) });
+          await fetch(`${API}/users/${userId}/credit-card`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ description: it.name||"Compra no crédito", subcategory: it.subcategory||"Outros", amount: amt, installments: inst, dueDay: it.dueDay||null, recurring: it.recurring?1:0, expenseDate: it.date||null }) });
           totalXp += calcXpExpense(parcelAmt);
-          done.push(inst>1 ? `💳 ${it.name||"Compra"} — ${fmt(amt)} em ${inst}x de ${fmt(parcelAmt)}` : `💳 ${it.name||"Compra"} — ${fmt(amt)} no crédito`);
+          const modo = it.recurring ? " (recorrente 🔄)" : inst>1 ? ` em ${inst}x de ${fmt(parcelAmt)}` : "";
+          done.push(`💳 ${it.name||"Compra"} — ${fmt(amt)}${modo} (${dataStr})`);
         } else {
-          const catId = CATS.some(c=>c.id===it.categoryId) ? it.categoryId : 8;
-          await fetch(`${API}/users/${userId}/expenses`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ categoryId:catId, name: it.name||"Gasto", amount: amt, subcategory: it.subcategory||null, dueDate: it.dueDate||null, recurring: it.recurring?1:0 }) });
+          const catId = CATS.some((c:any)=>c.id===it.categoryId) ? it.categoryId : 8;
+          await fetch(`${API}/users/${userId}/expenses`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ categoryId:catId, name: it.name||"Gasto", amount: amt, subcategory: it.subcategory||null, dueDate: it.dueDate||null, recurring: it.recurring?1:0, expenseDate: it.date||null }) });
           totalXp += calcXpExpense(amt);
-          const catEmoji = CATS.find(c=>c.id===catId)?.emoji||"💸";
-          done.push(`${catEmoji} ${it.name||"Gasto"} — ${fmt(amt)}${it.recurring?" (recorrente 🔄)":""}`);
+          const catEmoji = CATS.find((c:any)=>c.id===catId)?.emoji||"💸";
+          done.push(`${catEmoji} ${it.name||"Gasto"} — ${fmt(amt)} (${dataStr})${it.recurring?" · recorrente 🔄":""}${vencStr}`);
         }
       }
       await onDone(totalXp);
@@ -1107,9 +1117,12 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
 
   return (
     <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:16, padding:"14px 16px", marginBottom:14 }}>
-      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
         <LogoMark size={40}/>
         <span style={{ fontSize:13, fontWeight:800, color:"var(--text)" }}>Vieira · seu gestor financeiro</span>
+      </div>
+      <div style={{ fontSize:11, color:"var(--text2)", marginBottom:10, paddingLeft:2 }}>
+        Ex: "Segunda-feira gastei 100 reais no Restaurante Mineiro, atividade de lazer"
       </div>
       <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:260, overflowY:"auto", marginBottom:10 }}>
         {messages.map((m,i)=>(
@@ -1126,8 +1139,20 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
   );
 }
 
-function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick,onDonate,onSettings,onExpenses,onIncome,onReports,userId,onChatDone,chatMessages,setChatMessages }: any) {
-  const [collapsedCards, setCollapsedCards] = useState<Record<string,boolean>>({});
+function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick,onDonate,onSettings,onExpenses,onIncome,onReports,userId,onChatDone,chatMessages,setChatMessages }: any) {
+  const [collapsedCards, setCollapsedCards] = useState<Record<string,boolean>>({ capital:true });
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [aiTip, setAiTip] = useState("");
+  useEffect(()=>{
+    if (!moreOpen || aiTip) return;
+    const inv = byCategory.find((c:any)=>c.id===INVESTIR_ID)?.total||0;
+    const rec = salary + totalIncome;
+    const pctTop = rec>0 ? Math.round(inv/rec*100) : 0;
+    let off=false;
+    fetch(`${API}/users/${userId}/invest-tip?pct=${pctTop}&tier=${levelInfo?.tier||"iniciante"}`)
+      .then(r=>r.json()).then(d=>{ if(!off && d?.tip) setAiTip(d.tip); }).catch(()=>{});
+    return ()=>{ off=true; };
+  },[moreOpen]);
   const toggleCard = (id: string) => setCollapsedCards(p => ({...p,[id]:!p[id]}));
   const isCollapsed = (id: string) => !!collapsedCards[id];
 
@@ -1148,9 +1173,6 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         <span style={{ fontSize:12, color:"#c084fc", fontWeight:600 }}>☕ Apoie quem criou o NaCarteira</span>
         <span style={{ fontSize:11, color:"rgba(192,132,252,0.6)", fontWeight:500 }}>Pix rápido →</span>
       </div>
-
-      {/* SAÚDE FINANCEIRA — topo */}
-      <HealthCard score={healthScore} salary={salary}/>
 
       {/* STREAK */}
       <div onClick={onStreak} style={{ background:streakClaimed?"rgba(0,214,143,0.05)":"rgba(108,99,255,0.06)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.28)":"rgba(108,99,255,0.32)"}`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -1183,6 +1205,18 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         ))}
       </div>
 
+      {/* MAIS INFORMAÇÕES — colapsável */}
+      {(()=>{
+        const open = moreOpen; const setOpen = setMoreOpen;
+        return (
+          <div style={{ marginBottom:14 }}>
+            <button onClick={()=>setOpen(o=>!o)} style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", color:"var(--text)" }}>
+              <span style={{ fontSize:13, fontWeight:700 }}>📋 Mais informações</span>
+              <span style={{ fontSize:12, color:"var(--text2)" }}>{open?"▲":"▼"}</span>
+            </button>
+            {open && (
+              <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:10 }}>
+                <HealthCard score={healthScore} salary={salary}/>
       {/* CAPITAL ALOCADO — COLAPSÁVEL */}
       {(()=>{
         const investTotal = byCategory.find((c:any)=>c.id===INVESTIR_ID)?.total||0;
@@ -1211,13 +1245,13 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         const collapsed = isCollapsed("capital");
 
         return (
-          <div style={{ background:"linear-gradient(135deg,rgba(0,214,143,0.07),rgba(0,214,143,0.03))", border:"1px solid rgba(0,214,143,0.28)", borderRadius:14, padding:"13px 16px", marginBottom:14 }}>
+          <div style={{ background:"linear-gradient(135deg,rgba(0,214,143,0.07),rgba(0,214,143,0.03))", border:"1px solid rgba(0,214,143,0.28)", borderRadius:12, padding:"8px 12px", marginBottom:0 }}>
             <CollapseHeader id="capital">
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:24 }}>📈</span>
+                <span style={{ fontSize:18 }}>📈</span>
                 <div>
                   <div style={{ fontSize:10, color:"#00d68f", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Capital Alocado este Mês</div>
-                  <div style={{ fontSize:20, fontWeight:900, color:"#00d68f", fontVariantNumeric:"tabular-nums" }}>{fmt(investTotal)}</div>
+                  <div style={{ fontSize:15, fontWeight:800, color:"#00d68f", fontVariantNumeric:"tabular-nums" }}>{fmt(investTotal)}</div>
                 </div>
               </div>
             </CollapseHeader>
@@ -1245,7 +1279,7 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
                     <span style={{ fontSize:16 }}>{riskProfile.icon}</span>
                     <span style={{ fontSize:11, fontWeight:800, color:riskProfile.color }}>{riskProfile.label}</span>
                   </div>
-                  <div style={{ fontSize:11, color:"var(--text2)", lineHeight:1.5 }}>{riskProfile.tip}</div>
+                  <div style={{ fontSize:11, color:"var(--text2)", lineHeight:1.5 }}>{aiTip || riskProfile.tip}</div>
                   {riskProfile.tipExtra && (
                     <div style={{ fontSize:10, color:"var(--text2)", marginTop:5, paddingTop:5, borderTop:"1px solid rgba(255,255,255,0.06)", fontStyle:"italic" }}>{riskProfile.tipExtra}</div>
                   )}
@@ -1285,13 +1319,14 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
 
       {/* INVESTINDO NO SONHO — COLAPSÁVEL */}
       {sonhoTotal>0&&(
-        <div style={{ background:"linear-gradient(135deg,rgba(6,182,212,0.08),rgba(139,92,246,0.08))", border:"1px solid rgba(6,182,212,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:14 }}>
+        <div style={{ background:"linear-gradient(135deg,rgba(6,182,212,0.08),rgba(139,92,246,0.08))", border:"1px solid rgba(6,182,212,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:0 }}>
           <CollapseHeader id="sonho">
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <span style={{ fontSize:26 }}>✨</span>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:10, color:"#06b6d4", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Sonho</div>
                 <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(sonhoTotal)} este mês</div>
+                {sonhoRecorrente && <div style={{ fontSize:11, color:"var(--text2)" }}>{fmt(sonhoInvestidoTotal)} investido no total</div>}
                 {sonhoPago
                   ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
                   : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
@@ -1311,17 +1346,6 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         </div>
       )}
 
-      {/* MAIS INFORMAÇÕES — colapsável */}
-      {(()=>{
-        const [open, setOpen] = React.useState(false);
-        return (
-          <div style={{ marginBottom:14 }}>
-            <button onClick={()=>setOpen(o=>!o)} style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", color:"var(--text)" }}>
-              <span style={{ fontSize:13, fontWeight:700 }}>📋 Mais informações</span>
-              <span style={{ fontSize:12, color:"var(--text2)" }}>{open?"▲":"▼"}</span>
-            </button>
-            {open && (
-              <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:10 }}>
                 {/* STATUS PAGAMENTO */}
                 <div className="card">
                   <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📊 Status de Pagamento</div>
@@ -1402,7 +1426,7 @@ export default function App() {
   const [showDonation, setShowDonation] = useState(false);
   const donation = useDonationPopup((user as any)?.createdAt);
   const pwa = usePWAInstall();
-  const [pwaPromptDismissed, setPwaPromptDismissed] = useState(() => !!localStorage.getItem("mg_pwa_dismissed"));
+  const [pwaPromptDismissed, setPwaPromptDismissed] = useState(() => !!localStorage.getItem("nc_pwa_dismissed"));
   const [chatMessages, setChatMessages] = useState<{role:"user"|"assistant";text:string}[]>([
     { role:"assistant", text:"Oi, sou **Vieira**, seu gestor financeiro inteligente. Estou aqui pra agilizar seus registros e te dar direcionamentos com base neles.\nMe diga **o que** você gastou ou ganhou, **quando**, se tem **vencimento**, a forma de pagamento (**débito** ou **crédito**) e o **tipo de gasto**." }
   ]);
@@ -1513,7 +1537,8 @@ export default function App() {
   const sonhoTotal = sonhoExp.filter(e=>e.paid).reduce((s,e)=>s+num(e.amount),0);
   const sonhoPago = sonhoExp.some(e=>!!e.paid);
   const sonhoRecorrente = sonhoExp.find(e=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
-  const sonhoProgresso = sonhoRecorrente ? Math.min(sonhoTotal/num(sonhoRecorrente.recurringGoal)*100,100) : 0;
+  const sonhoInvestidoTotal = sonhoRecorrente ? num(sonhoRecorrente.recurringGoalPaidTotal) : 0;
+  const sonhoProgresso = sonhoRecorrente ? Math.min(sonhoInvestidoTotal/num(sonhoRecorrente.recurringGoal)*100,100) : 0;
   const byCategory = CATS.map(cat=>({...cat,items:expenses.filter(e=>Number(e.categoryId)===cat.id),total:expenses.filter(e=>Number(e.categoryId)===cat.id).reduce((s,e)=>s+num(e.amount),0)}));
   // Score de saúde financeira — usa total real (todas as categorias)
   const healthScore = calcHealthScore(salary, totalExpAll, totalIncome, totalPaid, totalExpAll+totalCC, streakDays);
@@ -1566,13 +1591,13 @@ export default function App() {
       {pwa.canInstall && !pwaPromptDismissed && (
         <PWAInstallBanner
           onInstall={pwa.install}
-          onDismiss={()=>{ setPwaPromptDismissed(true); localStorage.setItem("mg_pwa_dismissed","1"); }}
+          onDismiss={()=>{ setPwaPromptDismissed(true); localStorage.setItem("nc_pwa_dismissed","1"); }}
         />
       )}
     </>
   );
 
-  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit"),onDonate:()=>setShowDonation(true),onSettings:()=>setShowSettings(true),onExpenses:()=>setTab("expenses"),onIncome:()=>setTab("income"),onReports:()=>setTab("reports"),userId:user.id,onChatDone:async(xpGain:number)=>{ if(xpGain>0) await gainXpRaw(xpGain); await load(); },chatMessages,setChatMessages };
+  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit"),onDonate:()=>setShowDonation(true),onSettings:()=>setShowSettings(true),onExpenses:()=>setTab("expenses"),onIncome:()=>setTab("income"),onReports:()=>setTab("reports"),userId:user.id,onChatDone:async(xpGain:number)=>{ if(xpGain>0) await gainXpRaw(xpGain); await load(); },chatMessages,setChatMessages };
 
   // ── PC LAYOUT ─────────────────────────────────────────────────────────────
   if (isPC) return (
@@ -1638,7 +1663,7 @@ export default function App() {
             {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
               onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
               onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-              onEdit={async(id:number,name:string,amount:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount)})}); load(); }}
+              onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null})}); load(); }}
             />}
             {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
               onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -1657,7 +1682,7 @@ export default function App() {
                 load();
               }}
               onAdvance={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({advanceInstallment:true})}); load(); }}
-              onEdit={async(id:number,desc:string,amount:string,dueDay:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null})}); load(); }}
+              onEdit={async(id:number,desc:string,amount:string,dueDay:string,recurring:boolean,expenseDate:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null,recurring:recurring?1:0,expenseDate:expenseDate||null})}); load(); }}
               onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
             />}
             {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
@@ -1693,7 +1718,7 @@ export default function App() {
         {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
           onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
           onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-          onEdit={async(id:number,name:string,amount:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount)})}); load(); }}
+          onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null})}); load(); }}
         />}
         {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
           onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -1710,7 +1735,7 @@ export default function App() {
             load();
           }}
           onAdvance={async(c:any)=>{ await fetch(`${API}/credit-card/${c.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({advanceInstallment:true})}); load(); }}
-          onEdit={async(id:number,desc:string,amount:string,dueDay:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null})}); load(); }}
+          onEdit={async(id:number,desc:string,amount:string,dueDay:string,recurring:boolean,expenseDate:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null,recurring:recurring?1:0,expenseDate:expenseDate||null})}); load(); }}
           onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
         />}
         {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
@@ -1733,6 +1758,8 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
   const [editId, setEditId] = useState<number|null>(null);
   const [editName, setEditName] = useState("");
   const [editAmount, setEditAmount] = useState("");
+  const [editExpDate, setEditExpDate] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
 
   return (
     <div>
@@ -1761,8 +1788,18 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                       style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
                     <input value={editAmount} onChange={e=>setEditAmount(e.target.value)} placeholder="Valor (R$)" type="number" step="0.01"
                       style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                    <div>
+                      <label style={{ fontSize:10, color:"var(--text2)", display:"block", marginBottom:2 }}>Data do gasto</label>
+                      <input value={editExpDate} onChange={e=>setEditExpDate(e.target.value)} type="date"
+                        style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, color:"var(--text2)", display:"block", marginBottom:2 }}>Vencimento (opcional)</label>
+                      <input value={editDueDate} onChange={e=>setEditDueDate(e.target.value)} type="date"
+                        style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                    </div>
                     <div style={{ display:"flex", gap:7 }}>
-                      <button onClick={()=>{ onEdit(exp.id,editName,editAmount); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
+                      <button onClick={()=>{ onEdit(exp.id,editName,editAmount,editExpDate,editDueDate); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
                       <button onClick={()=>setEditId(null)} style={{ flex:1, padding:"7px", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer", fontSize:12 }}>Cancelar</button>
                     </div>
                   </div>
@@ -1776,12 +1813,13 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                       </div>
                       <div style={{ fontSize:10, color:isDueSoon?"var(--yellow)":"var(--text2)" }}>
                         {exp.subcategory&&`${exp.subcategory} · `}
-                        {exp.dueDate&&`Vence: ${(()=>{ const d=new Date(exp.dueDate!); const now=new Date(); const adjusted=new Date(now.getFullYear(),now.getMonth(),d.getDate()); return adjusted.toLocaleDateString("pt-BR"); })()}`}
+                        {exp.expenseDate&&`${fmtDateBR(exp.expenseDate)}`}
+                        {exp.dueDate&&` · Vence: ${(()=>{ const d=new Date(exp.dueDate!); const now=new Date(); const adjusted=new Date(now.getFullYear(),now.getMonth(),d.getDate()); return adjusted.toLocaleDateString("pt-BR"); })()}`}
                         {isDueSoon&&" ⚠️"}{exp.recurring?" 🔄":""}
                       </div>
                     </div>
                     <span style={{ fontWeight:800, fontSize:12, fontVariantNumeric:"tabular-nums", color:exp.paid?"var(--green)":"var(--yellow)", flexShrink:0 }}>{fmt(num(exp.amount))}</span>
-                    <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); }}
+                    <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); setEditExpDate(exp.expenseDate?String(exp.expenseDate).slice(0,10):""); setEditDueDate(exp.dueDate?String(exp.dueDate).slice(0,10):""); }}
                       style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"4px 8px", fontSize:12, cursor:"pointer", flexShrink:0 }}>✏️</button>
                     <button className="btn-danger" onClick={()=>onDelete(exp.id)} style={{ padding:"4px 8px", flexShrink:0 }}>🗑</button>
                   </div>
@@ -1801,6 +1839,8 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
   const [editVal, setEditVal] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editDueDay, setEditDueDay] = useState("");
+  const [editRecurring, setEditRecurring] = useState(false);
+  const [editExpenseDate, setEditExpenseDate] = useState("");
 
   const totalPago = cc.filter((c:any)=>c.paid).reduce((s:number,c:any)=>s+num(c.amount),0);
   const totalPendente = totalCC - totalPago;
@@ -1883,10 +1923,19 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
                   style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:13 }}/>
                 <input value={editVal} onChange={e=>setEditVal(e.target.value)} placeholder="Valor da parcela (R$)"
                   type="number" step="0.01" style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:13 }}/>
-                <input value={editDueDay} onChange={e=>setEditDueDay(e.target.value)} placeholder="Dia de vencimento (ex: 10)"
+                <div>
+                  <label style={{ fontSize:10, color:"var(--text2)", display:"block", marginBottom:3 }}>Data do gasto</label>
+                  <input value={editExpenseDate} onChange={e=>setEditExpenseDate(e.target.value)} type="date"
+                    style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:13 }}/>
+                </div>
+                <input value={editDueDay} onChange={e=>setEditDueDay(e.target.value)} placeholder="Dia de vencimento da fatura (ex: 10)"
                   type="number" min="1" max="31" style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:13 }}/>
+                <label style={{ display:"flex", alignItems:"center", gap:7, fontSize:12, color:"var(--text2)", cursor:"pointer" }}>
+                  <input type="checkbox" checked={editRecurring} onChange={e=>setEditRecurring(e.target.checked)}/>
+                  🔄 Recorrente (repete todo mês, indefinidamente)
+                </label>
                 <div style={{ display:"flex", gap:8 }}>
-                  <button onClick={()=>{ onEdit(c.id, editDesc, editVal, editDueDay); setEditId(null); }}
+                  <button onClick={()=>{ onEdit(c.id, editDesc, editVal, editDueDay, editRecurring, editExpenseDate); setEditId(null); }}
                     className="btn-primary" style={{ flex:1, padding:"8px" }}>✅ Salvar</button>
                   <button onClick={()=>setEditId(null)}
                     style={{ flex:1, padding:"8px", background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer" }}>Cancelar</button>
@@ -1900,7 +1949,11 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
                     <div style={{ fontWeight:700, fontSize:14, textDecoration:c.paid&&!isParcelado?"line-through":"none", color:c.paid&&!isParcelado?"var(--text2)":"var(--text)" }}>
                       {c.description}
                     </div>
-                    {c.subcategory && <div style={{ fontSize:11, color:"var(--text2)", marginTop:1 }}>{c.subcategory}</div>}
+                    <div style={{ fontSize:11, color:"var(--text2)", marginTop:1, display:"flex", gap:6, flexWrap:"wrap" }}>
+                      {c.subcategory && <span>{c.subcategory}</span>}
+                      {c.expenseDate && <span>· {fmtDateBR(c.expenseDate)}</span>}
+                      {c.recurring ? <span style={{ color:"var(--primary)", fontWeight:700 }}>· 🔄 Recorrente</span> : null}
+                    </div>
                     {isParcelado && (
                       <div style={{ fontSize:11, color: c.paid ? "var(--green)" : "var(--primary)", fontWeight:700, marginTop:3 }}>
                         📦 Parcela {parcAtual}/{parcTotal} {c.paid ? "✅" : ""} · Total: {fmt(totalCompra)}
@@ -1911,7 +1964,7 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
                     <div style={{ fontWeight:900, fontSize:16, fontVariantNumeric:"tabular-nums", color:c.paid?"var(--green)":"var(--yellow)" }}>
                       {fmt(num(c.amount))}
                     </div>
-                    {isParcelado && <div style={{ fontSize:10, color:"var(--text2)" }}>por mês</div>}
+                    {(isParcelado || c.recurring) && <div style={{ fontSize:10, color:"var(--text2)" }}>por mês</div>}
                   </div>
                 </div>
 
