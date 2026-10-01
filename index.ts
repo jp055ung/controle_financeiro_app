@@ -24,7 +24,7 @@ app.use(express.static(path.join(process.cwd(), "dist")));
 
 let pool: mysql.Pool | null = null;
 function getPool() {
-  if (!pool && process.env.DATABASE_URL) pool = mysql.createPool(process.env.DATABASE_URL);
+  if (!pool && process.env.DATABASE_URL) pool = mysql.createPool({ uri: process.env.DATABASE_URL, dateStrings: true });
   return pool;
 }
 
