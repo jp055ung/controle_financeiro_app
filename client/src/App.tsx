@@ -29,6 +29,7 @@ const CATS = [
 ];
 const CC_CATS = ["Comida","Roupas","Gasolina","Transporte","Saúde","Streaming","Outros"];
 const SONHO_ID = 6;
+const OBJETIVO_ID = 5;
 const calcXpIncome  = (a: number) => Math.max(1, Math.round(a));           // renda extra: 1 XP/real
 const calcXpExpense = (a: number) => Math.max(1, Math.round(a * 0.1));     // despesa/cartão: 10% → R$100 = 10 XP
 const XP_PAY_BILL = 15;
@@ -1143,7 +1144,7 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
   );
 }
 
-function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick,onDonate,onSettings,onExpenses,onIncome,onReports,userId,onChatDone,chatMessages,setChatMessages }: any) {
+function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,objetivoTotal,objetivoPago,objetivoRecorrente,objetivoProgresso,objetivoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick,onDonate,onSettings,onExpenses,onIncome,onReports,userId,onChatDone,chatMessages,setChatMessages }: any) {
   const [collapsedCards, setCollapsedCards] = useState<Record<string,boolean>>({ capital:true });
   const [moreOpen, setMoreOpen] = useState(false);
   const [aiTip, setAiTip] = useState("");
@@ -1367,6 +1368,34 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         </div>
       )}
 
+      {objetivoTotal>0&&(
+        <div style={{ background:"linear-gradient(135deg,rgba(139,92,246,0.08),rgba(108,99,255,0.08))", border:"1px solid rgba(139,92,246,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:0, marginTop:14 }}>
+          <CollapseHeader id="objetivo">
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:26 }}>🎯</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:10, color:"#8b5cf6", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Objetivo</div>
+                <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(objetivoTotal)} este mês</div>
+                {objetivoRecorrente && <div style={{ fontSize:11, color:"var(--text2)" }}>{fmt(objetivoInvestidoTotal)} investido no total</div>}
+                {objetivoPago
+                  ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
+                  : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
+                }
+              </div>
+            </div>
+          </CollapseHeader>
+          {!isCollapsed("objetivo") && objetivoRecorrente&&(
+            <div style={{ marginTop:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
+                <span>Meta: {fmt(num(objetivoRecorrente.recurringGoal))}</span>
+                <span>{Math.round(objetivoProgresso)}% concluído</span>
+              </div>
+              <div className="progress-bar"><div className="progress-fill" style={{ width:`${objetivoProgresso}%`, background:"linear-gradient(90deg,#8b5cf6,#6c63ff)" }}/></div>
+            </div>
+          )}
+        </div>
+      )}
+
                 {/* STATUS PAGAMENTO */}
                 <div className="card">
                   <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📊 Status de Pagamento</div>
@@ -1560,6 +1589,12 @@ export default function App() {
   const sonhoRecorrente = sonhoExp.find(e=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
   const sonhoInvestidoTotal = sonhoRecorrente ? num(sonhoRecorrente.recurringGoalPaidTotal) : 0;
   const sonhoProgresso = sonhoRecorrente ? Math.min(sonhoInvestidoTotal/num(sonhoRecorrente.recurringGoal)*100,100) : 0;
+  const objetivoExp = expenses.filter(e=>Number(e.categoryId)===OBJETIVO_ID);
+  const objetivoTotal = objetivoExp.filter(e=>e.paid).reduce((s,e)=>s+num(e.amount),0);
+  const objetivoPago = objetivoExp.some(e=>!!e.paid);
+  const objetivoRecorrente = objetivoExp.find(e=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
+  const objetivoInvestidoTotal = objetivoRecorrente ? num(objetivoRecorrente.recurringGoalPaidTotal) : 0;
+  const objetivoProgresso = objetivoRecorrente ? Math.min(objetivoInvestidoTotal/num(objetivoRecorrente.recurringGoal)*100,100) : 0;
   const byCategory = CATS.map(cat=>({...cat,items:expenses.filter(e=>Number(e.categoryId)===cat.id),total:expenses.filter(e=>Number(e.categoryId)===cat.id).reduce((s,e)=>s+num(e.amount),0)}));
   // Score de saúde financeira — usa total real (todas as categorias)
   const healthScore = calcHealthScore(salary, totalExpAll, totalIncome, totalPaid, totalExpAll+totalCC, streakDays);
@@ -1618,7 +1653,7 @@ export default function App() {
     </>
   );
 
-  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit"),onDonate:()=>setShowDonation(true),onSettings:()=>setShowSettings(true),onExpenses:()=>setTab("expenses"),onIncome:()=>setTab("income"),onReports:()=>setTab("reports"),userId:user.id,onChatDone:async(xpGain:number)=>{ if(xpGain>0) await gainXpRaw(xpGain); await load(); },chatMessages,setChatMessages };
+  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,objetivoTotal,objetivoPago,objetivoRecorrente,objetivoProgresso,objetivoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit"),onDonate:()=>setShowDonation(true),onSettings:()=>setShowSettings(true),onExpenses:()=>setTab("expenses"),onIncome:()=>setTab("income"),onReports:()=>setTab("reports"),userId:user.id,onChatDone:async(xpGain:number)=>{ if(xpGain>0) await gainXpRaw(xpGain); await load(); },chatMessages,setChatMessages };
 
   // ── PC LAYOUT ─────────────────────────────────────────────────────────────
   if (isPC) return (
@@ -1679,7 +1714,6 @@ export default function App() {
             </div>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"20px 22px" }}>
-            <XPLevel xp={xp}/>
             {tab==="dashboard"&&<DashboardContent {...dashProps}/>}
             {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
               onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
@@ -1734,7 +1768,6 @@ export default function App() {
         </div>
       </header>
       <main style={{ padding:"14px 14px 0" }}>
-        <XPLevel xp={xp}/>
         {tab==="dashboard"&&<DashboardContent {...dashProps}/>}
         {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
           onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
@@ -1788,9 +1821,15 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
         <h2 style={{ fontSize:17, fontWeight:800 }}>💸 Despesas</h2>
         <button className="btn-primary" onClick={onAdd} style={{ padding:"9px 16px", fontSize:13 }}>+ Adicionar</button>
       </div>
-      {byCategory.map((cat:any)=>(
+      {byCategory.map((cat:any)=>{
+        const goalItem = cat.items.find((e:any)=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
+        const goalPaid = goalItem ? num(goalItem.recurringGoalPaidTotal) : 0;
+        const goalTotal = goalItem ? num(goalItem.recurringGoal) : 0;
+        const goalMonthly = goalItem ? num(goalItem.amount) : 0;
+        const parcelsLeft = goalItem && goalMonthly>0 ? Math.max(0, Math.ceil((goalTotal-goalPaid)/goalMonthly)) : 0;
+        return (
         <div key={cat.id} className="card" style={{ marginBottom:10 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:cat.items.length?10:0 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:cat.items.length?4:0 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
               <span style={{ fontSize:17 }}>{cat.emoji}</span>
               <span style={{ fontWeight:700, fontSize:14 }}>{cat.name}</span>
@@ -1798,6 +1837,11 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
             </div>
             <span style={{ fontWeight:800, fontSize:14, fontVariantNumeric:"tabular-nums" }}>{fmt(cat.total)}</span>
           </div>
+          {goalItem && (
+            <div style={{ fontSize:11, color:"#06b6d4", fontWeight:600, marginBottom:10 }}>
+              🎯 Meta: {fmt(goalTotal)} · {fmt(goalPaid)} investido · faltam {parcelsLeft} parcela{parcelsLeft===1?"":"s"}
+            </div>
+          )}
           {cat.items.map((exp:Expense)=>{
             const isDueSoon = exp.dueDate&&!exp.paid&&(()=>{ const diff=Math.ceil((new Date(exp.dueDate!).getTime()-new Date().getTime())/86400000); return diff>=0&&diff<=3; })();
             const isSonhoOrInvest = Number(exp.categoryId)===SONHO_ID || Number(exp.categoryId)===INVESTIR_ID;
@@ -1849,7 +1893,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
             );
           })}
         </div>
-      ))}
+        );})}
     </div>
   );
 }
@@ -2602,10 +2646,12 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
   const [form, setForm] = useState({ categoryId:"4", name:"", amount:"", subcategory:"", dueDate:"", recurring:false, recurringMonths:"", recurringGoal:"" });
   const [loading, setLoading] = useState(false);
   const isSonho = parseInt(form.categoryId)===SONHO_ID;
+  const isObjetivo = parseInt(form.categoryId)===OBJETIVO_ID;
+  const isGoalCat = isSonho || isObjetivo;
 
   const submit = async () => {
     if (!form.name.trim()) return;
-    const sonhoAutoCalc = isSonho && form.recurring && form.recurringGoal && form.recurringMonths;
+    const sonhoAutoCalc = isGoalCat && form.recurring && form.recurringGoal && form.recurringMonths;
 
     // Calcula amount com segurança — nunca NaN
     let computedAmount: number;
@@ -2650,7 +2696,7 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
     setLoading(false);
   };
 
-  const monthlyCalc = isSonho && form.recurring && form.recurringGoal && form.recurringMonths
+  const monthlyCalc = isGoalCat && form.recurring && form.recurringGoal && form.recurringMonths
     ? parseFloat(form.recurringGoal) / parseInt(form.recurringMonths)
     : null;
 
@@ -2661,7 +2707,7 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
           {CATS.map(c=><option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
         </select>
         <input placeholder="Nome da despesa *" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
-        <input type="number" placeholder={isSonho&&form.recurring?"Valor mensal (deixe em branco p/ calcular)":"Valor (R$) *"} value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/>
+        <input type="number" placeholder={isGoalCat&&form.recurring?"Valor mensal (deixe em branco p/ calcular)":"Valor (R$) *"} value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/>
         <input placeholder="Subcategoria (opcional)" value={form.subcategory} onChange={e=>setForm(f=>({...f,subcategory:e.target.value}))}/>
         <input type="date" value={form.dueDate} onChange={e=>setForm(f=>({...f,dueDate:e.target.value}))}/>
         <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--text2)", cursor:"pointer", userSelect:"none" as any }}>
@@ -2669,11 +2715,11 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
           <span>Recorrente 🔄</span>
         </label>
 
-        {/* FIX #1: Bloco Sonho aparece quando categoria=Sonho + recorrente */}
-        {isSonho && form.recurring && (
+        {/* Bloco de meta aparece quando categoria=Sonho OU Objetivo + recorrente */}
+        {isGoalCat && form.recurring && (
           <div style={{ background:"rgba(6,182,212,0.07)", border:"1px solid rgba(6,182,212,0.22)", borderRadius:12, padding:"12px 14px", display:"flex", flexDirection:"column", gap:9 }}>
-            <div style={{ fontSize:10, color:"#06b6d4", fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>✨ META DO SONHO</div>
-            <input type="number" placeholder="Valor total do sonho (R$)" value={form.recurringGoal} onChange={e=>setForm(f=>({...f,recurringGoal:e.target.value}))}/>
+            <div style={{ fontSize:10, color:"#06b6d4", fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>{isSonho ? "✨ META DO SONHO" : "🎯 META DO OBJETIVO"}</div>
+            <input type="number" placeholder={isSonho?"Valor total do sonho (R$)":"Valor total do objetivo (R$)"} value={form.recurringGoal} onChange={e=>setForm(f=>({...f,recurringGoal:e.target.value}))}/>
             <input type="number" placeholder="Em quantos meses?" value={form.recurringMonths} onChange={e=>setForm(f=>({...f,recurringMonths:e.target.value}))}/>
             {monthlyCalc !== null && (
               <div style={{ fontSize:12, color:"var(--green)", fontWeight:600 }}>
@@ -2689,7 +2735,7 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
             className="btn-primary"
             onClick={submit}
             disabled={loading || !form.name.trim() || (
-              !(isSonho && form.recurring && form.recurringGoal && form.recurringMonths) &&
+              !(isGoalCat && form.recurring && form.recurringGoal && form.recurringMonths) &&
               (!form.amount || parseFloat(form.amount) <= 0)
             )}
             style={{ flex:1 }}
