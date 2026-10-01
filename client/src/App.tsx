@@ -496,7 +496,7 @@ function OnboardingSalary({ user, onDone }: { user:User; onDone:()=>void }) {
   };
   return (
     <div style={{ textAlign:"center" }}>
-      <div style={{ fontSize:48, marginBottom:14 }}>💰</div>
+      <div style={{ display:"flex", justifyContent:"center", marginBottom:14 }}><LogoMark size={48}/></div>
       <h2 style={{ fontSize:19, fontWeight:900, marginBottom:8 }}>Qual é seu salário base?</h2>
       <p style={{ color:"var(--text2)", fontSize:13, marginBottom:20, lineHeight:1.5 }}>Isso ajuda a calcular seu saldo e saúde financeira.</p>
       <input type="number" placeholder="Ex: 3000" value={salary} onChange={e=>setSalary(e.target.value)} style={{ width:"100%", fontSize:18, textAlign:"center", marginBottom:14 }}/>
@@ -1041,16 +1041,21 @@ function Bold({ text }: { text:string }) {
 
 function fmtDateBR(iso?: string|null) {
   if (!iso) return "";
-  const [y,m,d] = iso.split("-");
+  const datePart = String(iso).slice(0,10); // corta qualquer "T00:00:00.000Z" que venha junto
+  const [y,m,d] = datePart.split("-");
+  if (!y||!m||!d) return "";
   return `${d}/${m}`;
 }
 
 function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; messages:{role:"user"|"assistant";text:string}[]; setMessages:React.Dispatch<React.SetStateAction<{role:"user"|"assistant";text:string}[]>>; onDone:(xpGain:number)=>Promise<void>|void }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const endRef = React.useRef<HTMLDivElement>(null);
+  const scrollBoxRef = React.useRef<HTMLDivElement>(null);
 
-  useEffect(()=>{ endRef.current?.scrollIntoView({ behavior:"smooth" }); },[messages]);
+  useEffect(()=>{
+    const box = scrollBoxRef.current;
+    if (box) box.scrollTop = box.scrollHeight; // scroll só dentro da caixa, nunca a página toda
+  },[messages]);
 
   const push = (role:"user"|"assistant", text:string) => {
     setMessages(m => {
@@ -1124,12 +1129,11 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
       <div style={{ fontSize:11, color:"var(--text2)", marginBottom:10, paddingLeft:2 }}>
         Ex: "Segunda-feira gastei 100 reais no Restaurante Mineiro, atividade de lazer"
       </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:260, overflowY:"auto", marginBottom:10 }}>
+      <div ref={scrollBoxRef} style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:260, overflowY:"auto", marginBottom:10 }}>
         {messages.map((m,i)=>(
           <div key={i} style={{ alignSelf: m.role==="user"?"flex-end":"flex-start", background: m.role==="user"?"var(--primary)":"var(--bg3)", color: m.role==="user"?"#fff":"var(--text)", padding:"8px 12px", borderRadius:12, fontSize:13, maxWidth:"88%", whiteSpace:"pre-line", lineHeight:1.45 }}><Bold text={m.text}/></div>
         ))}
         {loading && <div style={{ alignSelf:"flex-start", fontSize:12, color:"var(--text2)", padding:"2px 4px" }}>digitando…</div>}
-        <div ref={endRef}/>
       </div>
       <div style={{ display:"flex", gap:8 }}>
         <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder='Ex: "gastei 45 no mercado hoje"' disabled={loading} style={{ flex:1 }}/>
@@ -1165,16 +1169,7 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
 
   return (
     <>
-      {/* CHAT INTELIGENTE — entrada principal de gastos/ganhos */}
-      <SmartChat userId={userId} messages={chatMessages} setMessages={setChatMessages} onDone={onChatDone}/>
-
-      {/* BANNER DOAÇÃO — discreto, abaixo do chat */}
-      <div onClick={onDonate} style={{ background:"rgba(130,10,209,0.07)", border:"0.5px solid rgba(130,10,209,0.25)", borderRadius:12, padding:"9px 14px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <span style={{ fontSize:12, color:"#c084fc", fontWeight:600 }}>☕ Apoie quem criou o NaCarteira</span>
-        <span style={{ fontSize:11, color:"rgba(192,132,252,0.6)", fontWeight:500 }}>Pix rápido →</span>
-      </div>
-
-      {/* STREAK */}
+      {/* STREAK — topo */}
       <div onClick={onStreak} style={{ background:streakClaimed?"rgba(0,214,143,0.05)":"rgba(108,99,255,0.06)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.28)":"rgba(108,99,255,0.32)"}`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <span style={{ fontSize:30 }}>{getStreakIcon(streakDays)}</span>
@@ -1186,6 +1181,32 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
           </div>
         </div>
         {!streakClaimed&&<div style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.3)", color:"#a78bfa", fontSize:12, fontWeight:700, padding:"5px 11px", borderRadius:8, whiteSpace:"nowrap" }}>+{getStreakXP(streakDays+1)} XP</div>}
+      </div>
+
+      {/* CHAT INTELIGENTE — entrada principal de gastos/ganhos */}
+      <SmartChat userId={userId} messages={chatMessages} setMessages={setChatMessages} onDone={onChatDone}/>
+
+      {/* BANNER DOAÇÃO — discreto, abaixo do chat */}
+      <div onClick={onDonate} style={{ background:"rgba(130,10,209,0.07)", border:"0.5px solid rgba(130,10,209,0.25)", borderRadius:12, padding:"9px 14px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span style={{ fontSize:12, color:"#c084fc", fontWeight:600 }}>☕ Apoie quem criou o NaCarteira</span>
+        <span style={{ fontSize:11, color:"rgba(192,132,252,0.6)", fontWeight:500 }}>Pix rápido →</span>
+      </div>
+
+      {/* NÍVEL — onde a streak ficava antes */}
+      <div onClick={onSettings} style={{ background:`${levelInfo.color}0f`, border:`1px solid ${levelInfo.color}44`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:22 }}>⚔️</span>
+            <div>
+              <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:1 }}>Nível</div>
+              <div style={{ fontSize:14, fontWeight:800, color:levelInfo.color }}>{levelInfo.label} · NV.{levelInfo.levelNum}</div>
+            </div>
+          </div>
+          <div style={{ fontSize:11, color:"var(--text2)", fontWeight:700 }}>{levelInfo.xpInLevel}/{XP_PER_LEVEL} XP</div>
+        </div>
+        <div style={{ height:6, background:"var(--bg3)", borderRadius:99, overflow:"hidden" }}>
+          <div style={{ height:"100%", width:`${levelInfo.pctInLevel}%`, background:levelInfo.color, borderRadius:99 }}/>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -1428,7 +1449,7 @@ export default function App() {
   const pwa = usePWAInstall();
   const [pwaPromptDismissed, setPwaPromptDismissed] = useState(() => !!localStorage.getItem("nc_pwa_dismissed"));
   const [chatMessages, setChatMessages] = useState<{role:"user"|"assistant";text:string}[]>([
-    { role:"assistant", text:"Oi, sou **Vieira**, seu gestor financeiro inteligente. Estou aqui pra agilizar seus registros e te dar direcionamentos com base neles.\nMe diga **o que** você gastou ou ganhou, **quando**, se tem **vencimento**, a forma de pagamento (**débito** ou **crédito**) e o **tipo de gasto**." }
+    { role:"assistant", text:"Oi, sou **Vieira**, seu gestor financeiro. Me conta o que você gastou ou ganhou, do seu jeito." }
   ]);
 
   useEffect(()=>{ const h=()=>setIsPC(window.innerWidth>=1024); window.addEventListener("resize",h); return()=>window.removeEventListener("resize",h); },[]);
@@ -1608,9 +1629,9 @@ export default function App() {
           <div style={{ padding:"18px 18px 14px", borderBottom:"1px solid var(--border)" }}>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:4, marginBottom:4 }}>
               <LogoMark size={48}/>
-              <span style={{ fontSize:15, fontWeight:900, color:"var(--text)", letterSpacing:0.2 }}>NaCarteira</span>
+              <span style={{ fontSize:15, fontWeight:900, color:"var(--text)", letterSpacing:0.2 }}>{user.name?.split(" ")[0]}</span>
             </div>
-            <div style={{ fontSize:11, color:"var(--text2)" }}>Olá, {user.name?.split(" ")[0]}!</div>
+            <div style={{ fontSize:11, color:"var(--text2)" }}><span style={{ color:levelInfo.color, fontWeight:700 }}>⚔️ {levelInfo.label} NV.{levelNum}</span></div>
           </div>
           <div style={{ padding:"12px 16px", borderBottom:"1px solid var(--border)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
@@ -1701,9 +1722,9 @@ export default function App() {
         <div>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <LogoMark size={36}/>
-            <span style={{ fontSize:15, fontWeight:900, color:"var(--text)" }}>NaCarteira</span>
+            <span style={{ fontSize:15, fontWeight:900, color:"var(--text)" }}>{user.name?.split(" ")[0]}</span>
           </div>
-          <div style={{ fontSize:11, color:"var(--text2)" }}>Olá, {user.name?.split(" ")[0]}! <span style={{ color:levelInfo.color, fontWeight:700 }}>⚔️ {levelInfo.label} NV.{levelNum}</span></div>
+          <div style={{ fontSize:11, color:"var(--text2)" }}><span style={{ color:levelInfo.color, fontWeight:700 }}>⚔️ {levelInfo.label} NV.{levelNum}</span></div>
         </div>
         <div style={{ display:"flex", gap:7 }}>
           {pwa.canInstall && <button onClick={pwa.install} title="Baixar Aplicativo" style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.4)", color:"var(--primary)", padding:"8px 11px", borderRadius:10, fontSize:12, fontWeight:700 }}>📲</button>}
