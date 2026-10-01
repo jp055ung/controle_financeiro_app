@@ -360,7 +360,7 @@ app.post("/api/users/:userId/expenses", async (req, res) => {
     const recur = (recurring === 1 || recurring === true || recurring === '1') ? 1 : 0;
     let due: Date | null = null;
     if (dueDate) { try { due = new Date(dueDate); } catch {} }
-    const expDate = expenseDate || new Date().toISOString().slice(0,10);
+    const expDate = expenseDate || todayIsoBR();
     await p.execute(
       "INSERT INTO expenses (userId,categoryId,name,amount,subcategory,dueDate,paid,recurring,recurringMonths,recurringGoal,expenseDate) VALUES (?,?,?,?,?,?,0,?,?,?,?)",
       [req.params.userId, catId, name.trim(), amt, subcategory||null, due, recur,
@@ -380,7 +380,7 @@ app.patch("/api/expenses/:id/paid", async (req, res) => {
     const row = rows[0];
     await p.execute("UPDATE expenses SET paid=? WHERE id=?", [newPaid, req.params.id]);
     // Sonho (categoryId 6) recorrente: acumula histórico real investido, não reseta por mês
-    if (row && Number(row.categoryId) === 6 && row.recurring) {
+    if (row && (Number(row.categoryId) === 6 || Number(row.categoryId) === 5) && row.recurring) {
       const delta = newPaid - (row.paid ? 1 : 0);
       if (delta !== 0) {
         await p.execute(
@@ -419,7 +419,7 @@ app.post("/api/users/:userId/credit-card", async (req, res) => {
     if (isNaN(totalAmt) || totalAmt <= 0) return res.status(400).json({ error: "amount invalido" });
     const parcelAmt = Math.round(totalAmt / inst * 100) / 100;
     const recur = (recurring === 1 || recurring === true || recurring === '1') ? 1 : 0;
-    const expDate = expenseDate || new Date().toISOString().slice(0,10);
+    const expDate = expenseDate || todayIsoBR();
     await p.execute(
       "INSERT INTO creditCardExpenses (userId,description,amount,totalAmount,installments,installmentCurrent,subcategory,paid,dueDay,recurring,expenseDate) VALUES (?,?,?,?,?,1,?,0,?,?,?)",
       [req.params.userId, description, parcelAmt, inst > 1 ? totalAmt : null, inst, subcategory||null, dueDay||null, recur, expDate]
@@ -517,7 +517,7 @@ app.post("/api/users/:userId/extra-income", async (req, res) => {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
     const amt = parseFloat(req.body.amount);
     if (isNaN(amt) || amt <= 0) return res.status(400).json({ error: "amount invalido" });
-    const dt = req.body.date || new Date().toISOString().slice(0,10);
+    const dt = req.body.date || todayIsoBR();
     await p.execute("INSERT INTO extraIncomes (userId,description,amount,date) VALUES (?,?,?,?)",
       [req.params.userId, req.body.description, amt, dt]);
     const [rows] = await p.execute("SELECT * FROM extraIncomes WHERE userId=?", [req.params.userId]) as any;
@@ -753,11 +753,25 @@ app.post("/api/ai/insights", async (req, res) => {
 // ── RESOLVEDOR DE DATAS (determinístico, sem IA) ──────────────────────────────
 function normalizeStr(s: string) { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim(); }
 
+// "Hoje" sempre no horário de Brasília, independente do fuso em que o servidor roda (Railway roda em UTC,
+// e sem isso a virada do dia acontecia 3h antes da hora certa no Brasil).
+function todayBR(): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year:"numeric", month:"2-digit", day:"2-digit" }).formatToParts(new Date());
+  const y = parseInt(parts.find(p=>p.type==="year")!.value);
+  const m = parseInt(parts.find(p=>p.type==="month")!.value);
+  const d = parseInt(parts.find(p=>p.type==="day")!.value);
+  return new Date(y, m-1, d);
+}
+function todayIsoBR(): string {
+  const d = todayBR();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
 function resolveDateExpr(expr: string | null | undefined, today: Date): string | null {
   if (!expr) return null;
   const e = normalizeStr(expr);
   const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const iso = (dt: Date) => dt.toISOString().slice(0,10);
+  const iso = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
   const addDays = (dt: Date, n: number) => { const r = new Date(dt); r.setDate(r.getDate()+n); return r; };
 
   if (e === "hoje" || e === "agora") return iso(d);
@@ -818,8 +832,8 @@ app.post("/api/ai/parse-transaction", async (req, res) => {
     const { text, history } = req.body;
     if (!text || !String(text).trim()) return res.status(400).json({ error: "text obrigatorio" });
 
-    const today = new Date();
-    const todayIso = today.toISOString().slice(0,10);
+    const today = todayBR();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
     const todayWd = today.toLocaleDateString("pt-BR", { weekday:"long" });
     const catsList = AI_CATS.map(c=>`${c.id}=${c.name}`).join(", ");
 
