@@ -1127,8 +1127,8 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
         <LogoMark size={40}/>
         <span style={{ fontSize:13, fontWeight:800, color:"var(--text)" }}>Vieira · seu gestor financeiro</span>
       </div>
-      <div style={{ fontSize:11, color:"var(--text2)", marginBottom:10, paddingLeft:2 }}>
-        Ex: "Segunda-feira gastei 100 reais no Restaurante Mineiro, atividade de lazer"
+      <div style={{ fontSize:10, fontStyle:"italic", color:"var(--text2)", opacity:0.7, marginBottom:10, paddingLeft:2 }}>
+        Ex: "Gastei 100 reais no mercado hoje"
       </div>
       <div ref={scrollBoxRef} style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:260, overflowY:"auto", marginBottom:10 }}>
         {messages.map((m,i)=>(
@@ -1184,14 +1184,14 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         {!streakClaimed&&<div style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.3)", color:"#a78bfa", fontSize:12, fontWeight:700, padding:"5px 11px", borderRadius:8, whiteSpace:"nowrap" }}>+{getStreakXP(streakDays+1)} XP</div>}
       </div>
 
-      {/* CHAT INTELIGENTE — entrada principal de gastos/ganhos */}
-      <SmartChat userId={userId} messages={chatMessages} setMessages={setChatMessages} onDone={onChatDone}/>
-
-      {/* BANNER DOAÇÃO — discreto, abaixo do chat */}
+      {/* BANNER DOAÇÃO — acima do chat */}
       <div onClick={onDonate} style={{ background:"rgba(130,10,209,0.07)", border:"0.5px solid rgba(130,10,209,0.25)", borderRadius:12, padding:"9px 14px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <span style={{ fontSize:12, color:"#c084fc", fontWeight:600 }}>☕ Apoie quem criou o NaCarteira</span>
         <span style={{ fontSize:11, color:"rgba(192,132,252,0.6)", fontWeight:500 }}>Pix rápido →</span>
       </div>
+
+      {/* CHAT INTELIGENTE — entrada principal de gastos/ganhos */}
+      <SmartChat userId={userId} messages={chatMessages} setMessages={setChatMessages} onDone={onChatDone}/>
 
       {/* NÍVEL — onde a streak ficava antes */}
       <div onClick={onSettings} style={{ background:`${levelInfo.color}0f`, border:`1px solid ${levelInfo.color}44`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer" }}>
@@ -1226,6 +1226,63 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
           </div>
         ))}
       </div>
+
+      {/* INVESTINDO NO SONHO — COLAPSÁVEL */}
+      {sonhoRecorrente&&(
+        <div style={{ background:"linear-gradient(135deg,rgba(6,182,212,0.08),rgba(139,92,246,0.08))", border:"1px solid rgba(6,182,212,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:0 }}>
+          <CollapseHeader id="sonho">
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:26 }}>✨</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:10, color:"#06b6d4", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Sonho</div>
+                <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(sonhoTotal)} este mês</div>
+                {sonhoRecorrente && <div style={{ fontSize:11, color:"var(--text2)" }}>{fmt(sonhoInvestidoTotal)} investido no total</div>}
+                {sonhoPago
+                  ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
+                  : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
+                }
+              </div>
+            </div>
+          </CollapseHeader>
+          {!isCollapsed("sonho") && sonhoRecorrente&&(
+            <div style={{ marginTop:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
+                <span>Meta: {fmt(num(sonhoRecorrente.recurringGoal))}</span>
+                <span>{Math.round(sonhoProgresso)}% concluído</span>
+              </div>
+              <div className="progress-bar"><div className="progress-fill" style={{ width:`${sonhoProgresso}%`, background:"linear-gradient(90deg,#06b6d4,#8b5cf6)" }}/></div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {objetivoRecorrente&&(
+        <div style={{ background:"linear-gradient(135deg,rgba(139,92,246,0.08),rgba(108,99,255,0.08))", border:"1px solid rgba(139,92,246,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:0, marginTop:14 }}>
+          <CollapseHeader id="objetivo">
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:26 }}>🎯</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:10, color:"#8b5cf6", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Objetivo</div>
+                <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(objetivoTotal)} este mês</div>
+                {objetivoRecorrente && <div style={{ fontSize:11, color:"var(--text2)" }}>{fmt(objetivoInvestidoTotal)} investido no total</div>}
+                {objetivoPago
+                  ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
+                  : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
+                }
+              </div>
+            </div>
+          </CollapseHeader>
+          {!isCollapsed("objetivo") && objetivoRecorrente&&(
+            <div style={{ marginTop:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
+                <span>Meta: {fmt(num(objetivoRecorrente.recurringGoal))}</span>
+                <span>{Math.round(objetivoProgresso)}% concluído</span>
+              </div>
+              <div className="progress-bar"><div className="progress-fill" style={{ width:`${objetivoProgresso}%`, background:"linear-gradient(90deg,#8b5cf6,#6c63ff)" }}/></div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* MAIS INFORMAÇÕES — colapsável */}
       {(()=>{
@@ -1339,62 +1396,6 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         </div>
       )}
 
-      {/* INVESTINDO NO SONHO — COLAPSÁVEL */}
-      {sonhoTotal>0&&(
-        <div style={{ background:"linear-gradient(135deg,rgba(6,182,212,0.08),rgba(139,92,246,0.08))", border:"1px solid rgba(6,182,212,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:0 }}>
-          <CollapseHeader id="sonho">
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <span style={{ fontSize:26 }}>✨</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:10, color:"#06b6d4", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Sonho</div>
-                <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(sonhoTotal)} este mês</div>
-                {sonhoRecorrente && <div style={{ fontSize:11, color:"var(--text2)" }}>{fmt(sonhoInvestidoTotal)} investido no total</div>}
-                {sonhoPago
-                  ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
-                  : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
-                }
-              </div>
-            </div>
-          </CollapseHeader>
-          {!isCollapsed("sonho") && sonhoRecorrente&&(
-            <div style={{ marginTop:8 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
-                <span>Meta: {fmt(num(sonhoRecorrente.recurringGoal))}</span>
-                <span>{Math.round(sonhoProgresso)}% concluído</span>
-              </div>
-              <div className="progress-bar"><div className="progress-fill" style={{ width:`${sonhoProgresso}%`, background:"linear-gradient(90deg,#06b6d4,#8b5cf6)" }}/></div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {objetivoTotal>0&&(
-        <div style={{ background:"linear-gradient(135deg,rgba(139,92,246,0.08),rgba(108,99,255,0.08))", border:"1px solid rgba(139,92,246,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:0, marginTop:14 }}>
-          <CollapseHeader id="objetivo">
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <span style={{ fontSize:26 }}>🎯</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:10, color:"#8b5cf6", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Objetivo</div>
-                <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(objetivoTotal)} este mês</div>
-                {objetivoRecorrente && <div style={{ fontSize:11, color:"var(--text2)" }}>{fmt(objetivoInvestidoTotal)} investido no total</div>}
-                {objetivoPago
-                  ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
-                  : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
-                }
-              </div>
-            </div>
-          </CollapseHeader>
-          {!isCollapsed("objetivo") && objetivoRecorrente&&(
-            <div style={{ marginTop:8 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
-                <span>Meta: {fmt(num(objetivoRecorrente.recurringGoal))}</span>
-                <span>{Math.round(objetivoProgresso)}% concluído</span>
-              </div>
-              <div className="progress-bar"><div className="progress-fill" style={{ width:`${objetivoProgresso}%`, background:"linear-gradient(90deg,#8b5cf6,#6c63ff)" }}/></div>
-            </div>
-          )}
-        </div>
-      )}
 
                 {/* STATUS PAGAMENTO */}
                 <div className="card">
@@ -1661,12 +1662,11 @@ export default function App() {
       {sharedModals}
       <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:"var(--bg)" }}>
         <aside style={{ width:235, background:"var(--bg2)", borderRight:"1px solid var(--border)", display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
-          <div style={{ padding:"18px 18px 14px", borderBottom:"1px solid var(--border)" }}>
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:4, marginBottom:4 }}>
-              <LogoMark size={48}/>
-              <span style={{ fontSize:15, fontWeight:900, color:"var(--text)", letterSpacing:0.2 }}>{user.name?.split(" ")[0]}</span>
-            </div>
-            <div style={{ fontSize:11, color:"var(--text2)" }}><span style={{ color:levelInfo.color, fontWeight:700 }}>⚔️ {levelInfo.label} NV.{levelNum}</span></div>
+          <div style={{ padding:"14px 18px 10px", borderBottom:"1px solid var(--border)", display:"flex", alignItems:"center", gap:9 }}>
+            <LogoMark size={36}/>
+            <span style={{ fontSize:13, fontWeight:800, color:"var(--text)", letterSpacing:0.2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+              {user.name?.split(" ")[0]} <span style={{ color:"var(--text2)", fontWeight:500 }}>-</span> <span style={{ color:levelInfo.color }}>NV.{levelNum}</span>
+            </span>
           </div>
           <div style={{ padding:"12px 16px", borderBottom:"1px solid var(--border)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
@@ -1718,7 +1718,7 @@ export default function App() {
             {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
               onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
               onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-              onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null})}); load(); }}
+              onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); load(); }}
             />}
             {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
               onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -1740,7 +1740,7 @@ export default function App() {
               onEdit={async(id:number,desc:string,amount:string,dueDay:string,recurring:boolean,expenseDate:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null,recurring:recurring?1:0,expenseDate:expenseDate||null})}); load(); }}
               onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
             />}
-            {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
+            {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string,date?:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),date:date||undefined})}); load(); }}/>}
             {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} userName={user.name} salary={salary} healthScore={healthScore} totalInvestido={totalInvestido} levelInfo={levelInfo}/>}
           </div>
         </div>
@@ -1752,13 +1752,12 @@ export default function App() {
   return (
     <div style={{ minHeight:"100vh", paddingBottom:80 }}>
       {sharedModals}
-      <header style={{ background:"var(--bg2)", borderBottom:"1px solid var(--border)", padding:"13px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:50 }}>
-        <div>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <LogoMark size={36}/>
-            <span style={{ fontSize:15, fontWeight:900, color:"var(--text)" }}>{user.name?.split(" ")[0]}</span>
-          </div>
-          <div style={{ fontSize:11, color:"var(--text2)" }}><span style={{ color:levelInfo.color, fontWeight:700 }}>⚔️ {levelInfo.label} NV.{levelNum}</span></div>
+      <header style={{ background:"var(--bg2)", borderBottom:"1px solid var(--border)", padding:"10px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:50 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
+          <LogoMark size={30}/>
+          <span style={{ fontSize:13, fontWeight:800, color:"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+            {user.name?.split(" ")[0]} <span style={{ color:"var(--text2)", fontWeight:500 }}>-</span> <span style={{ color:levelInfo.color }}>NV.{levelNum}</span>
+          </span>
         </div>
         <div style={{ display:"flex", gap:7 }}>
           {pwa.canInstall && <button onClick={pwa.install} title="Baixar Aplicativo" style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.4)", color:"var(--primary)", padding:"8px 11px", borderRadius:10, fontSize:12, fontWeight:700 }}>📲</button>}
@@ -1772,7 +1771,7 @@ export default function App() {
         {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
           onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
           onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-          onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null})}); load(); }}
+          onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); load(); }}
         />}
         {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
           onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -1792,7 +1791,7 @@ export default function App() {
           onEdit={async(id:number,desc:string,amount:string,dueDay:string,recurring:boolean,expenseDate:string)=>{ await fetch(`${API}/credit-card/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),dueDay:dueDay?parseInt(dueDay):null,recurring:recurring?1:0,expenseDate:expenseDate||null})}); load(); }}
           onPayAll={async()=>{ await fetch(`${API}/users/${user.id}/credit-card/pay-all`,{method:"POST"}); load(); }}
         />}
-        {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount)})}); load(); }}/>}
+        {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string,date?:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),date:date||undefined})}); load(); }}/>}
         {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} userName={user.name} salary={salary} healthScore={healthScore} totalInvestido={totalInvestido} levelInfo={levelInfo}/>}
       </main>
       <nav style={{ position:"fixed", bottom:0, left:0, right:0, background:"var(--bg2)", borderTop:"1px solid var(--border)", display:"flex", zIndex:50 }}>
@@ -1814,6 +1813,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
   const [editAmount, setEditAmount] = useState("");
   const [editExpDate, setEditExpDate] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
+  const [editInvestedTotal, setEditInvestedTotal] = useState("");
 
   return (
     <div>
@@ -1863,8 +1863,15 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                       <input value={editDueDate} onChange={e=>setEditDueDate(e.target.value)} type="date"
                         style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
                     </div>
+                    {!!exp.recurring && num(exp.recurringGoal)>0 && (
+                      <div>
+                        <label style={{ fontSize:10, color:"#06b6d4", display:"block", marginBottom:2 }}>Total já investido (corrigir/completar histórico)</label>
+                        <input value={editInvestedTotal} onChange={e=>setEditInvestedTotal(e.target.value)} type="number" step="0.01" placeholder="Ex: 2000"
+                          style={{ width:"100%", background:"var(--bg2)", border:"1px solid rgba(6,182,212,0.3)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                      </div>
+                    )}
                     <div style={{ display:"flex", gap:7 }}>
-                      <button onClick={()=>{ onEdit(exp.id,editName,editAmount,editExpDate,editDueDate); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
+                      <button onClick={()=>{ onEdit(exp.id,editName,editAmount,editExpDate,editDueDate,editInvestedTotal); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
                       <button onClick={()=>setEditId(null)} style={{ flex:1, padding:"7px", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer", fontSize:12 }}>Cancelar</button>
                     </div>
                   </div>
@@ -1884,7 +1891,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                       </div>
                     </div>
                     <span style={{ fontWeight:800, fontSize:12, fontVariantNumeric:"tabular-nums", color:exp.paid?"var(--green)":"var(--yellow)", flexShrink:0 }}>{fmt(num(exp.amount))}</span>
-                    <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); setEditExpDate(exp.expenseDate?String(exp.expenseDate).slice(0,10):""); setEditDueDate(exp.dueDate?String(exp.dueDate).slice(0,10):""); }}
+                    <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); setEditExpDate(exp.expenseDate?String(exp.expenseDate).slice(0,10):""); setEditDueDate(exp.dueDate?String(exp.dueDate).slice(0,10):""); setEditInvestedTotal(exp.recurringGoalPaidTotal!=null?String(num(exp.recurringGoalPaidTotal)):""); }}
                       style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"4px 8px", fontSize:12, cursor:"pointer", flexShrink:0 }}>✏️</button>
                     <button className="btn-danger" onClick={()=>onDelete(exp.id)} style={{ padding:"4px 8px", flexShrink:0 }}>🗑</button>
                   </div>
@@ -2087,6 +2094,7 @@ function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete,onEdit }
   const [editId, setEditId] = useState<number|null>(null);
   const [editDesc, setEditDesc] = useState("");
   const [editAmt, setEditAmt] = useState("");
+  const [editIncDate, setEditIncDate] = useState("");
 
   return (
     <div>
@@ -2116,8 +2124,10 @@ function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete,onEdit }
                 style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
               <input value={editAmt} onChange={e=>setEditAmt(e.target.value)} placeholder="Valor (R$)" type="number" step="0.01"
                 style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+              <input value={editIncDate} onChange={e=>setEditIncDate(e.target.value)} type="date"
+                style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
               <div style={{ display:"flex", gap:7 }}>
-                <button onClick={()=>{ onEdit(inc.id,editDesc,editAmt); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
+                <button onClick={()=>{ onEdit(inc.id,editDesc,editAmt,editIncDate); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
                 <button onClick={()=>setEditId(null)} style={{ flex:1, padding:"7px", background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer", fontSize:12 }}>Cancelar</button>
               </div>
             </div>
@@ -2128,7 +2138,7 @@ function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete,onEdit }
                 <div style={{ fontSize:11, color:"var(--text2)" }}>{new Date(inc.date).toLocaleDateString("pt-BR")}</div>
               </div>
               <span style={{ fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--green)" }}>+{fmt(num(inc.amount))}</span>
-              <button onClick={()=>{ setEditId(inc.id); setEditDesc(inc.description); setEditAmt(String(num(inc.amount))); }}
+              <button onClick={()=>{ setEditId(inc.id); setEditDesc(inc.description); setEditAmt(String(num(inc.amount))); setEditIncDate(inc.date?String(inc.date).slice(0,10):""); }}
                 style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"5px 9px", fontSize:12, cursor:"pointer" }}>✏️</button>
               <button className="btn-danger" onClick={()=>onDelete(inc.id)}>🗑</button>
             </div>
@@ -2528,9 +2538,37 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
     month: h.month,
   }));
 
+  const sonhoGoal = expenses.find((e:any)=>Number(e.categoryId)===SONHO_ID && e.recurring && num(e.recurringGoal)>0);
+  const objetivoGoal = expenses.find((e:any)=>Number(e.categoryId)===OBJETIVO_ID && e.recurring && num(e.recurringGoal)>0);
+  const goals = [
+    sonhoGoal && { label:"Sonho", emoji:"✨", color:"#06b6d4", goal:sonhoGoal },
+    objetivoGoal && { label:"Objetivo", emoji:"🎯", color:"#8b5cf6", goal:objetivoGoal },
+  ].filter(Boolean) as any[];
+
   return (
     <div>
       <h2 style={{ fontSize:17, fontWeight:800, marginBottom:14 }}>📈 Relatórios</h2>
+
+      {goals.length>0 && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:14 }}>
+          {goals.map(g=>{
+            const invested = num(g.goal.recurringGoalPaidTotal);
+            const target = num(g.goal.recurringGoal);
+            const pct = target>0 ? Math.min(invested/target*100,100) : 0;
+            return (
+              <div key={g.label} className="card" style={{ borderTop:`3px solid ${g.color}` }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                  <span style={{ fontSize:12, fontWeight:800, color:g.color }}>{g.emoji} Já investido no {g.label}</span>
+                  <span style={{ fontSize:11, color:"var(--text2)" }}>{Math.round(pct)}%</span>
+                </div>
+                <div style={{ fontSize:19, fontWeight:900, color:"var(--text)", marginBottom:6 }}>{fmt(invested)} <span style={{ fontSize:12, color:"var(--text2)", fontWeight:600 }}>de {fmt(target)}</span></div>
+                <div className="progress-bar"><div className="progress-fill" style={{ width:`${pct}%`, background:g.color }}/></div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
         <div className="card" style={{ borderTop:"3px solid var(--red)" }}>
           <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Gastos</div>
@@ -2749,7 +2787,7 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
 function AddCCModal({ userId, onClose, onXp }: any) {
   // Modo: "total" (valor total ÷ parcelas) ou "parcela" (valor da parcela × vezes)
   const [mode, setMode] = useState<"total"|"parcela">("parcela");
-  const [form, setForm] = useState({ subcategory:"Outros", description:"", amount:"", installments:"1", dueDay:"" });
+  const [form, setForm] = useState({ subcategory:"Outros", description:"", amount:"", installments:"1", dueDay:"", expenseDate:"", recurring:false });
   const [loading, setLoading] = useState(false);
 
   const inst = Math.max(1, parseInt(form.installments) || 1);
@@ -2771,6 +2809,8 @@ function AddCCModal({ userId, onClose, onXp }: any) {
           amount: totalAmt,      // servidor recebe total e divide por inst
           installments: inst,
           dueDay: form.dueDay ? parseInt(form.dueDay) : null,
+          expenseDate: form.expenseDate || null,
+          recurring: form.recurring ? 1 : 0,
         })
       });
       if (res.ok) { onXp(calcXpExpense(parcelAmt)); onClose(); }
@@ -2834,12 +2874,23 @@ function AddCCModal({ userId, onClose, onXp }: any) {
           </div>
         )}
 
+        {/* Data do gasto */}
+        <div>
+          <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5 }}>DATA DO GASTO (deixe em branco p/ hoje)</label>
+          <input type="date" value={form.expenseDate} onChange={e=>setForm(f=>({...f,expenseDate:e.target.value}))}/>
+        </div>
+
         {/* Vencimento */}
         <div>
-          <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5 }}>DIA DE VENCIMENTO (opcional)</label>
+          <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5 }}>DIA DE VENCIMENTO DA FATURA (opcional)</label>
           <input type="number" placeholder="Ex: 10" min="1" max="31"
             value={form.dueDay} onChange={e=>setForm(f=>({...f,dueDay:e.target.value}))}/>
         </div>
+
+        <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--text2)", cursor:"pointer" }}>
+          <input type="checkbox" checked={form.recurring} onChange={e=>setForm(f=>({...f,recurring:e.target.checked}))} style={{ width:16, height:16, accentColor:"var(--primary)", flexShrink:0 }}/>
+          <span>🔄 Recorrente (repete todo mês, indefinidamente)</span>
+        </label>
 
         <div style={{ display:"flex", gap:8 }}>
           <button className="btn-ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</button>
@@ -2853,13 +2904,13 @@ function AddCCModal({ userId, onClose, onXp }: any) {
 }
 
 function AddIncomeModal({ userId, onClose, onXp }: any) {
-  const [form, setForm] = useState({ description:"", amount:"" });
+  const [form, setForm] = useState({ description:"", amount:"", date:"" });
   const [loading, setLoading] = useState(false);
   const submit = async () => {
     if (!form.description||!form.amount) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/users/${userId}/extra-income`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,amount:parseFloat(form.amount)})});
+      const res = await fetch(`${API}/users/${userId}/extra-income`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,amount:parseFloat(form.amount),date:form.date||null})});
       if (res.ok) { onXp(calcXpIncome(parseFloat(form.amount))); onClose(); }
     } catch {}
     setLoading(false);
@@ -2869,6 +2920,10 @@ function AddIncomeModal({ userId, onClose, onXp }: any) {
       <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
         <input placeholder="Descrição (ex: Freelance, Venda...) *" value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}/>
         <input type="number" placeholder="Valor (R$) *" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/>
+        <div>
+          <label style={{ fontSize:10, color:"var(--text2)", display:"block", marginBottom:2 }}>Data (deixe em branco p/ hoje)</label>
+          <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
+        </div>
         {form.amount&&parseFloat(form.amount)>0&&(
           <div style={{ fontSize:12, color:"var(--green)", fontWeight:600, padding:"8px 12px", background:"rgba(0,214,143,0.08)", borderRadius:8 }}>
             ⚔️ +{calcXpIncome(parseFloat(form.amount))} XP com esse registro!
