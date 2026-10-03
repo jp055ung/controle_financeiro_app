@@ -487,7 +487,7 @@ app.post("/api/users/:userId/credit-card/pay-all", async (req, res) => {
 app.patch("/api/expenses/:id/edit", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const { name, amount, expenseDate, dueDate } = req.body;
+    const { name, amount, expenseDate, dueDate, recurringGoalPaidTotal } = req.body;
     if (name !== undefined) await p.execute("UPDATE expenses SET name=? WHERE id=?", [name, req.params.id]);
     if (amount !== undefined) {
       const amt = parseFloat(amount);
@@ -498,6 +498,10 @@ app.patch("/api/expenses/:id/edit", async (req, res) => {
     }
     if (dueDate !== undefined) {
       await p.execute("UPDATE expenses SET dueDate=? WHERE id=?", [dueDate||null, req.params.id]);
+    }
+    if (recurringGoalPaidTotal !== undefined) {
+      const inv = parseFloat(recurringGoalPaidTotal);
+      if (!isNaN(inv) && inv >= 0) await p.execute("UPDATE expenses SET recurringGoalPaidTotal=? WHERE id=?", [inv, req.params.id]);
     }
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -536,11 +540,14 @@ app.delete("/api/extra-income/:id", async (req, res) => {
 app.patch("/api/extra-income/:id/edit", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const { description, amount } = req.body;
+    const { description, amount, date } = req.body;
     if (description !== undefined) await p.execute("UPDATE extraIncomes SET description=? WHERE id=?", [description, req.params.id]);
     if (amount !== undefined) {
       const amt = parseFloat(amount);
       if (!isNaN(amt) && amt > 0) await p.execute("UPDATE extraIncomes SET amount=? WHERE id=?", [amt, req.params.id]);
+    }
+    if (date !== undefined) {
+      await p.execute("UPDATE extraIncomes SET date=? WHERE id=?", [date||null, req.params.id]);
     }
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
