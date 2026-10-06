@@ -1588,13 +1588,15 @@ export default function App() {
   const sonhoTotal = sonhoExp.filter(e=>e.paid).reduce((s,e)=>s+num(e.amount),0);
   const sonhoPago = sonhoExp.some(e=>!!e.paid);
   const sonhoRecorrente = sonhoExp.find(e=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
-  const sonhoInvestidoTotal = sonhoRecorrente ? num(sonhoRecorrente.recurringGoalPaidTotal) : 0;
+  // Math.max com sonhoTotal: se o acúmulo no banco falhar por algum motivo, nunca mostra menos
+  // do que o que já está visivelmente pago este mês (evita "Pago este mês" + "R$0 no total").
+  const sonhoInvestidoTotal = sonhoRecorrente ? Math.max(num(sonhoRecorrente.recurringGoalPaidTotal), sonhoTotal) : 0;
   const sonhoProgresso = sonhoRecorrente ? Math.min(sonhoInvestidoTotal/num(sonhoRecorrente.recurringGoal)*100,100) : 0;
   const objetivoExp = expenses.filter(e=>Number(e.categoryId)===OBJETIVO_ID);
   const objetivoTotal = objetivoExp.filter(e=>e.paid).reduce((s,e)=>s+num(e.amount),0);
   const objetivoPago = objetivoExp.some(e=>!!e.paid);
   const objetivoRecorrente = objetivoExp.find(e=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
-  const objetivoInvestidoTotal = objetivoRecorrente ? num(objetivoRecorrente.recurringGoalPaidTotal) : 0;
+  const objetivoInvestidoTotal = objetivoRecorrente ? Math.max(num(objetivoRecorrente.recurringGoalPaidTotal), objetivoTotal) : 0;
   const objetivoProgresso = objetivoRecorrente ? Math.min(objetivoInvestidoTotal/num(objetivoRecorrente.recurringGoal)*100,100) : 0;
   const byCategory = CATS.map(cat=>({...cat,items:expenses.filter(e=>Number(e.categoryId)===cat.id),total:expenses.filter(e=>Number(e.categoryId)===cat.id).reduce((s,e)=>s+num(e.amount),0)}));
   // Score de saúde financeira — usa total real (todas as categorias)
@@ -1718,7 +1720,7 @@ export default function App() {
             {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
               onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
               onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-              onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); load(); }}
+              onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); if(!r.ok) showToast("⚠️ Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
             />}
             {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
               onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -1771,7 +1773,7 @@ export default function App() {
         {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
           onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
           onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-          onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); load(); }}
+          onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); if(!r.ok) showToast("⚠️ Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
         />}
         {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
           onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -2552,7 +2554,7 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
       {goals.length>0 && (
         <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:14 }}>
           {goals.map(g=>{
-            const invested = num(g.goal.recurringGoalPaidTotal);
+            const invested = Math.max(num(g.goal.recurringGoalPaidTotal), g.goal.paid?num(g.goal.amount):0);
             const target = num(g.goal.recurringGoal);
             const pct = target>0 ? Math.min(invested/target*100,100) : 0;
             return (
@@ -2681,7 +2683,7 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
 
 // ── MODAIS ────────────────────────────────────────────────────────────────────
 function AddExpenseModal({ userId, onClose, onXp }: any) {
-  const [form, setForm] = useState({ categoryId:"4", name:"", amount:"", subcategory:"", dueDate:"", recurring:false, recurringMonths:"", recurringGoal:"" });
+  const [form, setForm] = useState({ categoryId:"4", name:"", amount:"", subcategory:"", expenseDate:"", hasDueDate:false, dueDate:"", recurring:false, recurringMonths:"", recurringGoal:"" });
   const [loading, setLoading] = useState(false);
   const isSonho = parseInt(form.categoryId)===SONHO_ID;
   const isObjetivo = parseInt(form.categoryId)===OBJETIVO_ID;
@@ -2711,7 +2713,8 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
         name: form.name.trim(),
         amount: computedAmount,
         subcategory: form.subcategory || null,
-        dueDate: form.dueDate || null,
+        expenseDate: form.expenseDate || null,
+        dueDate: (form.hasDueDate && form.dueDate) ? form.dueDate : null,
         recurring: form.recurring ? 1 : 0,
         recurringGoal: sonhoAutoCalc ? parseFloat(form.recurringGoal) : null,
         recurringMonths: sonhoAutoCalc ? parseInt(form.recurringMonths) : null,
@@ -2747,11 +2750,27 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
         <input placeholder="Nome da despesa *" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
         <input type="number" placeholder={isGoalCat&&form.recurring?"Valor mensal (deixe em branco p/ calcular)":"Valor (R$) *"} value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/>
         <input placeholder="Subcategoria (opcional)" value={form.subcategory} onChange={e=>setForm(f=>({...f,subcategory:e.target.value}))}/>
-        <input type="date" value={form.dueDate} onChange={e=>setForm(f=>({...f,dueDate:e.target.value}))}/>
+
+        <div>
+          <label style={{ fontSize:10, color:"var(--text2)", display:"block", marginBottom:3 }}>Data do gasto (deixe em branco p/ hoje)</label>
+          <input type="date" value={form.expenseDate} onChange={e=>setForm(f=>({...f,expenseDate:e.target.value}))}/>
+        </div>
+
         <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--text2)", cursor:"pointer", userSelect:"none" as any }}>
           <input type="checkbox" checked={form.recurring} onChange={e=>setForm(f=>({...f,recurring:e.target.checked}))} style={{ width:16, height:16, accentColor:"var(--primary)", flexShrink:0 }}/>
           <span>Recorrente 🔄</span>
         </label>
+
+        <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--text2)", cursor:"pointer", userSelect:"none" as any }}>
+          <input type="checkbox" checked={form.hasDueDate} onChange={e=>setForm(f=>({...f,hasDueDate:e.target.checked}))} style={{ width:16, height:16, accentColor:"var(--yellow)", flexShrink:0 }}/>
+          <span>Tem vencimento? ⏰</span>
+        </label>
+        {form.hasDueDate && (
+          <div>
+            <label style={{ fontSize:10, color:"var(--yellow)", display:"block", marginBottom:3 }}>Data de vencimento</label>
+            <input type="date" value={form.dueDate} onChange={e=>setForm(f=>({...f,dueDate:e.target.value}))}/>
+          </div>
+        )}
 
         {/* Bloco de meta aparece quando categoria=Sonho OU Objetivo + recorrente */}
         {isGoalCat && form.recurring && (
