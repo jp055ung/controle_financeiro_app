@@ -111,7 +111,14 @@ async function runMigrations() {
     "ALTER TABLE users ADD COLUMN investTipDate DATE NULL",
     "ALTER TABLE expenses ADD COLUMN recurringGoalPaidTotal DECIMAL(10,2) DEFAULT 0",
   ];
-  for (const sql of alters) { try { await p.execute(sql); } catch {} }
+  for (const sql of alters) {
+    try { await p.execute(sql); }
+    catch (e: any) {
+      // "Duplicate column" (coluna já existe) é esperado e ignorado; qualquer outro erro é logado,
+      // pra não mascarar falha real de migração (ex: permissão) como se tivesse funcionado.
+      if (!/duplicate column/i.test(e?.message || "")) console.error("⚠️ Migração falhou:", sql, "→", e?.message);
+    }
+  }
   console.log("✅ Migrações OK");
 }
 
@@ -379,14 +386,20 @@ app.patch("/api/expenses/:id/paid", async (req, res) => {
     const [rows] = await p.execute("SELECT paid, amount, categoryId, recurring FROM expenses WHERE id=?", [req.params.id]) as any;
     const row = rows[0];
     await p.execute("UPDATE expenses SET paid=? WHERE id=?", [newPaid, req.params.id]);
-    // Sonho (categoryId 6) recorrente: acumula histórico real investido, não reseta por mês
+    // Sonho (categoryId 6) e Objetivo (5) recorrentes: acumula histórico real investido, não reseta por mês.
+    // Isolado em try/catch próprio: se isso falhar (ex: coluna ainda não migrada), o "paid" já salvo acima
+    // continua valendo, e o erro fica logado em vez de virar 500 silencioso pro usuário.
     if (row && (Number(row.categoryId) === 6 || Number(row.categoryId) === 5) && row.recurring) {
       const delta = newPaid - (row.paid ? 1 : 0);
       if (delta !== 0) {
-        await p.execute(
-          "UPDATE expenses SET recurringGoalPaidTotal = GREATEST(0, IFNULL(recurringGoalPaidTotal,0) + ?) WHERE id=?",
-          [delta * Number(row.amount), req.params.id]
-        );
+        try {
+          await p.execute(
+            "UPDATE expenses SET recurringGoalPaidTotal = GREATEST(0, IFNULL(recurringGoalPaidTotal,0) + ?) WHERE id=?",
+            [delta * Number(row.amount), req.params.id]
+          );
+        } catch (e: any) {
+          console.error("⚠️ Falha ao acumular recurringGoalPaidTotal (id="+req.params.id+"):", e.message);
+        }
       }
     }
     res.json({ success:true });
@@ -488,21 +501,26 @@ app.patch("/api/expenses/:id/edit", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
     const { name, amount, expenseDate, dueDate, recurringGoalPaidTotal } = req.body;
-    if (name !== undefined) await p.execute("UPDATE expenses SET name=? WHERE id=?", [name, req.params.id]);
+    const errors: string[] = [];
+    const safe = async (label: string, fn: () => Promise<any>) => {
+      try { await fn(); } catch (e: any) { errors.push(label+": "+e.message); console.error("⚠️ Edit despesa ("+label+", id="+req.params.id+"):", e.message); }
+    };
+    if (name !== undefined) await safe("name", () => p.execute("UPDATE expenses SET name=? WHERE id=?", [name, req.params.id]));
     if (amount !== undefined) {
       const amt = parseFloat(amount);
-      if (!isNaN(amt) && amt > 0) await p.execute("UPDATE expenses SET amount=? WHERE id=?", [amt, req.params.id]);
+      if (!isNaN(amt) && amt > 0) await safe("amount", () => p.execute("UPDATE expenses SET amount=? WHERE id=?", [amt, req.params.id]));
     }
     if (expenseDate !== undefined) {
-      await p.execute("UPDATE expenses SET expenseDate=? WHERE id=?", [expenseDate||null, req.params.id]);
+      await safe("expenseDate", () => p.execute("UPDATE expenses SET expenseDate=? WHERE id=?", [expenseDate||null, req.params.id]));
     }
     if (dueDate !== undefined) {
-      await p.execute("UPDATE expenses SET dueDate=? WHERE id=?", [dueDate||null, req.params.id]);
+      await safe("dueDate", () => p.execute("UPDATE expenses SET dueDate=? WHERE id=?", [dueDate||null, req.params.id]));
     }
     if (recurringGoalPaidTotal !== undefined) {
       const inv = parseFloat(recurringGoalPaidTotal);
-      if (!isNaN(inv) && inv >= 0) await p.execute("UPDATE expenses SET recurringGoalPaidTotal=? WHERE id=?", [inv, req.params.id]);
+      if (!isNaN(inv) && inv >= 0) await safe("recurringGoalPaidTotal", () => p.execute("UPDATE expenses SET recurringGoalPaidTotal=? WHERE id=?", [inv, req.params.id]));
     }
+    if (errors.length) return res.status(207).json({ success:false, partialErrors: errors });
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
