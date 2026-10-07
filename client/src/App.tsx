@@ -1041,11 +1041,15 @@ function Bold({ text }: { text:string }) {
 }
 
 function fmtDateBR(iso?: string|null) {
+  // Formata "YYYY-MM-DD" (ou "YYYY-MM-DD HH:MM:SS") manualmente, SEM passar por new Date().
+  // new Date("2026-10-03") (data pura, sem hora) é interpretado como meia-noite UTC pelo JS —
+  // num navegador no Brasil (UTC-3) isso vira o dia anterior ao converter pro fuso local.
+  // Fazendo a formatação na mão, nunca tem esse deslocamento.
   if (!iso) return "";
-  const datePart = String(iso).slice(0,10); // corta qualquer "T00:00:00.000Z" que venha junto
+  const datePart = String(iso).slice(0,10);
   const [y,m,d] = datePart.split("-");
   if (!y||!m||!d) return "";
-  return `${d}/${m}`;
+  return `${d}/${m}/${y}`;
 }
 
 function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; messages:{role:"user"|"assistant";text:string}[]; setMessages:React.Dispatch<React.SetStateAction<{role:"user"|"assistant";text:string}[]>>; onDone:(xpGain:number)=>Promise<void>|void }) {
@@ -1825,7 +1829,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
       </div>
       {byCategory.map((cat:any)=>{
         const goalItem = cat.items.find((e:any)=>e.recurring && num(e.recurringGoal)>0 && num(e.recurringMonths)>0);
-        const goalPaid = goalItem ? num(goalItem.recurringGoalPaidTotal) : 0;
+        const goalPaid = goalItem ? Math.max(num(goalItem.recurringGoalPaidTotal), goalItem.paid?num(goalItem.amount):0) : 0;
         const goalTotal = goalItem ? num(goalItem.recurringGoal) : 0;
         const goalMonthly = goalItem ? num(goalItem.amount) : 0;
         const parcelsLeft = goalItem && goalMonthly>0 ? Math.max(0, Math.ceil((goalTotal-goalPaid)/goalMonthly)) : 0;
@@ -1886,9 +1890,9 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                         {isSonhoOrInvest && <span style={{ fontSize:10, color: Number(exp.categoryId)===INVESTIR_ID?"var(--green)":"#06b6d4", fontWeight:700, marginLeft:5 }}>{Number(exp.categoryId)===INVESTIR_ID?"📈 Patrimônio":"✨ Sonho"}</span>}
                       </div>
                       <div style={{ fontSize:10, color:isDueSoon?"var(--yellow)":"var(--text2)" }}>
-                        {exp.subcategory&&`${exp.subcategory} · `}
-                        {exp.expenseDate&&`${fmtDateBR(exp.expenseDate)}`}
-                        {exp.dueDate&&` · Vence: ${(()=>{ const d=new Date(exp.dueDate!); const now=new Date(); const adjusted=new Date(now.getFullYear(),now.getMonth(),d.getDate()); return adjusted.toLocaleDateString("pt-BR"); })()}`}
+                        {exp.subcategory ? `${exp.subcategory} · ` : ""}
+                        {fmtDateBR(exp.expenseDate || exp.createdAt) || new Date().toLocaleDateString("pt-BR")}
+                        {exp.dueDate&&` · Vence: ${fmtDateBR(exp.dueDate)}`}
                         {isDueSoon&&" ⚠️"}{exp.recurring?" 🔄":""}
                       </div>
                     </div>
@@ -2025,7 +2029,7 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
                     </div>
                     <div style={{ fontSize:11, color:"var(--text2)", marginTop:1, display:"flex", gap:6, flexWrap:"wrap" }}>
                       {c.subcategory && <span>{c.subcategory}</span>}
-                      {c.expenseDate && <span>· {fmtDateBR(c.expenseDate)}</span>}
+                      <span>· {fmtDateBR(c.expenseDate || c.createdAt) || new Date().toLocaleDateString("pt-BR")}</span>
                       {c.recurring ? <span style={{ color:"var(--primary)", fontWeight:700 }}>· 🔄 Recorrente</span> : null}
                     </div>
                     {isParcelado && (
