@@ -516,11 +516,19 @@ app.patch("/api/expenses/:id/edit", async (req, res) => {
     if (dueDate !== undefined) {
       await safe("dueDate", () => p.execute("UPDATE expenses SET dueDate=? WHERE id=?", [dueDate||null, req.params.id]));
     }
-    if (recurringGoalPaidTotal !== undefined) {
-      const inv = parseFloat(recurringGoalPaidTotal);
-      if (!isNaN(inv) && inv >= 0) await safe("recurringGoalPaidTotal", () => p.execute("UPDATE expenses SET recurringGoalPaidTotal=? WHERE id=?", [inv, req.params.id]));
+    if (recurringGoalPaidTotal !== undefined && recurringGoalPaidTotal !== null && recurringGoalPaidTotal !== "") {
+      // O usuário informa "já investido ANTES deste mês". O total acumulado = esse valor + parcela do mês (se já paga).
+      const base = parseFloat(recurringGoalPaidTotal);
+      if (!isNaN(base) && base >= 0) {
+        try {
+          await p.execute("ALTER TABLE expenses ADD COLUMN recurringGoalPaidTotal DECIMAL(10,2) DEFAULT 0");
+        } catch (e: any) { /* já existe: ok */ }
+        await safe("recurringGoalPaidTotal", async () => {
+          await p.execute("UPDATE expenses SET recurringGoalPaidTotal = ? + IF(paid=1, amount, 0) WHERE id=?", [base, req.params.id]);
+        });
+      }
     }
-    if (errors.length) return res.status(207).json({ success:false, partialErrors: errors });
+    if (errors.length) return res.status(500).json({ success:false, error: errors.join(" | ") });
     res.json({ success:true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
