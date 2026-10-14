@@ -995,6 +995,21 @@ app.get("/api/users/:userId/invest-tip", async (req, res) => {
 });
 
 // ── STATIC + FALLBACK ─────────────────────────────────────────────────────────
+// ── DIAGNÓSTICO (temporário): confirma versão no ar e estrutura real das tabelas ──
+app.get("/api/debug", async (_req, res) => {
+  const out: any = { version: "2026-10-14-edit-fix", time: new Date().toISOString() };
+  try {
+    const p = getPool(); if (!p) return res.json({ ...out, error: "sem DATABASE_URL" });
+    for (const t of ["expenses", "extraIncomes", "creditCardExpenses"]) {
+      try {
+        const [cols] = await p.query("SHOW COLUMNS FROM " + t) as any;
+        out[t] = cols.map((c: any) => c.Field + " " + c.Type);
+      } catch (e: any) { out[t] = "ERRO: " + e.message; }
+    }
+  } catch (e: any) { out.error = e.message; }
+  res.json(out);
+});
+
 app.get("*", (_req, res) => {
   const indexPath = path.join(process.cwd(), "dist", "index.html");
   res.sendFile(indexPath, (err) => {
