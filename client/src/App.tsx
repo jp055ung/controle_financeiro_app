@@ -1871,7 +1871,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                     </div>
                     {!!exp.recurring && num(exp.recurringGoal)>0 && (
                       <div>
-                        <label style={{ fontSize:10, color:"#06b6d4", display:"block", marginBottom:2 }}>Total já investido (corrigir/completar histórico)</label>
+                        <label style={{ fontSize:10, color:"#06b6d4", display:"block", marginBottom:2 }}>Total já investido antes deste mês</label>
                         <input value={editInvestedTotal} onChange={e=>setEditInvestedTotal(e.target.value)} type="number" step="0.01" placeholder="Ex: 2000"
                           style={{ width:"100%", background:"var(--bg2)", border:"1px solid rgba(6,182,212,0.3)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
                       </div>
@@ -1897,7 +1897,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                       </div>
                     </div>
                     <span style={{ fontWeight:800, fontSize:12, fontVariantNumeric:"tabular-nums", color:exp.paid?"var(--green)":"var(--yellow)", flexShrink:0 }}>{fmt(num(exp.amount))}</span>
-                    <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); setEditExpDate(exp.expenseDate?String(exp.expenseDate).slice(0,10):""); setEditDueDate(exp.dueDate?String(exp.dueDate).slice(0,10):""); setEditInvestedTotal(exp.recurringGoalPaidTotal!=null?String(num(exp.recurringGoalPaidTotal)):""); }}
+                    <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); setEditExpDate(exp.expenseDate?String(exp.expenseDate).slice(0,10):""); setEditDueDate(exp.dueDate?String(exp.dueDate).slice(0,10):""); setEditInvestedTotal(exp.recurringGoalPaidTotal!=null?String(Math.max(0,num(exp.recurringGoalPaidTotal)-(exp.paid?num(exp.amount):0))):""); }}
                       style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"4px 8px", fontSize:12, cursor:"pointer", flexShrink:0 }}>✏️</button>
                     <button className="btn-danger" onClick={()=>onDelete(exp.id)} style={{ padding:"4px 8px", flexShrink:0 }}>🗑</button>
                   </div>
