@@ -110,6 +110,7 @@ async function runMigrations() {
     "ALTER TABLE users ADD COLUMN investTip TEXT NULL",
     "ALTER TABLE users ADD COLUMN investTipDate DATE NULL",
     "ALTER TABLE expenses ADD COLUMN recurringGoalPaidTotal DECIMAL(10,2) DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN potConfig TEXT NULL",
   ];
   for (const sql of alters) {
     try { await p.execute(sql); }
@@ -851,6 +852,81 @@ function resolveDateExpr(expr: string | null | undefined, today: Date): string |
   return null; // não reconhecido pela lógica determinística
 }
 
+// ── POTES (padrão "Criação de Riqueza" ou personalizado) ─────────────────────
+// Os 6 potes configuráveis ocupam os ids de categoria 1,2,3,4,6,7. Objetivo (5) e Variáveis (8) não entram na %.
+// O comportamento especial fica preso ao id: 3 = Investimento (patrimônio), 6 = Sonho (meta de longo prazo).
+const POT_IDS = [1, 2, 3, 4, 6, 7];
+const POT_DEFAULTS: Record<number, { name: string; desc: string }> = {
+  1: { name: "Pagar-se", desc: "Investir em você mesmo: presente, saúde, passeio, desenvolvimento pessoal." },
+  2: { name: "Doar",     desc: "Generosidade: doações, presentes para outros, ajudar quem precisa." },
+  3: { name: "Investir", desc: "Construir patrimônio: Tesouro, CDB, fundos, ações, previdência." },
+  4: { name: "Contas",   desc: "Obrigações do mês: aluguel, luz, água, internet, mercado, transporte, escola." },
+  6: { name: "Sonho",    desc: "Meta grande de longo prazo, acompanhada aos poucos: casa, viagem, carro." },
+  7: { name: "Abundar",  desc: "Os luxos da vida: restaurante melhor, hobby, lazer, experiências sem culpa." },
+};
+function standardPct(levelNum: number): Record<number, number> {
+  // ids: 1 Pagar-se, 2 Doar, 3 Investir, 4 Contas, 6 Sonho, 7 Abundar
+  if (levelNum >= 100) return { 1: 10, 2: 10, 3: 25, 4: 45, 6: 5, 7: 5 };
+  if (levelNum >= 50)  return { 1: 10, 2: 5,  3: 15, 4: 55, 6: 10, 7: 5 };
+  return { 1: 5, 2: 5, 3: 5, 4: 70, 6: 10, 7: 5 };
+}
+type PotCfg = { mode: "standard" | "custom"; pots: { id: number; name: string; pct: number; desc: string }[] };
+
+function buildPotCfg(stored: any, levelNum: number): PotCfg {
+  const std = standardPct(levelNum);
+  const standardPots = POT_IDS.map(id => ({ id, name: POT_DEFAULTS[id].name, pct: std[id], desc: POT_DEFAULTS[id].desc }));
+  if (stored && stored.mode === "custom" && Array.isArray(stored.pots)) {
+    const pots = POT_IDS.map(id => {
+      const it = stored.pots.find((x: any) => Number(x?.id) === id);
+      return {
+        id,
+        name: String(it?.name || POT_DEFAULTS[id].name).slice(0, 24),
+        pct: Math.max(0, Math.min(100, Math.round(Number(it?.pct) || 0))),
+        desc: String(it?.desc ?? POT_DEFAULTS[id].desc).slice(0, 200),
+      };
+    });
+    return { mode: "custom", pots };
+  }
+  return { mode: "standard", pots: standardPots };
+}
+
+async function loadPotCfg(userId: any): Promise<PotCfg> {
+  try {
+    const p = getPool(); if (!p) return buildPotCfg(null, 1);
+    const [rows] = await p.execute("SELECT potConfig, levelNum FROM users WHERE id=?", [userId]) as any;
+    const u = rows[0]; if (!u) return buildPotCfg(null, 1);
+    let stored: any = null;
+    try { stored = u.potConfig ? JSON.parse(u.potConfig) : null; } catch { stored = null; }
+    return buildPotCfg(stored, Number(u.levelNum) || 1);
+  } catch { return buildPotCfg(null, 1); }
+}
+
+app.get("/api/users/:id/pots", async (req, res) => {
+  res.json(await loadPotCfg(req.params.id));
+});
+
+app.put("/api/users/:id/pots", async (req, res) => {
+  try {
+    const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
+    const mode = req.body?.mode === "custom" ? "custom" : "standard";
+    if (mode === "standard") {
+      await p.execute("UPDATE users SET potConfig=? WHERE id=?", [JSON.stringify({ mode: "standard" }), req.params.id]);
+      return res.json(await loadPotCfg(req.params.id));
+    }
+    const incoming = Array.isArray(req.body?.pots) ? req.body.pots : [];
+    const clean = POT_IDS.map(id => {
+      const it = incoming.find((x: any) => Number(x?.id) === id) || {};
+      return { id, name: String(it.name || "").trim().slice(0, 24), pct: Math.round(Number(it.pct)), desc: String(it.desc || "").trim().slice(0, 200) };
+    });
+    if (clean.some(c => !c.name)) return res.status(400).json({ error: "Todos os potes precisam de um nome." });
+    if (clean.some(c => isNaN(c.pct) || c.pct < 0 || c.pct > 100)) return res.status(400).json({ error: "Percentuais inválidos (0 a 100)." });
+    const total = clean.reduce((a, c) => a + c.pct, 0);
+    if (total !== 100) return res.status(400).json({ error: `Os percentuais precisam somar 100% (agora somam ${total}%).` });
+    await p.execute("UPDATE users SET potConfig=? WHERE id=?", [JSON.stringify({ mode: "custom", pots: clean }), req.params.id]);
+    res.json(await loadPotCfg(req.params.id));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 const AI_CATS = [
   { id:1, name:"Pagar-se" }, { id:2, name:"Doar" }, { id:3, name:"Investir" },
   { id:4, name:"Contas" }, { id:5, name:"Objetivo" }, { id:6, name:"Sonho" },
@@ -862,35 +938,63 @@ app.post("/api/ai/parse-transaction", async (req, res) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY não configurada no servidor" });
 
-    const { text, history } = req.body;
+    const { text, history, userId } = req.body;
     if (!text || !String(text).trim()) return res.status(400).json({ error: "text obrigatorio" });
 
     const today = todayBR();
     const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
     const todayWd = today.toLocaleDateString("pt-BR", { weekday:"long" });
-    const catsList = AI_CATS.map(c=>`${c.id}=${c.name}`).join(", ");
 
-    const systemPrompt = `Você é o motor de extração do chat da Vieira, gestor financeiro do app NaCarteira. Extrai lançamentos financeiros de textos em português coloquial (Brasil) e devolve APENAS um JSON válido (objeto), sem markdown, sem texto fora do JSON.
+    // Potes do usuário (padrão ou personalizado): nomes, % e definição entram no prompt para a IA alocar no pote certo
+    const potCfg = await loadPotCfg(userId);
+    const potLines = potCfg.pots.map(pt => `${pt.id}="${pt.name}" (${pt.pct}%) — ${pt.desc}`).join("\n");
+    const potMode = potCfg.mode === "custom"
+      ? "O usuário PERSONALIZOU os potes (nomes, % e definições abaixo são dele e valem mais que o padrão)."
+      : "O usuário usa o padrão 'Criação de Riqueza' (6 potes; as % mudam por nível: NV.1-49, NV.50-99, NV.100).";
 
-Hoje é ${todayIso} (${todayWd}). Você NÃO calcula datas — só identifica a EXPRESSÃO de data usada no texto (ex: "ontem", "segunda", "segunda passada", "15/03", "dia 10"), em "dateExpr". Um código separado resolve a data exata a partir dessa expressão — por isso é essencial que "dateExpr" reproduza fielmente a expressão original (não normalize, não calcule).
+    const systemPrompt = `Você é a Vieira (gestor financeiro, voz masculina, cordial e direto) do app NaCarteira. Faz DUAS coisas: (1) extrai lançamentos financeiros de textos em português coloquial e (2) responde como guia do app. Devolve APENAS um JSON válido (objeto), sem markdown, sem texto fora do JSON.
 
-Categorias de despesa disponíveis (use o id): ${catsList}. Se não for óbvio, use 8 (Variáveis).
+Hoje é ${todayIso} (${todayWd}). Você NÃO calcula datas — só identifica a EXPRESSÃO de data usada no texto (ex: "ontem", "segunda", "segunda passada", "15/03", "dia 10"), em "dateExpr". Um código separado resolve a data exata — por isso "dateExpr" deve reproduzir fielmente a expressão original (não normalize, não calcule).
+
+POTES DO USUÁRIO (categorias de despesa; use o id). ${potMode}
+${potLines}
+5="Objetivo" — projeto mensal de curto/médio prazo, sem data fixa obrigatória.
+8="Variáveis" — gastos sem pote claro.
+Para despesas, escolha o pote cuja DEFINIÇÃO melhor combina com o gasto (mesmo que o nome do pote seja diferente do padrão). Se não for óbvio, use 8.
+
+INTENÇÕES (campo "intent"):
+- "transaction": o usuário relatou gasto/ganho/compra no crédito. Preencha "transactions".
+- "update_salary": o usuário quer definir/mudar o SALÁRIO BASE (renda fixa mensal) — ex: "meu salário agora é 5000", "passei a ganhar 3000 por mês", ou respondeu com o valor depois de você ter perguntado do salário. Preencha "salary" com o número e deixe transactions vazio. O app guarda só o valor (não o dia de recebimento). Salário NÃO é renda extra e NÃO é lançamento.
+- "guide": pergunta sobre como o app funciona, onde fica algo, para que serve, por que XP/níveis/streak/potes. Responda em "reply" usando o CONHECIMENTO abaixo. transactions vazio.
+- "other": conversa ou dúvida sem lançamento (inclui pedir o valor que faltou). transactions vazio; use "reply".
+Se o usuário disser algo como "ganho X todo mês/dia Y" e não estiver claro se é o salário base ou uma renda extra, NÃO assuma: pergunte em "reply" (intent "other"). Se ele pedir para mudar o salário mas não der o valor, pergunte o valor.
+
+CONHECIMENTO DO APP (a única fonte para explicar o app; nunca invente menus, botões ou funções que não estão aqui; se não souber, diga que não sabe):
+- Navegação: Dashboard, Despesas, Cartão, Renda Extra, Relatórios. O botão "Metodologia" explica os potes, os níveis, o XP e a saúde financeira (não existe menu "Ajuda" nem "Sobre"). A engrenagem "Configurações" tem: salário base, configurar potes, pergunta de segurança, alterar senha, baixar aplicativo e "Virar Mês" (arquiva o mês e limpa).
+- Salário Base: renda fixa mensal; muda em Configurações ou aqui no chat. Renda Extra: qualquer ganho além do salário.
+- Potes: o dinheiro é dividido em destinos, cada um com uma %. Padrão "Criação de Riqueza" (livro de Paulo Vieira): Pagar-se, Doar, Investir, Contas, Sonho, Abundar. Em Configurações → potes o usuário escolhe o padrão ou personaliza nome, % e definição (a soma tem que dar 100%). Só o próprio usuário altera os potes; no modo personalizado a distribuição NÃO muda com o nível, mas XP, streak e conquistas continuam normais. Você (Vieira) não altera os potes: explica onde mudar.
+- Sonho: meta grande acompanhada a longo prazo (acumula o total já investido; dá para informar quanto já foi investido antes do mês ao editar). Objetivo: projeto mensal de médio/curto prazo; meta e valor são opcionais.
+- Despesas: cada lançamento tem data de registro (padrão hoje) e vencimento opcional; dá para editar, marcar como pago e apagar. Recorrente = repete todo mês. Cartão de crédito: compra com data de registro, parcelas, e dia de vencimento da fatura.
+- XP: R$100 em ganho (renda extra) = 100 XP; R$100 em gasto registrado = 50 XP; pagar conta = +15 XP; streak diária = dia N rende N×10 XP (até 300). Por quê: a riqueza nasce de ganhar e acumular, então ganhar vale mais; registrar gasto vale menos para não premiar gastar, mas é o hábito de acompanhar que dá controle. A streak existe para o usuário olhar o dinheiro todo dia.
+- Níveis: 1.000 XP por nível, 100 níveis. Iniciante NV.1-49, Investidor NV.50-99, Avançado NV.100 (fim de jogo). No padrão, a distribuição dos potes muda ao virar Investidor e Avançado.
+- Saúde financeira: nota de 0 a 100 que combina saldo (receita − despesas), contas pagas e streak.
+Estilo das respostas ("reply"): curtas (até ~5 linhas), cordiais, com os nomes reais dos botões; explique o porquê quando perguntarem. Não use respostas decoradas: adapte ao que foi perguntado.
 
 FORMATO DE SAÍDA (sempre um objeto):
-{"transactions":[{"type":"expense"|"income"|"credit","categoryId":number|null,"name":"string curta","amount":number,"dateExpr":"string"|null,"dueDateExpr":"string"|null,"subcategory":"string"|null,"recurring":boolean,"installments":number|null,"dueDay":number|null}],"reply":"string"|null}
+{"intent":"transaction"|"update_salary"|"guide"|"other","salary":number|null,"transactions":[{"type":"expense"|"income"|"credit","categoryId":number|null,"name":"string curta","amount":number,"dateExpr":"string"|null,"dueDateExpr":"string"|null,"subcategory":"string"|null,"recurring":boolean,"installments":number|null,"dueDay":number|null}],"reply":"string"|null}
 
-Regras:
-- "type":"income" = renda/ganho/recebimento. "type":"expense" = gasto normal (débito, dinheiro, pix, boleto avulso). "type":"credit" = APENAS quando o usuário disser explicitamente "crédito"/"cartão de crédito"/"no cartão"/"parcelado no cartão". Se ele mencionar parcelamento (ex: "em 2x") SEM deixar claro a forma de pagamento, NÃO assuma — devolva transactions:[] e pergunte em "reply" qual a forma de pagamento (boleto, débito, cartão de crédito etc.).
+Regras dos lançamentos:
+- "type":"income" = renda extra/ganho avulso. "type":"expense" = gasto normal (débito, dinheiro, pix, boleto). "type":"credit" = APENAS quando o usuário disser explicitamente "crédito"/"cartão de crédito"/"no cartão"/"parcelado no cartão". Parcelamento (ex: "em 2x") SEM forma de pagamento clara: NÃO assuma — transactions:[] e pergunte em "reply" a forma de pagamento.
 - "categoryId": só para expense (null em income e credit).
-- "amount": para expense/income é o valor do lançamento. Para credit é o valor TOTAL da compra (ex: "1000 em 2x" → amount:1000, installments:2 — o servidor divide, não divida você).
-- "installments": só relevante para credit (padrão 1 se à vista no cartão). "dueDay": dia do mês de vencimento do cartão, só se o usuário informar.
-- "dueDateExpr": expressão de vencimento — só preencha quando o usuário disser EXPLICITAMENTE algo como "vence em X"/"vence dia X"/"vence [dia da semana]". Nunca infira. Se não disser nada sobre vencimento, deixe null.
-- "dateExpr": expressão da data do gasto/ganho em si. Se o usuário não mencionar nenhuma data, deixe null (o servidor assume hoje).
-- "recurring": true se o usuário indicar que é um gasto fixo/mensal/recorrente/indeterminado (ex: "todo mês", "fixo", "sempre pago"). Diferente de parcelamento (que tem fim definido). Caso contrário false.
-- Cada gasto mencionado separadamente vira um item — ex: "gastei 100 no cinema e 59 na pipoca" = 2 itens.
-- "name" curto e descritivo (ex: "Cinema", "Pipoca", "Freela design").
-- "reply": use para confirmar dúvidas (forma de pagamento não clara, valor não identificado) — escreva como a Vieira falaria, direto e cordial, uma pergunta objetiva. Deixe null quando os itens em "transactions" já estão completos.
-- Se houver histórico da conversa antes desta mensagem, use-o para interpretar respostas a perguntas que você mesma fez (ex: você perguntou a forma de pagamento e o usuário respondeu só "crédito").
+- "amount": expense/income = valor do lançamento. credit = valor TOTAL da compra (ex: "1000 em 2x" → amount:1000, installments:2; o servidor divide).
+- "installments": só para credit (padrão 1). "dueDay": dia do vencimento do cartão, só se o usuário informar.
+- "dueDateExpr": só quando o usuário disser EXPLICITAMENTE "vence em X"/"vence dia X". Nunca infira; senão null.
+- "dateExpr": expressão da data do gasto/ganho; null se não houver (o servidor assume hoje).
+- "recurring": true se indicar gasto fixo/mensal/recorrente/indeterminado ("todo mês", "fixo"). Diferente de parcelamento.
+- Cada gasto mencionado separadamente vira um item.
+- "name" curto e descritivo.
+- "reply": use para dúvidas ou respostas de guia; null quando os lançamentos estão completos.
+- Use o histórico para interpretar respostas a perguntas que você mesmo fez.
 - Responda SOMENTE o objeto JSON, nada mais.`;
 
     const msgs: any[] = [];
@@ -912,7 +1016,7 @@ Regras:
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 900,
+        max_tokens: 1200,
         system: systemPrompt,
         messages: msgs,
       }),
@@ -926,16 +1030,37 @@ Regras:
 
     let transactions: any[] = [];
     let reply: string | null = null;
+    let intent = "transaction";
+    let salaryValue: number | null = null;
     try {
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed)) transactions = parsed;
       else if (parsed && typeof parsed === "object") {
         transactions = Array.isArray(parsed.transactions) ? parsed.transactions : [];
         reply = typeof parsed.reply === "string" ? parsed.reply : null;
+        if (typeof parsed.intent === "string") intent = parsed.intent;
+        const sv = parseFloat(parsed.salary);
+        salaryValue = !isNaN(sv) && sv > 0 ? sv : null;
       }
     } catch {
       return res.json({ transactions: [], reply: "Não consegui entender direito. Pode tentar reescrever com o valor em reais?" });
     }
+
+    // Atualização do salário base: feita aqui, direto no banco (nunca vira lançamento nem XP)
+    if (intent === "update_salary" && salaryValue && userId) {
+      try {
+        const p = getPool();
+        if (p) {
+          await p.execute("UPDATE users SET salaryBase=? WHERE id=?", [salaryValue, userId]);
+          const fmtV = salaryValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+          return res.json({ intent, transactions: [], salaryUpdated: salaryValue, reply: `Pronto! Atualizei seu salário base para ${fmtV}. Guardo só o valor, não o dia em que ele cai. Quer registrar algum gasto agora?` });
+        }
+      } catch (e: any) {
+        console.error("⚠️ Falha ao atualizar salário pelo chat:", e.message);
+        return res.json({ intent, transactions: [], reply: "Não consegui atualizar o salário agora. Tenta em Configurações, ou me manda de novo em instantes." });
+      }
+    }
+    if (intent === "guide" || intent === "update_salary") transactions = [];
 
     // Resolve as datas em código — a IA só identificou a expressão usada
     for (const it of transactions) {
@@ -956,7 +1081,7 @@ Regras:
       }
     }
 
-    res.json({ transactions, reply });
+    res.json({ intent, transactions, reply });
   } catch (e: any) {
     console.error("AI parse-transaction:", e.message);
     res.status(500).json({ error: e.message });
