@@ -27,11 +27,44 @@ const CATS = [
   { id: 7, name: "Abundar",     emoji: "🌟", color: "#f97316" },
   { id: 8, name: "Variáveis",   emoji: "🛒", color: "#ef4444" },
 ];
+// ── POTES: padrão "Criação de Riqueza" ou personalizado (nome, %, definição) ──
+const POT_IDS = [1,2,3,4,6,7]; // Pagar-se, Doar, Investir, Contas, Sonho, Abundar (Objetivo=5 e Variáveis=8 ficam fora da %)
+const POT_DEFAULT_DESC: Record<number,string> = {
+  1:"Investir em você mesmo: presente, saúde, passeio, desenvolvimento pessoal.",
+  2:"Generosidade: doações, presentes para outros, ajudar quem precisa.",
+  3:"Construir patrimônio: Tesouro, CDB, fundos, ações, previdência.",
+  4:"Obrigações do mês: aluguel, luz, água, internet, mercado, transporte, escola.",
+  6:"Meta grande de longo prazo, acompanhada aos poucos: casa, viagem, carro.",
+  7:"Os luxos da vida: restaurante melhor, hobby, lazer, experiências sem culpa.",
+};
+const POT_DEFAULT_NAME: Record<number,string> = {};
+CATS.forEach(c=>{ POT_DEFAULT_NAME[c.id]=c.name; });
+type PotCfgT = { mode:"standard"|"custom"; pots:{id:number;name:string;pct:number;desc:string}[] };
+let POT_MODE: "standard"|"custom" = "standard";
+let POT_CUSTOM_PCT: Record<number,number>|null = null;
+function stdPotPct(levelNum:number): Record<number,number> {
+  if (levelNum >= 100) return {1:10,2:10,3:25,4:45,6:5,7:5};
+  if (levelNum >= 50)  return {1:10,2:5, 3:15,4:55,6:10,7:5};
+  return                      {1:5, 2:5, 3:5, 4:70,6:10,7:5};
+}
+// Aplica a configuração do usuário nos nomes/definições das categorias (muda os objetos de CATS no lugar)
+function applyPotConfig(cfg: PotCfgT|null) {
+  CATS.forEach((c:any)=>{ c.name = POT_DEFAULT_NAME[c.id]; c.desc = POT_DEFAULT_DESC[c.id]||""; });
+  POT_MODE = "standard"; POT_CUSTOM_PCT = null;
+  if (cfg && cfg.mode==="custom" && Array.isArray(cfg.pots)) {
+    POT_MODE = "custom"; POT_CUSTOM_PCT = {};
+    cfg.pots.forEach(p=>{
+      const c:any = CATS.find(x=>x.id===p.id);
+      if (c) { c.name = p.name; c.desc = p.desc; }
+      POT_CUSTOM_PCT![p.id] = p.pct;
+    });
+  }
+}
 const CC_CATS = ["Comida","Roupas","Gasolina","Transporte","Saúde","Streaming","Outros"];
 const SONHO_ID = 6;
 const OBJETIVO_ID = 5;
 const calcXpIncome  = (a: number) => Math.max(1, Math.round(a));           // renda extra: 1 XP/real
-const calcXpExpense = (a: number) => Math.max(1, Math.round(a * 0.1));     // despesa/cartão: 10% → R$100 = 10 XP
+const calcXpExpense = (a: number) => Math.max(1, Math.round(a * 0.5));     // despesa/cartão: R$100 = 50 XP (ganho vale mais: R$100 = 100 XP)
 const XP_PAY_BILL = 15;
 
 // ── SAÚDE FINANCEIRA ──────────────────────────────────────────────────────────
@@ -102,6 +135,10 @@ function getLevelInfo(xpTotal: number): { label:string; color:string; tier:"inic
 
 // % recomendadas por tier
 function getTargetPct(tier: string) {
+  if (POT_MODE === "custom" && POT_CUSTOM_PCT) {
+    const P = POT_CUSTOM_PCT;
+    return { pagar:P[1]||0, doar:P[2]||0, investir:Math.max(1,P[3]||0), contas:P[4]||0, sonho:P[6]||0, abundar:P[7]||0 };
+  }
   if (tier === "avancado")   return { pagar:10, doar:10, investir:25, contas:45, sonho:5,  abundar:5 };
   if (tier === "investidor") return { pagar:10, doar:5,  investir:15, contas:55, sonho:10, abundar:5 };
   return                            { pagar:5,  doar:5,  investir:5,  contas:70, sonho:10, abundar:5 };
@@ -430,7 +467,7 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
       ))}
 
       <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 14px", marginTop:4, fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>
-        🔥 <strong style={{color:"var(--text)"}}>Como ganhar XP:</strong> Renda extra (1 real = 1 XP) · Pagar contas (+15 XP) · Streak diária (até +300 XP/dia)
+        🔥 <strong style={{color:"var(--text)"}}>Como ganhar XP:</strong> Ganhos (R$100 = 100 XP) · Gastos registrados (R$100 = 50 XP) · Pagar contas (+15 XP) · Streak diária (até +300 XP/dia)
       </div>
     </div>,
 
@@ -462,7 +499,10 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
       ))}
     </div>,
 
-    // STEP 2: Configurar salário
+    // STEP 2: Escolher/personalizar os potes
+    <PotsEditor userId={user.id} levelNum={1} current={null} submitLabel="Continuar →" onSaved={()=>setStep(3)}/>,
+
+    // STEP 3: Configurar salário
     <OnboardingSalary user={user} onDone={onDone}/>,
   ];
 
@@ -470,7 +510,7 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
     <div style={{ minHeight:"100vh", background:"var(--bg)", display:"flex", flexDirection:"column", padding:"20px 16px" }}>
       {/* Progresso */}
       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:24 }}>
-        {[0,1,2].map(i=>(
+        {[0,1,2,3].map(i=>(
           <div key={i} style={{ flex:i===step?2:1, height:6, borderRadius:3, background:i<=step?"var(--primary)":"var(--bg3)", transition:"all .35s" }}/>
         ))}
       </div>
@@ -1052,7 +1092,16 @@ function fmtDateBR(iso?: string|null) {
   return `${d}/${m}/${y}`;
 }
 
-function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; messages:{role:"user"|"assistant";text:string}[]; setMessages:React.Dispatch<React.SetStateAction<{role:"user"|"assistant";text:string}[]>>; onDone:(xpGain:number)=>Promise<void>|void }) {
+// Mensagem do Vieira convidando a "pagar um café" ao desenvolvedor (uma vez, após ~10–15 registros)
+const COFFEE_MSG = (n:number) => `Posso te contar uma coisa? Você já fez **${n} registros** aqui, e isso é um hábito se formando. 👏
+
+O NaCarteira é feito por **uma pessoa só**. Ele é gratuito de propósito: a ideia é espalhar o controle financeiro e uma visão de abundância para quem normalmente não teria acesso a isso.
+
+Manter o app no ar tem custos pequenos, que podem ser cobertos por quem usa, com uma contribuição simples. Se ele está te ajudando, que tal **pagar um café** ao desenvolvedor? Qualquer valor ajuda o projeto a continuar vivo e gratuito para mais gente.
+
+Sem pressão: você continua com tudo liberado de qualquer jeito. ☕`;
+
+function SmartChat({ userId, messages, setMessages, onDone, onDonate }: { userId:number; messages:{role:"user"|"assistant";text:string;action?:"donate"}[]; setMessages:React.Dispatch<React.SetStateAction<{role:"user"|"assistant";text:string;action?:"donate"}[]>>; onDone:(xpGain:number)=>Promise<void>|void; onDonate?:()=>void }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollBoxRef = React.useRef<HTMLDivElement>(null);
@@ -1062,9 +1111,9 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
     if (box) box.scrollTop = box.scrollHeight; // scroll só dentro da caixa, nunca a página toda
   },[messages]);
 
-  const push = (role:"user"|"assistant", text:string) => {
+  const push = (role:"user"|"assistant", text:string, action?:"donate") => {
     setMessages(m => {
-      const next = [...m, { role, text }];
+      const next = [...m, action ? { role, text, action } : { role, text }];
       // mantém resumido: guarda só as últimas 30 mensagens, nunca apaga tudo
       return next.length > 30 ? next.slice(next.length-30) : next;
     });
@@ -1087,6 +1136,11 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
         setLoading(false); return;
       }
       const items = Array.isArray(data.transactions) ? data.transactions : [];
+      if (data.salaryUpdated) {
+        await onDone(0); // recarrega o salário do servidor, sem XP
+        push("assistant", data.reply || "Salário atualizado.");
+        setLoading(false); return;
+      }
       if (items.length === 0) {
         push("assistant", data.reply || "Não identifiquei nenhum valor aí. Pode repetir com o valor em reais? Ex: \"gastei 45 no mercado\"");
         setLoading(false); return;
@@ -1119,6 +1173,18 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
       }
       await onDone(totalXp);
       push("assistant", done.length ? `Prontinho, registrei:\n${done.join("\n")}${totalXp>0?`\n\n+${totalXp} XP ⚔️`:""}` : "Não consegui confirmar os valores. Pode tentar de novo?");
+      // Convite do café: uma única vez, entre 10 e 15 registros (fixo por usuário), contados neste aparelho
+      if (done.length) {
+        try {
+          const kCount = `nc_chat_regs_${userId}`, kShown = `nc_coffee_shown_${userId}`;
+          const n = (parseInt(localStorage.getItem(kCount)||"0")||0) + done.length;
+          localStorage.setItem(kCount, String(n));
+          if (n >= 10 + (userId % 6) && !localStorage.getItem(kShown)) {
+            localStorage.setItem(kShown, "1");
+            push("assistant", COFFEE_MSG(n), "donate");
+          }
+        } catch {}
+      }
     } catch {
       push("assistant", "Erro de conexão. Verifique sua internet e tente de novo.");
     }
@@ -1136,7 +1202,12 @@ function SmartChat({ userId, messages, setMessages, onDone }: { userId:number; m
       </div>
       <div ref={scrollBoxRef} style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:260, overflowY:"auto", marginBottom:10 }}>
         {messages.map((m,i)=>(
-          <div key={i} style={{ alignSelf: m.role==="user"?"flex-end":"flex-start", background: m.role==="user"?"var(--primary)":"var(--bg3)", color: m.role==="user"?"#fff":"var(--text)", padding:"8px 12px", borderRadius:12, fontSize:13, maxWidth:"88%", whiteSpace:"pre-line", lineHeight:1.45 }}><Bold text={m.text}/></div>
+          <React.Fragment key={i}>
+          <div style={{ alignSelf: m.role==="user"?"flex-end":"flex-start", background: m.role==="user"?"var(--primary)":"var(--bg3)", color: m.role==="user"?"#fff":"var(--text)", padding:"8px 12px", borderRadius:12, fontSize:13, maxWidth:"88%", whiteSpace:"pre-line", lineHeight:1.45 }}><Bold text={m.text}/></div>
+          {m.action==="donate" && onDonate && (
+            <button onClick={onDonate} className="btn-primary" style={{ alignSelf:"flex-start", padding:"8px 16px", fontSize:13 }}>☕ Pagar um café</button>
+          )}
+          </React.Fragment>
         ))}
         {loading && <div style={{ alignSelf:"flex-start", fontSize:12, color:"var(--text2)", padding:"2px 4px" }}>digitando…</div>}
       </div>
@@ -1195,7 +1266,7 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
       </div>
 
       {/* CHAT INTELIGENTE — entrada principal de gastos/ganhos */}
-      <SmartChat userId={userId} messages={chatMessages} setMessages={setChatMessages} onDone={onChatDone}/>
+      <SmartChat userId={userId} messages={chatMessages} setMessages={setChatMessages} onDone={onChatDone} onDonate={onDonate}/>
 
       {/* NÍVEL — onde a streak ficava antes */}
       <div onClick={onSettings} style={{ background:`${levelInfo.color}0f`, border:`1px solid ${levelInfo.color}44`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer" }}>
@@ -1238,7 +1309,7 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <span style={{ fontSize:26 }}>✨</span>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:10, color:"#06b6d4", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Sonho</div>
+                <div style={{ fontSize:10, color:"#06b6d4", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>{`Investindo em ${CATS.find(c=>c.id===SONHO_ID)?.name||"Sonho"}`}</div>
                 <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(sonhoTotal)} este mês</div>
                 {sonhoRecorrente && <div style={{ fontSize:11, color:"var(--text2)" }}>{fmt(sonhoInvestidoTotal)} investido no total</div>}
                 {sonhoPago
@@ -1474,6 +1545,8 @@ export default function App() {
   const [showAddIncome, setShowAddIncome] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
+  const [showPots, setShowPots] = useState(false);
+  const [potCfg, setPotCfg] = useState<PotCfgT|null>(null);
   const [showReset, setShowReset] = useState(false);
   const [showStreak, setShowStreak] = useState(false);
   const [levelUpInfo, setLevelUpInfo] = useState<{levelNum:number;tier:string}|null>(null);
@@ -1482,7 +1555,7 @@ export default function App() {
   const donation = useDonationPopup((user as any)?.createdAt);
   const pwa = usePWAInstall();
   const [pwaPromptDismissed, setPwaPromptDismissed] = useState(() => !!localStorage.getItem("nc_pwa_dismissed"));
-  const [chatMessages, setChatMessages] = useState<{role:"user"|"assistant";text:string}[]>([
+  const [chatMessages, setChatMessages] = useState<{role:"user"|"assistant";text:string;action?:"donate"}[]>([
     { role:"assistant", text:"Oi, sou **Vieira**, seu gestor financeiro. Me conta o que você gastou ou ganhou, do seu jeito." }
   ]);
 
@@ -1538,6 +1611,11 @@ export default function App() {
       fetch(`${API}/users/${user.id}/extra-income`).then(r=>r.json()).catch(()=>[]),
     ]);
     setExpenses(Array.isArray(e)?e:[]); setCC(Array.isArray(c)?c:[]); setIncomes(Array.isArray(i)?i:[]);
+    // Potes do usuário (padrão ou personalizado): aplica nomes/definições nas categorias
+    try {
+      const pr = await fetch(`${API}/users/${user.id}/pots`);
+      if (pr.ok) { const cfg = await pr.json(); applyPotConfig(cfg); setPotCfg(cfg); }
+    } catch {}
     // Recarrega usuário completo sempre do servidor
     try {
       const uRes = await fetch(`${API}/auth/me/${user.id}`);
@@ -1647,7 +1725,8 @@ export default function App() {
       {showAddExp&&<AddExpenseModal userId={user.id} onClose={()=>{setShowAddExp(false);load();}} onXp={gainXpRaw}/>}
       {showAddCC&&<AddCCModal userId={user.id} onClose={()=>{setShowAddCC(false);load();}} onXp={gainXpRaw}/>}
       {showAddIncome&&<AddIncomeModal userId={user.id} onClose={()=>{setShowAddIncome(false);load();}} onXp={gainXpRaw}/>}
-      {showSettings&&<SettingsModal user={user} salary={salary} onSave={(s:number)=>{setSalary(s);showToast("✅ Salário atualizado!");setShowSettings(false);}} onClose={()=>setShowSettings(false)} onReset={()=>{setShowSettings(false);setShowReset(true);}}/>}
+      {showSettings&&<SettingsModal user={user} salary={salary} onSave={(s:number)=>{setSalary(s);showToast("✅ Salário atualizado!");setShowSettings(false);}} onClose={()=>setShowSettings(false)} onReset={()=>{setShowSettings(false);setShowReset(true);}} onPots={()=>{setShowSettings(false);setShowPots(true);}}/>}
+      {showPots&&<Modal title="🏺 Meus Potes" onClose={()=>setShowPots(false)}><PotsEditor userId={user.id} levelNum={levelNum} current={potCfg} submitLabel="Salvar potes" onSaved={(cfg:PotCfgT)=>{applyPotConfig(cfg);setPotCfg(cfg);setShowPots(false);showToast("✅ Potes atualizados!");}}/></Modal>}
       {showMethodology&&<MethodologyModal xp={xp} onClose={()=>setShowMethodology(false)}/>}
       {showReset&&<ResetModal onClose={()=>setShowReset(false)} onConfirm={handleReset}/>}
       {(showDonation||donation.show)&&<DonationPopup onClose={()=>{setShowDonation(false);donation.close();}}/>}
@@ -1887,7 +1966,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:600, textDecoration:exp.paid?"line-through":"none", color:exp.paid?"var(--text2)":isSonhoOrInvest?"var(--text)":"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         {exp.name}
-                        {isSonhoOrInvest && <span style={{ fontSize:10, color: Number(exp.categoryId)===INVESTIR_ID?"var(--green)":"#06b6d4", fontWeight:700, marginLeft:5 }}>{Number(exp.categoryId)===INVESTIR_ID?"📈 Patrimônio":"✨ Sonho"}</span>}
+                        {isSonhoOrInvest && <span style={{ fontSize:10, color: Number(exp.categoryId)===INVESTIR_ID?"var(--green)":"#06b6d4", fontWeight:700, marginLeft:5 }}>{Number(exp.categoryId)===INVESTIR_ID?"📈 Patrimônio":`✨ ${CATS.find(c=>c.id===SONHO_ID)?.name||"Sonho"}`}</span>}
                       </div>
                       <div style={{ fontSize:10, color:isDueSoon?"var(--yellow)":"var(--text2)" }}>
                         {exp.subcategory ? `${exp.subcategory} · ` : ""}
@@ -2042,7 +2121,7 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
                     <div style={{ fontWeight:900, fontSize:16, fontVariantNumeric:"tabular-nums", color:c.paid?"var(--green)":"var(--yellow)" }}>
                       {fmt(num(c.amount))}
                     </div>
-                    {(isParcelado || c.recurring) && <div style={{ fontSize:10, color:"var(--text2)" }}>por mês</div>}
+                    {(isParcelado || !!c.recurring) && <div style={{ fontSize:10, color:"var(--text2)" }}>por mês</div>}
                   </div>
                 </div>
 
@@ -2547,7 +2626,7 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
   const sonhoGoal = expenses.find((e:any)=>Number(e.categoryId)===SONHO_ID && e.recurring && num(e.recurringGoal)>0);
   const objetivoGoal = expenses.find((e:any)=>Number(e.categoryId)===OBJETIVO_ID && e.recurring && num(e.recurringGoal)>0);
   const goals = [
-    sonhoGoal && { label:"Sonho", emoji:"✨", color:"#06b6d4", goal:sonhoGoal },
+    sonhoGoal && { label:(CATS.find(c=>c.id===SONHO_ID)?.name||"Sonho"), emoji:"✨", color:"#06b6d4", goal:sonhoGoal },
     objetivoGoal && { label:"Objetivo", emoji:"🎯", color:"#8b5cf6", goal:objetivoGoal },
   ].filter(Boolean) as any[];
 
@@ -3022,7 +3101,7 @@ function ChangePasswordModal({ user, onClose }: { user: any; onClose: () => void
   );
 }
 
-function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
+function SettingsModal({ user, salary, onSave, onClose, onReset, onPots }: any) {
   const [s, setS] = useState(String(salary||""));
   const [loading, setLoading] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
@@ -3104,6 +3183,10 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
             </button>
           )}
 
+          <button onClick={onPots} style={{ width:"100%", background:"rgba(255,183,3,0.08)", color:"#ffb703", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(255,183,3,0.25)", cursor:"pointer" }}>
+            🏺 Meus potes · {POT_MODE==="custom" ? "personalizado" : "padrão Criação de Riqueza"}
+          </button>
+
           {/* Pergunta de segurança */}
           <button onClick={()=>setShowSecQ(o=>!o)} style={{ width:"100%", background:"rgba(0,214,143,0.06)", color:"var(--green)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(0,214,143,0.2)", cursor:"pointer" }}>
             🔐 {showSecQ ? "Fechar pergunta de segurança" : "Configurar pergunta de segurança"}
@@ -3135,6 +3218,127 @@ function SettingsModal({ user, salary, onSave, onClose, onReset }: any) {
   );
 }
 
+
+// ── EDITOR DE POTES (cadastro + configurações) ───────────────────────────────
+function PotsEditor({ userId, levelNum, current, submitLabel, onSaved }: { userId:number; levelNum:number; current:PotCfgT|null; submitLabel:string; onSaved:(cfg:PotCfgT)=>void }) {
+  const std = stdPotPct(levelNum);
+  const initialPots = () => POT_IDS.map(id=>{
+    const stored = current?.mode==="custom" ? current.pots.find(p=>p.id===id) : null;
+    return { id, name: stored?.name ?? POT_DEFAULT_NAME[id], pct: String(stored?.pct ?? std[id]), desc: stored?.desc ?? POT_DEFAULT_DESC[id] };
+  });
+  const [mode, setMode] = useState<"standard"|"custom">(current?.mode ?? "standard");
+  const [ack, setAck] = useState(current?.mode==="custom"); // aviso lido
+  const [pots, setPots] = useState(initialPots);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const total = pots.reduce((a,p)=>a+(parseInt(p.pct)||0),0);
+  const upd = (id:number, patch:Partial<{name:string;pct:string;desc:string}>) => setPots(ps=>ps.map(p=>p.id===id?{...p,...patch}:p));
+  const typeLabel: Record<number,string> = { 3:"Investimento · constrói patrimônio", 6:"Sonho · meta de longo prazo" };
+
+  const save = async () => {
+    setError("");
+    if (mode==="custom") {
+      if (pots.some(p=>!p.name.trim())) { setError("Todos os potes precisam de um nome."); return; }
+      if (total!==100) { setError(`As porcentagens precisam somar 100% (agora somam ${total}%).`); return; }
+    }
+    setSaving(true);
+    try {
+      const body = mode==="custom"
+        ? { mode, pots: pots.map(p=>({ id:p.id, name:p.name.trim(), pct:parseInt(p.pct)||0, desc:p.desc.trim() })) }
+        : { mode };
+      const res = await fetch(`${API}/users/${userId}/pots`,{ method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Não foi possível salvar."); setSaving(false); return; }
+      onSaved(data);
+    } catch { setError("Erro de conexão. Tente de novo."); }
+    setSaving(false);
+  };
+
+  const optBtn = (id:"standard"|"custom", title:string, sub:string) => (
+    <button onClick={()=>{ setMode(id); setError(""); }} style={{ flex:1, textAlign:"left", padding:"11px 12px", borderRadius:12, cursor:"pointer", background:mode===id?"rgba(108,99,255,0.14)":"var(--bg3)", border:`1.5px solid ${mode===id?"var(--primary)":"var(--border)"}`, color:"var(--text)" }}>
+      <div style={{ fontSize:13, fontWeight:800 }}>{mode===id?"● ":"○ "}{title}</div>
+      <div style={{ fontSize:11, color:"var(--text2)", marginTop:3, lineHeight:1.4 }}>{sub}</div>
+    </button>
+  );
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:34 }}>🏺</div>
+        <h2 style={{ fontSize:18, fontWeight:900, margin:"4px 0" }}>Como você quer dividir seu dinheiro?</h2>
+        <p style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>Você pode mudar isso a qualquer momento em Configurações.</p>
+      </div>
+
+      <div style={{ display:"flex", gap:8 }}>
+        {optBtn("standard","Criação de Riqueza","6 potes do método de Paulo Vieira. As % evoluem com seu nível.")}
+        {optBtn("custom","Personalizado","Você define nome, % e o que cabe em cada pote.")}
+      </div>
+
+      {mode==="standard" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+          {POT_IDS.map(id=>{
+            const c:any = CATS.find(x=>x.id===id);
+            return (
+              <div key={id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${c.color}` }}>
+                <span style={{ fontSize:20 }}>{c.emoji}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between" }}>
+                    <span style={{ fontWeight:700, fontSize:13 }}>{POT_DEFAULT_NAME[id]}</span>
+                    <span style={{ fontSize:12, color:c.color, fontWeight:800 }}>{std[id]}%</span>
+                  </div>
+                  <div style={{ fontSize:11, color:"var(--text2)", lineHeight:1.4 }}>{POT_DEFAULT_DESC[id]}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {mode==="custom" && !ack && (
+        <div style={{ background:"rgba(255,183,3,0.08)", border:"1px solid rgba(255,183,3,0.3)", borderRadius:12, padding:"12px 14px" }}>
+          <div style={{ fontSize:13, fontWeight:800, color:"#ffb703", marginBottom:6 }}>⚠️ Antes de personalizar</div>
+          <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.6 }}>
+            No modo personalizado, o sistema de níveis <strong style={{color:"var(--text)"}}>não altera a configuração dos seus potes</strong> (no padrão, as % mudam no NV.50 e no NV.100). Só você muda os potes, em Configurações.
+            Você continua ganhando <strong style={{color:"var(--text)"}}>XP, streak e conquistas</strong> normalmente.
+          </div>
+          <button className="btn-primary" onClick={()=>setAck(true)} style={{ width:"100%", marginTop:10, padding:"11px", fontSize:13 }}>Entendi, quero personalizar</button>
+        </div>
+      )}
+
+      {mode==="custom" && ack && (
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {pots.map(p=>{
+            const c:any = CATS.find(x=>x.id===p.id);
+            return (
+              <div key={p.id} style={{ padding:"10px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${c.color}` }}>
+                <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:6 }}>
+                  <span style={{ fontSize:20 }}>{c.emoji}</span>
+                  <input value={p.name} maxLength={24} onChange={e=>upd(p.id,{name:e.target.value})} placeholder="Nome do pote" style={{ flex:1, fontWeight:700 }}/>
+                  <div style={{ display:"flex", alignItems:"center", gap:3 }}>
+                    <input type="number" min={0} max={100} value={p.pct} onChange={e=>upd(p.id,{pct:e.target.value})} style={{ width:62, textAlign:"center" }}/>
+                    <span style={{ fontSize:12, color:"var(--text2)" }}>%</span>
+                  </div>
+                </div>
+                <textarea value={p.desc} maxLength={200} rows={2} onChange={e=>upd(p.id,{desc:e.target.value})} placeholder="O que entra neste pote? (o Vieira usa isso para lançar no pote certo)"
+                  style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:12, resize:"vertical" }}/>
+                {typeLabel[p.id] && <div style={{ fontSize:10, color:c.color, marginTop:4 }}>🔒 Tipo fixo: {typeLabel[p.id]}</div>}
+              </div>
+            );
+          })}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", borderRadius:10, background:total===100?"rgba(0,214,143,0.1)":"rgba(255,77,106,0.1)", border:`1px solid ${total===100?"rgba(0,214,143,0.3)":"rgba(255,77,106,0.3)"}` }}>
+            <span style={{ fontSize:12, color:"var(--text2)" }}>Total dos potes</span>
+            <span style={{ fontSize:14, fontWeight:900, color:total===100?"var(--green)":"var(--red)" }}>{total}% {total===100?"✅":"(precisa ser 100%)"}</span>
+          </div>
+        </div>
+      )}
+
+      {error && <div style={{ fontSize:12, color:"var(--red)", textAlign:"center" }}>❌ {error}</div>}
+      <button className="btn-primary" onClick={save} disabled={saving || (mode==="custom" && !ack)} style={{ width:"100%", padding:"14px", fontSize:14 }}>
+        {saving ? "Salvando..." : submitLabel}
+      </button>
+    </div>
+  );
+}
 
 function ResetModal({ onClose, onConfirm }: any) {
   const [loading, setLoading] = useState(false);
@@ -3182,7 +3386,10 @@ function MethodologyModal({ onClose, xp }: any) {
     { cat:"Sonho",     pct:"10%",  color:"#8b5cf6", emoji:"✨", desc:"Sonho maior agora — você tem estrutura para realizá-los." },
     { cat:"Abundar",   pct:"5%",   color:"#f97316", emoji:"🌟", desc:"Recompensa merecida. Aproveite sem culpa." },
   ];
-  const potes = (levelInfo.tier === "investidor" || levelInfo.tier === "avancado") ? POTES_INVESTIDOR : POTES_INICIANTE;
+  const isCustomPots = POT_MODE==="custom" && !!POT_CUSTOM_PCT;
+  const potes = isCustomPots
+    ? POT_IDS.map(id=>{ const c:any = CATS.find(x=>x.id===id); return { cat:c.name, pct:`${POT_CUSTOM_PCT![id]||0}%`, color:c.color, emoji:c.emoji, desc:c.desc||"" }; })
+    : (levelInfo.tier === "investidor" || levelInfo.tier === "avancado") ? POTES_INVESTIDOR : POTES_INICIANTE;
 
   const SAUDE_BANDS = [
     { range:"70 a 100", label:"Ótima",       color:"#00d68f", bg:"rgba(0,214,143,0.12)",  desc:"Vida financeira sem estresse. Finanças proporcionam segurança e liberdade." },
@@ -3208,9 +3415,10 @@ function MethodologyModal({ onClose, xp }: any) {
           <div style={{ background:`${levelInfo.color}18`, border:`1px solid ${levelInfo.color}44`, borderRadius:12, padding:"8px 12px", display:"flex", alignItems:"center", gap:8 }}>
             <span style={{ fontSize:18 }}>⚔️</span>
             <div>
-              <div style={{ fontSize:11, fontWeight:800, color:levelInfo.color }}>Distribuição atual: {levelInfo.label}</div>
+              <div style={{ fontSize:11, fontWeight:800, color:levelInfo.color }}>{isCustomPots ? "Distribuição personalizada" : `Distribuição atual: ${levelInfo.label}`}</div>
               <div style={{ fontSize:11, color:"var(--text2)" }}>
-                {levelInfo.tier==="iniciante" ? "Foco em criar o hábito. Investimento conservador." : "Você tem disciplina — aumente o investimento!"}
+                {isCustomPots ? "Definida por você em Configurações. Não muda com os níveis; XP e conquistas seguem normais."
+                  : levelInfo.tier==="iniciante" ? "Foco em criar o hábito. Investimento conservador." : "Você tem disciplina — aumente o investimento!"}
               </div>
             </div>
           </div>
