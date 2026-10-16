@@ -5,16 +5,37 @@ import "dotenv/config";
 import path from "path";
 import crypto from "crypto";
 
-// Hash simples SHA-256 com salt (sem dependência extra — bcrypt não está no package.json)
-// Para migrar para bcrypt, instale: npm install bcrypt @types/bcrypt
+// ── SENHAS ────────────────────────────────────────────────────────────────────
+// ATENÇÃO: NÃO ALTERAR o formato do hash nem o salt abaixo. Todas as senhas já gravadas no banco
+// dependem exatamente disto. Trocar (ex.: para bcrypt) faz todo mundo "perder" a senha.
+// Quando precisar mudar o formato: ADICIONAR o novo ao verifyPassword e manter os antigos funcionando.
+const PW_SALT = "mg_salt_2026";
+const sha256hex = (v: string) => crypto.createHash("sha256").update(v).digest("hex");
+
 function hashPassword(password: string): string {
-  const salt = "mg_salt_2026"; // salt fixo — para produção real use bcrypt com salt dinâmico
-  return crypto.createHash("sha256").update(salt + password).digest("hex");
+  return sha256hex(PW_SALT + password);
 }
+
+// Aceita TODOS os formatos que já existiram: texto puro (migrações antigas), sha256(salt+senha) atual,
+// sha256(senha) sem salt e a mesma senha com espaços nas pontas (celular costuma colar espaço).
 function verifyPassword(password: string, hash: string): boolean {
-  // Compatibilidade retroativa: aceita senha em texto puro (migrações antigas) OU hash
-  if (hash === password) return true; // senha antiga em texto puro — ainda funciona no login
-  return hashPassword(password) === hash;
+  if (!hash || typeof password !== "string") return false;
+  const cands = Array.from(new Set([password, password.trim()]));
+  for (const pw of cands) {
+    if (hash === pw) return true;
+    if (hash === sha256hex(PW_SALT + pw)) return true;
+    if (hash === sha256hex(pw)) return true;
+  }
+  return false;
+}
+
+// Só para diagnóstico (nunca loga a senha): que "cara" tem o valor guardado
+function hashKind(h: string): string {
+  if (!h) return "vazio";
+  if (/^[a-f0-9]{64}$/i.test(h)) return "sha256";
+  if (/^\$2[aby]\$/.test(h)) return "bcrypt";
+  if (h.length < 60) return "texto-puro";
+  return "outro";
 }
 
 const app = express();
@@ -129,7 +150,7 @@ app.post("/api/auth/register", async (req, res) => {
     const { name, email, password, securityQuestion, securityAnswer } = req.body;
     if (!name?.trim() || !email?.trim() || !password) return res.status(400).json({ error: "Preencha todos os campos" });
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const [ex] = await p.execute("SELECT id FROM users WHERE email=?", [email]) as any;
+    const [ex] = await p.execute("SELECT id FROM users WHERE LOWER(TRIM(email))=?", [String(email).trim().toLowerCase()]) as any;
     if (ex.length > 0) return res.status(400).json({ error: "Email ja cadastrado" });
     const hashedPw = hashPassword(password);
     const sq = securityQuestion?.trim() || null;
@@ -145,10 +166,14 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const [rows] = await p.execute("SELECT * FROM users WHERE email=?", [email]) as any;
-    if (!rows.length) return res.status(401).json({ error: "Credenciais invalidas" });
+    const mail = String(email || "").trim().toLowerCase();
+    const [rows] = await p.execute("SELECT * FROM users WHERE LOWER(TRIM(email))=?", [mail]) as any;
+    if (!rows.length) { console.log("login: e-mail não encontrado"); return res.status(401).json({ error: "Credenciais invalidas" }); }
     const u = rows[0];
-    if (!verifyPassword(password, u.password)) return res.status(401).json({ error: "Credenciais invalidas" });
+    if (!verifyPassword(password, u.password)) {
+      console.log(`login: senha não confere (user ${u.id}, formato guardado: ${hashKind(u.password)})`);
+      return res.status(401).json({ error: "Credenciais invalidas" });
+    }
     // Migração automática: se senha ainda está em texto puro, atualiza para hash
     if (u.password === password) {
       await p.execute("UPDATE users SET password=? WHERE id=?", [hashPassword(password), u.id]);
@@ -1131,6 +1156,12 @@ app.get("/api/debug", async (_req, res) => {
         out[t] = cols.map((c: any) => c.Field + " " + c.Type);
       } catch (e: any) { out[t] = "ERRO: " + e.message; }
     }
+    try {
+      const [us] = await p.query("SELECT password FROM users") as any;
+      const kinds: Record<string, number> = {};
+      for (const u of us) { const k = hashKind(u.password); kinds[k] = (kinds[k] || 0) + 1; }
+      out.senhasPorFormato = kinds; // ex.: { sha256: 12 } — se aparecer "bcrypt" ou "outro", é o formato que quebra o login
+    } catch (e: any) { out.senhasPorFormato = "ERRO: " + e.message; }
   } catch (e: any) { out.error = e.message; }
   res.json(out);
 });
