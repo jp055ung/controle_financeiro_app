@@ -10,12 +10,12 @@
 
 /* ─── VARIÁVEIS ────────────────────────────────────────────────────────────── */
 :root {
-  --bg: #0a0d14;
-  --bg2: #111420;
-  --bg3: #1a1f32;
-  --border: #252a42;
+  --bg: #0e1018;
+  --bg2: #161a2b;
+  --bg3: #1b2036;
+  --border: rgba(108,99,255,0.32);
   --text: #eef0ff;
-  --text2: #7b82a8;
+  --text2: #8b93b8;
   --primary: #6c63ff;
   --primary-light: #8b85ff;
   --green: #00d68f;
@@ -23,7 +23,7 @@
   --yellow: #ffb703;
   --purple: #b44fff;
   --gold: #ffd700;
-  --radius: 16px;
+  --radius: 20px;
   --shadow: 0 8px 32px rgba(0,0,0,0.4);
 
   /* Tipografia financeira */
@@ -163,7 +163,7 @@ button:active { transform: scale(0.96); }
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 16px;
 }
 
 /* ─── MODALS ───────────────────────────────────────────────────────────────── */
