@@ -8,8 +8,30 @@ function LogoWordmark({ height = 28 }: { height?: number }) {
   return <img src="/brand/logo-wordmark.png" alt="NaCarteira" style={{ height, width:"auto", display:"block" }}/>;
 }
 
+// ── ÍCONES (SVG, sem emoji) ──────────────────────────────────────────────────
+function Icon({ name, size = 20, color = "currentColor", stroke = 2.2 }: { name: string; size?: number; color?: string; stroke?: number }) {
+  const paths: Record<string, React.ReactNode> = {
+    home:  <path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>,
+    list:  <path d="M4 6h16M4 12h16M4 18h10"/>,
+    card:  <><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></>,
+    cash:  <><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></>,
+    chart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>,
+    book:  <><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h6"/></>,
+    send:  <path d="M5 12h14M13 6l6 6-6 6"/>,
+    x:     <path d="M6 6l12 12M18 6L6 18"/>,
+    down:  <path d="M6 9l6 6 6-6"/>,
+    up:    <path d="M6 15l6-6 6 6"/>,
+    logout:<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></>,
+    gear:  <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink:0 }}>{paths[name]}</svg>;
+}
+function FlameIcon({ size = 14, color = "#ffb703" }: { size?: number; color?: string }) {
+  return <svg width={size*0.86} height={size} viewBox="0 0 24 28" fill={color} aria-hidden="true" style={{ flexShrink:0 }}><path d="M12 0c1 5 6 8 6 15a6 6 0 0 1-12 0c0-2 1-4 2-5 0 2 1 3 2 3 0-5-1-8 2-13z"/></svg>;
+}
+
 const API = "/api";
-const fmt = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
+const fmt =(n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
 const num = (s: any) => parseFloat(String(s || 0)) || 0;
 
 type User = { id: number; name: string; email: string; salaryBase?: string|number; xp?: number; level?: string; levelNum?: number; streakDays?: number; lastCheckin?: string; isNewUser?: boolean };
@@ -1192,13 +1214,13 @@ function SmartChat({ userId, messages, setMessages, onDone, onDonate }: { userId
   };
 
   return (
-    <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:16, padding:"14px 16px", marginBottom:14 }}>
-      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-        <LogoMark size={40}/>
-        <span style={{ fontSize:13, fontWeight:800, color:"var(--text)" }}>Vieira · seu gestor financeiro</span>
-      </div>
-      <div style={{ fontSize:10, fontStyle:"italic", color:"var(--text2)", opacity:0.7, marginBottom:10, paddingLeft:2 }}>
-        Ex: "Gastei 100 reais no mercado hoje"
+    <div style={{ background:"linear-gradient(135deg,rgba(108,99,255,0.18),rgba(180,79,255,0.08))", border:"1px solid rgba(108,99,255,0.4)", borderRadius:20, padding:"14px", marginBottom:12 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:11 }}>
+        <div style={{ width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,#6c63ff,#b44fff)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:15, color:"#fff", flexShrink:0 }}>V</div>
+        <div>
+          <div style={{ fontSize:13.5, fontWeight:800, color:"var(--text)" }}>Vieira</div>
+          <div style={{ fontSize:11, color:"var(--text2)" }}>Seu gestor financeiro</div>
+        </div>
       </div>
       <div ref={scrollBoxRef} style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:260, overflowY:"auto", marginBottom:10 }}>
         {messages.map((m,i)=>(
@@ -1211,15 +1233,17 @@ function SmartChat({ userId, messages, setMessages, onDone, onDonate }: { userId
         ))}
         {loading && <div style={{ alignSelf:"flex-start", fontSize:12, color:"var(--text2)", padding:"2px 4px" }}>digitando…</div>}
       </div>
-      <div style={{ display:"flex", gap:8 }}>
-        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder='Ex: "gastei 45 no mercado hoje"' disabled={loading} style={{ flex:1 }}/>
-        <button className="btn-primary" onClick={send} disabled={loading||!input.trim()} style={{ padding:"0 16px", flexShrink:0 }}>{loading?"⏳":"Enviar"}</button>
+      <div style={{ display:"flex", alignItems:"center", gap:8, background:"var(--bg)", border:"1px solid var(--border)", borderRadius:14, padding:"5px 5px 5px 4px" }}>
+        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder='Ex: gastei 45 no mercado hoje' disabled={loading} style={{ flex:1, background:"transparent", border:"none", outline:"none", boxShadow:"none" }}/>
+        <button onClick={send} disabled={loading||!input.trim()} aria-label="Enviar" style={{ width:36, height:36, borderRadius:11, border:"none", background:"linear-gradient(135deg,#6c63ff,#b44fff)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, opacity:(loading||!input.trim())?0.5:1, cursor:"pointer", color:"#fff" }}>{loading?<span style={{ fontSize:11 }}>...</span>:<Icon name="send" size={16} stroke={2.4}/>}</button>
       </div>
     </div>
   );
 }
 
-function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,objetivoTotal,objetivoPago,objetivoRecorrente,objetivoProgresso,objetivoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak,onCreditClick,onDonate,onSettings,onExpenses,onIncome,onReports,userId,onChatDone,chatMessages,setChatMessages }: any) {
+function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,objetivoTotal,objetivoPago,objetivoRecorrente,objetivoProgresso,objetivoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onMethod,onCreditClick,onDonate,onSettings,onExpenses,onIncome,onReports,userId,onChatDone,chatMessages,setChatMessages }: any) {
+  const [donateHidden, setDonateHidden] = useState<boolean>(()=>{ try{ return !!sessionStorage.getItem("nc_apoie_hidden"); }catch{ return false; } });
+  const hideDonate = () => { setDonateHidden(true); try{ sessionStorage.setItem("nc_apoie_hidden","1"); }catch{} };
   const [collapsedCards, setCollapsedCards] = useState<Record<string,boolean>>({ capital:true });
   const [moreOpen, setMoreOpen] = useState(false);
   const [aiTip, setAiTip] = useState("");
@@ -1245,128 +1269,121 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
 
   return (
     <>
-      {/* STREAK — topo */}
-      <div onClick={onStreak} style={{ background:streakClaimed?"rgba(0,214,143,0.05)":"rgba(108,99,255,0.06)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.28)":"rgba(108,99,255,0.32)"}`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ fontSize:30 }}>{getStreakIcon(streakDays)}</span>
-          <div>
-            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:1 }}>Streak Diária</div>
-            <div style={{ fontSize:14, fontWeight:800, color:streakClaimed?"var(--green)":"#a78bfa" }}>
-              {streakClaimed ? `✅ ${streakDays} dias` : `${streakDays} dias · resgatar`}
-            </div>
-          </div>
-        </div>
-        {!streakClaimed&&<div style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.3)", color:"#a78bfa", fontSize:12, fontWeight:700, padding:"5px 11px", borderRadius:8, whiteSpace:"nowrap" }}>+{getStreakXP(streakDays+1)} XP</div>}
-      </div>
-
-      {/* BANNER DOAÇÃO — acima do chat */}
-      <div onClick={onDonate} style={{ background:"rgba(130,10,209,0.07)", border:"0.5px solid rgba(130,10,209,0.25)", borderRadius:12, padding:"9px 14px", marginBottom:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <span style={{ fontSize:12, color:"#c084fc", fontWeight:600 }}>☕ Apoie quem criou o NaCarteira</span>
-        <span style={{ fontSize:11, color:"rgba(192,132,252,0.6)", fontWeight:500 }}>Pix rápido →</span>
-      </div>
-
-      {/* CHAT INTELIGENTE — entrada principal de gastos/ganhos */}
+      {/* VIEIRA — entrada principal */}
       <SmartChat userId={userId} messages={chatMessages} setMessages={setChatMessages} onDone={onChatDone} onDonate={onDonate}/>
 
-      {/* NÍVEL — onde a streak ficava antes */}
-      <div onClick={onSettings} style={{ background:`${levelInfo.color}0f`, border:`1px solid ${levelInfo.color}44`, borderRadius:14, padding:"12px 16px", marginBottom:14, cursor:"pointer" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <span style={{ fontSize:22 }}>⚔️</span>
-            <div>
-              <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:1 }}>Nível</div>
-              <div style={{ fontSize:14, fontWeight:800, color:levelInfo.color }}>{levelInfo.label} · NV.{levelInfo.levelNum}</div>
+      {/* APOIE — abaixo do Vieira; o X esconde até a próxima sessão */}
+      {!donateHidden && (
+        <div style={{ display:"flex", alignItems:"center", background:"rgba(130,10,209,0.08)", border:"1px solid rgba(130,10,209,0.28)", borderRadius:14, marginBottom:12, overflow:"hidden" }}>
+          <div onClick={onDonate} style={{ flex:1, padding:"10px 14px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+            <span style={{ fontSize:12, color:"#c084fc", fontWeight:700 }}>Apoie quem criou o NaCarteira</span>
+            <span style={{ fontSize:11, color:"rgba(192,132,252,0.7)", fontWeight:600 }}>Pix rápido</span>
+          </div>
+          <button onClick={hideDonate} aria-label="Fechar" style={{ background:"none", border:"none", color:"rgba(192,132,252,0.7)", padding:"10px 12px", cursor:"pointer", display:"flex" }}><Icon name="x" size={14}/></button>
+        </div>
+      )}
+
+      {/* SALDO LIVRE — número principal */}
+      {(()=>{
+        const receita = salary + totalIncome;
+        const gasto = totalExpReais + totalCC;
+        const pctGasto = receita>0 ? Math.min(gasto/receita*100,100) : 0;
+        return (
+          <div onClick={onReports} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:20, padding:"16px 16px 14px", marginBottom:10, cursor:"pointer" }}>
+            <div style={{ fontSize:11, fontWeight:700, letterSpacing:0.7, textTransform:"uppercase", color:"var(--text2)" }}>Saldo livre do mês</div>
+            <div style={{ fontWeight:800, fontSize:32, fontVariantNumeric:"tabular-nums", letterSpacing:-0.5, marginTop:4, color:balance>=0?"var(--green)":"var(--red)" }}>{fmt(balance)}</div>
+            <div style={{ height:7, borderRadius:4, background:"var(--bg)", marginTop:12, overflow:"hidden" }}>
+              <div style={{ width:`${pctGasto}%`, height:7, borderRadius:4, background:"linear-gradient(90deg,#6c63ff,#b44fff)" }}/>
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between", marginTop:8, fontSize:11.5, color:"var(--text2)" }}>
+              <span>Gasto {fmt(gasto)}</span><span>de {fmt(receita)}</span>
             </div>
           </div>
-          <div style={{ fontSize:11, color:"var(--text2)", fontWeight:700 }}>{levelInfo.xpInLevel}/{XP_PER_LEVEL} XP</div>
-        </div>
-        <div style={{ height:6, background:"var(--bg3)", borderRadius:99, overflow:"hidden" }}>
-          <div style={{ height:"100%", width:`${levelInfo.pctInLevel}%`, background:levelInfo.color, borderRadius:99 }}/>
-        </div>
-      </div>
+        );
+      })()}
 
-      {/* KPIs */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:totalInvestido>0?10:14 }}>
+      {/* TRÊS NÚMEROS */}
+      <div style={{ display:"flex", gap:8, marginBottom:10 }}>
         {[
-          { label:"Salário Base",    value:fmt(salary),                              color:"var(--primary)", icon:"💼", action:onSettings },
-          { label:"Despesas Reais",  value:fmt(totalExpReais+totalCC),               color:"var(--red)",     icon:"💸", action:onExpenses },
-          { label:"Renda Extra",     value:fmt(totalIncome),                         color:"var(--green)",   icon:"💵", action:onIncome },
-          { label:"Saldo Livre",     value:fmt(balance), color:balance>=0?"var(--green)":"var(--red)", icon:balance>=0?"✅":"⚠️", action:onReports },
+          { label:"Salário base", value:fmt(salary),                color:"var(--text)",   action:onSettings },
+          { label:"Despesas",     value:fmt(totalExpReais+totalCC), color:"var(--yellow)", action:onExpenses },
+          { label:"Renda extra",  value:fmt(totalIncome),           color:"var(--green)",  action:onIncome },
         ].map((k,i)=>(
-          <div key={i} onClick={k.action} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 14px", borderTop:`3px solid ${k.color}`, cursor:"pointer", transition:"opacity .15s" }}
-            onMouseEnter={e=>(e.currentTarget.style.opacity=".8")} onMouseLeave={e=>(e.currentTarget.style.opacity="1")}>
-            <div style={{ fontSize:17, marginBottom:3 }}>{k.icon}</div>
-            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>{k.label}</div>
-            <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:k.color, marginTop:2 }}>{k.value}</div>
+          <div key={i} onClick={k.action} style={{ flex:1, minWidth:0, background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:16, padding:"11px 12px", cursor:"pointer" }}>
+            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700 }}>{k.label}</div>
+            <div style={{ fontSize:14, fontWeight:800, fontVariantNumeric:"tabular-nums", color:k.color, marginTop:4, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{k.value}</div>
           </div>
         ))}
       </div>
 
-      {/* INVESTINDO NO SONHO — COLAPSÁVEL */}
-      {sonhoRecorrente&&(
-        <div style={{ background:"linear-gradient(135deg,rgba(6,182,212,0.08),rgba(139,92,246,0.08))", border:"1px solid rgba(6,182,212,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:0 }}>
-          <CollapseHeader id="sonho">
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <span style={{ fontSize:26 }}>✨</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:10, color:"#06b6d4", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>{`Investindo em ${CATS.find(c=>c.id===SONHO_ID)?.name||"Sonho"}`}</div>
-                <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(sonhoTotal)} este mês</div>
-                {sonhoRecorrente && <div style={{ fontSize:11, color:"var(--text2)" }}>{fmt(sonhoInvestidoTotal)} investido no total</div>}
-                {sonhoPago
-                  ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
-                  : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
-                }
-              </div>
+      {/* SONHO — anel de progresso */}
+      {sonhoRecorrente&&(()=>{
+        const goal = num(sonhoRecorrente.recurringGoal);
+        const C = 2*Math.PI*30;
+        return (
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:20, padding:14, marginBottom:10, display:"flex", alignItems:"center", gap:14 }}>
+            <div style={{ position:"relative", width:76, height:76, flexShrink:0 }}>
+              <svg width="76" height="76" viewBox="0 0 76 76" role="img" aria-label={`${Math.round(sonhoProgresso)}% do sonho investido`}>
+                <circle cx="38" cy="38" r="30" fill="none" stroke="var(--bg)" strokeWidth="8"/>
+                <circle cx="38" cy="38" r="30" fill="none" stroke="#22c7e6" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${C*Math.min(sonhoProgresso,100)/100} ${C}`} transform="rotate(-90 38 38)"/>
+              </svg>
+              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:16 }}>{Math.round(sonhoProgresso)}%</div>
             </div>
-          </CollapseHeader>
-          {!isCollapsed("sonho") && sonhoRecorrente&&(
-            <div style={{ marginTop:8 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
-                <span>Meta: {fmt(num(sonhoRecorrente.recurringGoal))}</span>
-                <span>{Math.round(sonhoProgresso)}% concluído</span>
-              </div>
-              <div className="progress-bar"><div className="progress-fill" style={{ width:`${sonhoProgresso}%`, background:"linear-gradient(90deg,#06b6d4,#8b5cf6)" }}/></div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:10, fontWeight:800, letterSpacing:0.7, textTransform:"uppercase", color:"#22c7e6" }}>{CATS.find(c=>c.id===SONHO_ID)?.name||"Sonho"}</div>
+              <div style={{ fontSize:15, fontWeight:800, marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{sonhoRecorrente.name}</div>
+              <div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}><b style={{ color:"var(--text)" }}>{fmt(sonhoInvestidoTotal)}</b> de {fmt(goal)}</div>
+              <div style={{ fontSize:11, fontWeight:700, marginTop:3, color:sonhoPago?"var(--green)":"var(--text2)" }}>{sonhoPago?`Pago este mês: ${fmt(sonhoTotal)}`:"Aporte do mês pendente"}</div>
             </div>
-          )}
+          </div>
+        );
+      })()}
+
+      {/* OBJETIVO — barra */}
+      {objetivoRecorrente&&(
+        <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:20, padding:"13px 14px", marginBottom:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", gap:8 }}>
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontSize:10, fontWeight:800, letterSpacing:0.7, textTransform:"uppercase", color:"#a78bfa" }}>Objetivo</div>
+              <div style={{ fontSize:14, fontWeight:800, marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{objetivoRecorrente.name}</div>
+            </div>
+            <div style={{ fontSize:12, fontWeight:800, color:"#a78bfa" }}>{Math.round(objetivoProgresso)}%</div>
+          </div>
+          <div style={{ height:7, borderRadius:4, background:"var(--bg)", marginTop:10, overflow:"hidden" }}>
+            <div style={{ width:`${objetivoProgresso}%`, height:7, borderRadius:4, background:"linear-gradient(90deg,#8b5cf6,#6c63ff)" }}/>
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", marginTop:7, fontSize:11, color:"var(--text2)" }}>
+            <span>{fmt(objetivoInvestidoTotal)} de {fmt(num(objetivoRecorrente.recurringGoal))}</span>
+            <span style={{ color:objetivoPago?"var(--green)":"var(--text2)", fontWeight:700 }}>{objetivoPago?"Pago este mês":"Pendente"}</span>
+          </div>
         </div>
       )}
 
-      {objetivoRecorrente&&(
-        <div style={{ background:"linear-gradient(135deg,rgba(139,92,246,0.08),rgba(108,99,255,0.08))", border:"1px solid rgba(139,92,246,0.28)", borderRadius:14, padding:"12px 16px", marginBottom:0, marginTop:14 }}>
-          <CollapseHeader id="objetivo">
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <span style={{ fontSize:26 }}>🎯</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:10, color:"#8b5cf6", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Investindo no Objetivo</div>
-                <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(objetivoTotal)} este mês</div>
-                {objetivoRecorrente && <div style={{ fontSize:11, color:"var(--text2)" }}>{fmt(objetivoInvestidoTotal)} investido no total</div>}
-                {objetivoPago
-                  ? <div style={{ fontSize:11, color:"var(--green)" }}>✅ Pago este mês — vitória!</div>
-                  : <div style={{ fontSize:11, color:"var(--text2)" }}>Pendente · Você consegue!</div>
-                }
-              </div>
-            </div>
-          </CollapseHeader>
-          {!isCollapsed("objetivo") && objetivoRecorrente&&(
-            <div style={{ marginTop:8 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
-                <span>Meta: {fmt(num(objetivoRecorrente.recurringGoal))}</span>
-                <span>{Math.round(objetivoProgresso)}% concluído</span>
-              </div>
-              <div className="progress-bar"><div className="progress-fill" style={{ width:`${objetivoProgresso}%`, background:"linear-gradient(90deg,#8b5cf6,#6c63ff)" }}/></div>
-            </div>
-          )}
+      {/* NÍVEL */}
+      <div onClick={onMethod} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:20, padding:"13px 14px", marginBottom:10, display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
+        <div style={{ width:42, height:42, borderRadius:12, background:`${levelInfo.color}22`, border:`1px solid ${levelInfo.color}66`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:15, color:levelInfo.color, flexShrink:0 }}>{levelInfo.levelNum}</div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", gap:8 }}>
+            <span style={{ fontSize:13.5, fontWeight:800 }}>{levelInfo.label}</span>
+            <span style={{ fontSize:11, color:"var(--text2)" }}>{XP_PER_LEVEL-levelInfo.xpInLevel} XP para o NV.{levelInfo.levelNum+1}</span>
+          </div>
+          <div style={{ height:7, borderRadius:4, background:"var(--bg)", marginTop:8, overflow:"hidden" }}>
+            <div style={{ width:`${levelInfo.pctInLevel}%`, height:7, borderRadius:4, background:`linear-gradient(90deg,${levelInfo.color},#b44fff)` }}/>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* MAIS INFORMAÇÕES — colapsável */}
       {(()=>{
         const open = moreOpen; const setOpen = setMoreOpen;
         return (
           <div style={{ marginBottom:14 }}>
-            <button onClick={()=>setOpen(o=>!o)} style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", color:"var(--text)" }}>
-              <span style={{ fontSize:13, fontWeight:700 }}>📋 Mais informações</span>
-              <span style={{ fontSize:12, color:"var(--text2)" }}>{open?"▲":"▼"}</span>
+            <button onClick={()=>setOpen(o=>!o)} style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:16, padding:"13px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", color:"var(--text)" }}>
+              <span style={{ textAlign:"left" }}>
+                <span style={{ display:"block", fontSize:13, fontWeight:800 }}>Mais informações</span>
+                <span style={{ display:"block", fontSize:11, color:"var(--text2)", marginTop:2 }}>Potes, saúde financeira e categorias</span>
+              </span>
+              <Icon name={open?"up":"down"} size={16} color="var(--text2)"/>
             </button>
             {open && (
               <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:10 }}>
@@ -1549,6 +1566,7 @@ export default function App() {
   const [potCfg, setPotCfg] = useState<PotCfgT|null>(null);
   const [showReset, setShowReset] = useState(false);
   const [showStreak, setShowStreak] = useState(false);
+  const [loadedOnce, setLoadedOnce] = useState(false);
   const [levelUpInfo, setLevelUpInfo] = useState<{levelNum:number;tier:string}|null>(null);
   const [isPC, setIsPC] = useState(typeof window!=="undefined" && window.innerWidth>=1024);
   const [showDonation, setShowDonation] = useState(false);
@@ -1634,9 +1652,21 @@ export default function App() {
         }
       }
     } catch {}
+    setLoadedOnce(true);
   },[user]);
 
   useEffect(()=>{load();},[load]);
+
+  // Pop-up da streak: abre 1x por sessão, ao abrir o app, se ainda não resgatou hoje
+  useEffect(()=>{
+    if (!user || !loadedOnce || streakClaimed || showOnboarding) return;
+    try {
+      const k = `nc_streak_popup_${user.id}`;
+      if (sessionStorage.getItem(k)) return;
+      sessionStorage.setItem(k, "1");
+    } catch {}
+    setShowStreak(true);
+  },[user, loadedOnce, streakClaimed, showOnboarding]);
 
   useEffect(()=>{
     if (!expenses.length) return;
@@ -1684,7 +1714,7 @@ export default function App() {
   // Score de saúde financeira — usa total real (todas as categorias)
   const healthScore = calcHealthScore(salary, totalExpAll, totalIncome, totalPaid, totalExpAll+totalCC, streakDays);
 
-  const NAV = [{id:"dashboard",icon:"📊",label:"Dashboard"},{id:"expenses",icon:"💸",label:"Despesas"},{id:"credit",icon:"💳",label:"Cartão"},{id:"income",icon:"💵",label:"Renda Extra"},{id:"reports",icon:"📈",label:"Relatórios"}];
+  const NAV = [{id:"dashboard",icon:"home",label:"Início"},{id:"expenses",icon:"list",label:"Despesas"},{id:"credit",icon:"card",label:"Cartão"},{id:"income",icon:"cash",label:"Renda"},{id:"reports",icon:"chart",label:"Raio-X"}];
 
   const onStreakClaim = (data:any) => { setXp(data.xp); setLevelNum(data.levelNum); setLevel(data.level); setStreakDays(data.streakDays); setStreakClaimed(true); showToast(`+${data.xpGained} XP 🔥 ${data.streakDays} dias!`); load(); };
 
@@ -1725,7 +1755,7 @@ export default function App() {
       {showAddExp&&<AddExpenseModal userId={user.id} onClose={()=>{setShowAddExp(false);load();}} onXp={gainXpRaw}/>}
       {showAddCC&&<AddCCModal userId={user.id} onClose={()=>{setShowAddCC(false);load();}} onXp={gainXpRaw}/>}
       {showAddIncome&&<AddIncomeModal userId={user.id} onClose={()=>{setShowAddIncome(false);load();}} onXp={gainXpRaw}/>}
-      {showSettings&&<SettingsModal user={user} salary={salary} onSave={(s:number)=>{setSalary(s);showToast("✅ Salário atualizado!");setShowSettings(false);}} onClose={()=>setShowSettings(false)} onReset={()=>{setShowSettings(false);setShowReset(true);}} onPots={()=>{setShowSettings(false);setShowPots(true);}}/>}
+      {showSettings&&<SettingsModal user={user} salary={salary} onSave={(s:number)=>{setSalary(s);showToast("✅ Salário atualizado!");setShowSettings(false);}} onClose={()=>setShowSettings(false)} onReset={()=>{setShowSettings(false);setShowReset(true);}} onPots={()=>{setShowSettings(false);setShowPots(true);}} onLogout={logout}/>}
       {showPots&&<Modal title="🏺 Meus Potes" onClose={()=>setShowPots(false)}><PotsEditor userId={user.id} levelNum={levelNum} current={potCfg} submitLabel="Salvar potes" onSaved={(cfg:PotCfgT)=>{applyPotConfig(cfg);setPotCfg(cfg);setShowPots(false);showToast("✅ Potes atualizados!");}}/></Modal>}
       {showMethodology&&<MethodologyModal xp={xp} onClose={()=>setShowMethodology(false)}/>}
       {showReset&&<ResetModal onClose={()=>setShowReset(false)} onConfirm={handleReset}/>}
@@ -1739,7 +1769,7 @@ export default function App() {
     </>
   );
 
-  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,objetivoTotal,objetivoPago,objetivoRecorrente,objetivoProgresso,objetivoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onStreak:()=>setShowStreak(true),onCreditClick:()=>setTab("credit"),onDonate:()=>setShowDonation(true),onSettings:()=>setShowSettings(true),onExpenses:()=>setTab("expenses"),onIncome:()=>setTab("income"),onReports:()=>setTab("reports"),userId:user.id,onChatDone:async(xpGain:number)=>{ if(xpGain>0) await gainXpRaw(xpGain); await load(); },chatMessages,setChatMessages };
+  const dashProps = { expenses,cc,incomes,salary,balance,totalExpSemSonho,totalExpReais,totalInvestido,totalCC,totalIncome,totalPaid,totalPending,extraNeeded,sonhoTotal,sonhoPago,sonhoRecorrente,sonhoProgresso,sonhoInvestidoTotal,objetivoTotal,objetivoPago,objetivoRecorrente,objetivoProgresso,objetivoInvestidoTotal,byCategory,streakDays,streakClaimed,healthScore,levelInfo,onMethod:()=>setShowMethodology(true),onCreditClick:()=>setTab("credit"),onDonate:()=>setShowDonation(true),onSettings:()=>setShowSettings(true),onExpenses:()=>setTab("expenses"),onIncome:()=>setTab("income"),onReports:()=>setTab("reports"),userId:user.id,onChatDone:async(xpGain:number)=>{ if(xpGain>0) await gainXpRaw(xpGain); await load(); },chatMessages,setChatMessages };
 
   // ── PC LAYOUT ─────────────────────────────────────────────────────────────
   if (isPC) return (
@@ -1762,31 +1792,31 @@ export default function App() {
             <div style={{ fontSize:9, color:"var(--text2)", marginTop:3 }}>{xp} XP total</div>
           </div>
           <div onClick={()=>setShowStreak(true)} style={{ margin:"10px 10px 0", padding:"11px 13px", borderRadius:12, cursor:"pointer", background:streakClaimed?"rgba(0,214,143,0.06)":"rgba(108,99,255,0.08)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.22)":"rgba(108,99,255,0.28)"}`, display:"flex", alignItems:"center", gap:10 }}>
-            <span style={{ fontSize:24 }}>{getStreakIcon(streakDays)}</span>
+            <FlameIcon size={26} color={streakClaimed?"#00d68f":"#ffb703"}/>
             <div>
               <div style={{ fontSize:9, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.5 }}>STREAK</div>
-              <div style={{ fontSize:13, fontWeight:800, color:streakClaimed?"var(--green)":"#a78bfa" }}>{streakDays} dias {streakClaimed?"✅":`· +${getStreakXP(streakDays+1)}XP`}</div>
+              <div style={{ fontSize:13, fontWeight:800, color:streakClaimed?"var(--green)":"#a78bfa" }}>{streakDays} dias {streakClaimed?"· resgatada":`· +${getStreakXP(streakDays+1)} XP`}</div>
             </div>
           </div>
           <nav style={{ padding:"12px 10px", flex:1 }}>
             {NAV.map(n=>(
               <button key={n.id} onClick={()=>setTab(n.id)} style={{ width:"100%", display:"flex", alignItems:"center", gap:10, padding:"9px 13px", borderRadius:10, marginBottom:3, background:tab===n.id?"rgba(108,99,255,0.15)":"transparent", border:`1px solid ${tab===n.id?"rgba(108,99,255,0.28)":"transparent"}`, color:tab===n.id?"#a78bfa":"var(--text2)", fontSize:13, fontWeight:tab===n.id?700:500, cursor:"pointer", textAlign:"left", transition:"all 0.15s" }}>
-                <span style={{ fontSize:16 }}>{n.icon}</span> {n.label}
+                <Icon name={n.icon} size={18}/> {n.label}
               </button>
             ))}
           </nav>
           <div style={{ padding:"10px 10px 20px", borderTop:"1px solid var(--border)", display:"flex", flexDirection:"column", gap:6 }}>
-            <button onClick={()=>setShowMethodology(true)} style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}>📚 Metodologia</button>
-            <button onClick={()=>setShowSettings(true)} style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}>⚙️ Configurações</button>
-            <button onClick={()=>setShowDonation(true)} style={{ width:"100%", background:"rgba(130,10,209,0.1)", border:"1px solid rgba(130,10,209,0.3)", color:"#c084fc", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer", fontWeight:600 }}>☕ Apoie o NaCarteira</button>
-            {pwa.canInstall && <button onClick={pwa.install} style={{ width:"100%", background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.3)", color:"var(--primary)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer", fontWeight:600 }}>📲 Instalar App</button>}
-            <button onClick={logout} style={{ width:"100%", background:"rgba(255,77,106,0.08)", border:"1px solid rgba(255,77,106,0.2)", color:"var(--red)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}>🚪 Sair</button>
+            <button onClick={()=>setShowMethodology(true)} style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}><Icon name="book" size={15}/> Metodologia</button>
+            <button onClick={()=>setShowSettings(true)} style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}><Icon name="gear" size={15}/> Configurações</button>
+            <button onClick={()=>setShowDonation(true)} style={{ width:"100%", background:"rgba(130,10,209,0.1)", border:"1px solid rgba(130,10,209,0.3)", color:"#c084fc", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer", fontWeight:600 }}>Apoie o NaCarteira</button>
+            {pwa.canInstall && <button onClick={pwa.install} style={{ width:"100%", background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.3)", color:"var(--primary)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer", fontWeight:600 }}>Instalar app</button>}
+            <button onClick={logout} style={{ width:"100%", background:"rgba(255,77,106,0.08)", border:"1px solid rgba(255,77,106,0.2)", color:"var(--red)", padding:"9px 12px", borderRadius:10, fontSize:12, textAlign:"left", cursor:"pointer" }}><Icon name="logout" size={15}/> Sair</button>
           </div>
         </aside>
         <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
           <div style={{ background:"var(--bg2)", borderBottom:"1px solid var(--border)", padding:"14px 22px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
             <div>
-              <h1 style={{ fontSize:19, fontWeight:900, color:"var(--text)", margin:0 }}>{NAV.find(n=>n.id===tab)?.icon} {NAV.find(n=>n.id===tab)?.label}</h1>
+              <h1 style={{ fontSize:19, fontWeight:900, color:"var(--text)", margin:0 }}>{NAV.find(n=>n.id===tab)?.label}</h1>
               <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
             </div>
             <div style={{ display:"flex", gap:10 }}>
@@ -1835,20 +1865,22 @@ export default function App() {
 
   // ── MOBILE LAYOUT ─────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight:"100vh", paddingBottom:80 }}>
+    <div style={{ minHeight:"100vh", paddingBottom:92 }}>
       {sharedModals}
-      <header style={{ background:"var(--bg2)", borderBottom:"1px solid var(--border)", padding:"10px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:50 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
-          <LogoMark size={30}/>
-          <span style={{ fontSize:13, fontWeight:800, color:"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-            {user.name?.split(" ")[0]} <span style={{ color:"var(--text2)", fontWeight:500 }}>-</span> <span style={{ color:levelInfo.color }}>NV.{levelNum}</span>
-          </span>
+      <header style={{ background:"var(--bg)", padding:"14px 16px 8px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:50 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
+          <LogoMark size={32}/>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:11, color:"var(--text2)", textTransform:"capitalize" }}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
+            <div style={{ fontSize:17, fontWeight:800, color:"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>Olá, {user.name?.split(" ")[0]}</div>
+          </div>
         </div>
-        <div style={{ display:"flex", gap:7 }}>
-          {pwa.canInstall && <button onClick={pwa.install} title="Baixar Aplicativo" style={{ background:"rgba(108,99,255,0.15)", border:"1px solid rgba(108,99,255,0.4)", color:"var(--primary)", padding:"8px 11px", borderRadius:10, fontSize:12, fontWeight:700 }}>📲</button>}
-          <button onClick={()=>setShowMethodology(true)} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>📚</button>
-          <button onClick={()=>setShowSettings(true)} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>⚙️</button>
-          <button onClick={logout} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", padding:"8px 11px", borderRadius:10, fontSize:12 }}>🚪</button>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <button onClick={()=>setShowStreak(true)} aria-label="Streak diária" style={{ display:"flex", alignItems:"center", gap:5, background:streakClaimed?"rgba(0,214,143,0.12)":"rgba(255,183,3,0.14)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.4)":"rgba(255,183,3,0.4)"}`, borderRadius:999, padding:"6px 11px", cursor:"pointer" }}>
+            <FlameIcon size={14} color={streakClaimed?"#00d68f":"#ffb703"}/>
+            <span style={{ fontSize:12.5, fontWeight:800, color:streakClaimed?"#00d68f":"#ffc94d" }}>{streakDays} {streakDays===1?"dia":"dias"}</span>
+          </button>
+          <button onClick={()=>setShowSettings(true)} aria-label="Configurações" style={{ width:34, height:34, borderRadius:"50%", background:"var(--bg2)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text2)", cursor:"pointer", padding:0 }}><Icon name="gear" size={16}/></button>
         </div>
       </header>
       <main style={{ padding:"14px 14px 0" }}>
@@ -1879,13 +1911,17 @@ export default function App() {
         {tab==="income"&&<IncomeContent incomes={incomes} totalIncome={totalIncome} extraNeeded={extraNeeded} onAdd={()=>setShowAddIncome(true)} onDelete={async(id:number)=>{ await fetch(`${API}/extra-income/${id}`,{method:"DELETE"}); load(); }} onEdit={async(id:number,desc:string,amount:string,date?:string)=>{ await fetch(`${API}/extra-income/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:desc,amount:parseFloat(amount),date:date||undefined})}); load(); }}/>}
         {tab==="reports"&&<ReportsContent byCategory={byCategory} totalExpSemSonho={totalExpSemSonho} totalCC={totalCC} totalIncome={totalIncome} expenses={expenses} cc={cc} xp={xp} userId={user.id} userName={user.name} salary={salary} healthScore={healthScore} totalInvestido={totalInvestido} levelInfo={levelInfo}/>}
       </main>
-      <nav style={{ position:"fixed", bottom:0, left:0, right:0, background:"var(--bg2)", borderTop:"1px solid var(--border)", display:"flex", zIndex:50 }}>
+      <nav style={{ position:"fixed", bottom:0, left:0, right:0, background:"rgba(22,26,43,0.97)", borderTop:"1px solid var(--border)", display:"flex", zIndex:50, padding:"8px 4px calc(10px + env(safe-area-inset-bottom))" }}>
         {NAV.map(n=>(
-          <button key={n.id} onClick={()=>setTab(n.id)} style={{ flex:1, padding:"9px 4px 7px", background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:2, color:tab===n.id?"var(--primary)":"var(--text2)", cursor:"pointer" }}>
-            <span style={{ fontSize:tab===n.id?19:17 }}>{n.icon}</span>
-            <span style={{ fontSize:9, fontWeight:700, letterSpacing:0.3 }}>{n.label}</span>
+          <button key={n.id} onClick={()=>setTab(n.id)} style={{ flex:1, background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:4, color:tab===n.id?"#b9a8ff":"#6f7699", cursor:"pointer", padding:"2px 0" }}>
+            <Icon name={n.icon} size={20}/>
+            <span style={{ fontSize:10, fontWeight:tab===n.id?800:700 }}>{n.label}</span>
           </button>
         ))}
+        <button onClick={()=>setShowMethodology(true)} style={{ flex:1, background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:4, color:"#6f7699", cursor:"pointer", padding:"2px 0" }}>
+          <Icon name="book" size={20}/>
+          <span style={{ fontSize:10, fontWeight:700 }}>Método</span>
+        </button>
       </nav>
     </div>
   );
@@ -3101,7 +3137,7 @@ function ChangePasswordModal({ user, onClose }: { user: any; onClose: () => void
   );
 }
 
-function SettingsModal({ user, salary, onSave, onClose, onReset, onPots }: any) {
+function SettingsModal({ user, salary, onSave, onClose, onReset, onPots, onLogout }: any) {
   const [s, setS] = useState(String(salary||""));
   const [loading, setLoading] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
@@ -3208,6 +3244,11 @@ function SettingsModal({ user, salary, onSave, onClose, onReset, onPots }: any) 
           <button onClick={()=>setShowChangePw(true)} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
             🔑 Alterar Senha
           </button>
+          {onLogout && (
+            <button onClick={onLogout} style={{ width:"100%", background:"var(--bg3)", color:"var(--text2)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid var(--border)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+              <Icon name="logout" size={16}/> Sair da conta
+            </button>
+          )}
           <div style={{ fontSize:12, color:"var(--text2)" }}>⚠️ Zona de perigo</div>
           <button onClick={onReset} style={{ width:"100%", background:"rgba(255,77,106,.15)", color:"var(--red)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(255,77,106,.3)", cursor:"pointer" }}>
             🔄 Virar Mês — Arquivar e limpar
