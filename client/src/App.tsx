@@ -23,11 +23,66 @@ function Icon({ name, size = 20, color = "currentColor", stroke = 2.2 }: { name:
     up:    <path d="M6 15l6-6 6 6"/>,
     logout:<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></>,
     gear:  <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></>,
+    check: <path d="M20 6L9 17l-5-5"/>,
+    alert: <><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></>,
+    bolt: <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>,
+    gem: <><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/></>,
+    crown: <path d="M2 8l5 5 5-8 5 8 5-5-2 11H4z"/>,
+    trophy: <><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></>,
+    target: <><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></>,
+    sparkle: <path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>,
+    trend: <><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></>,
+    clipboard: <><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h6"/></>,
+    heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>,
+    user: <><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></>,
+    star: <path d="M12 2l3 7 7 .6-5.3 4.7 1.6 7.2L12 17.8 5.7 21.5l1.6-7.2L2 9.6 9 9z"/>,
+    cart: <><path d="M3 4h2l2.4 11h10.2L20 7H6"/><circle cx="9" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></>,
+    trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>,
+    edit: <><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></>,
+    calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></>,
+    refresh: <><path d="M21 12a9 9 0 0 1-15.5 6.2M3 12a9 9 0 0 1 15.5-6.2"/><path d="M21 4v5h-5M3 20v-5h5"/></>,
+    lock: <><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></>,
+    unlock: <><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></>,
+    key: <><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 6l3 3"/></>,
+    bulb: <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/>,
+    pot: <path d="M5 9h14M6 9v8a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V9M8 5h8l1 4H7z"/>,
+    coffee: <path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 4h-2M7 2v3M11 2v3"/>,
+    download: <path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>,
+    link: <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>,
+    doc: <><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></>,
+    bot: <><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01"/></>,
+    package: <><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></>,
+    undo: <><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></>,
+    plant: <><path d="M12 21V11"/><path d="M12 11C12 7 9 5 5 5c0 4 3 6 7 6"/><path d="M12 14c0-3 2-5 6-5 0 3-2 5-6 5"/></>,
+    shield: <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>,
+    folder: <path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>,
+    bag: <><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></>,
+    clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></>,
+    pie: <><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink:0 }}>{paths[name]}</svg>;
 }
 function FlameIcon({ size = 14, color = "#ffb703" }: { size?: number; color?: string }) {
   return <svg width={size*0.86} height={size} viewBox="0 0 24 28" fill={color} aria-hidden="true" style={{ flexShrink:0 }}><path d="M12 0c1 5 6 8 6 15a6 6 0 0 1-12 0c0-2 1-4 2-5 0 2 1 3 2 3 0-5-1-8 2-13z"/></svg>;
+}
+
+// Mapa emoji -> ícone (os dados antigos ainda guardam o emoji como "chave"; na tela só aparece o ícone)
+const EMO_MAP: Record<string,string> = {
+  "✅":"check","✓":"check","❌":"x","✕":"x","⚠":"alert","🔄":"refresh","🚀":"trend","🌱":"plant","💡":"bulb",
+  "💚":"heart","💜":"heart","💝":"heart","💔":"heart","🎉":"sparkle","🎁":"sparkle","✨":"sparkle","🏆":"trophy","👑":"crown",
+  "💎":"gem","⚡":"bolt","⚔":"bolt","📈":"trend","📊":"chart","📐":"chart","📋":"clipboard","🏷":"clipboard","💆":"user",
+  "🌟":"star","🛒":"cart","🎯":"target","📅":"calendar","💳":"card","💵":"cash","💸":"cash","💼":"bag","🏺":"pot",
+  "☕":"coffee","📲":"download","⬆":"download","🔗":"link","📄":"doc","🤖":"bot","📦":"package","➡":"send","👉":"send",
+  "↩":"undo","🔐":"lock","🔒":"lock","🔓":"unlock","🔑":"key","🛡":"shield","📂":"folder","⏳":"clock","🥧":"pie",
+  "📚":"book","⚙":"gear","🗑":"trash","✏":"edit",
+};
+function Em({ e, size = 16, color }: { e?: string; size?: number; color?: string }) {
+  if (!e) return null;
+  const key = e.replace(/\uFE0F/g,"").trim();
+  if (key==="🔥") return <FlameIcon size={size} color={color||"currentColor"}/>;
+  const name = EMO_MAP[key];
+  if (!name) return null;
+  return <span style={{ display:"inline-flex", verticalAlign:"-0.15em", marginRight:"0.3em", color }}><Icon name={name} size={size} stroke={2}/></span>;
 }
 
 const API = "/api";
@@ -40,14 +95,14 @@ type CC = { id: number; description: string; amount: string; subcategory?: strin
 type Income = { id: number; description: string; amount: string; date: string };
 
 const CATS = [
-  { id: 1, name: "Pagar-se",    emoji: "💆", color: "#6c63ff" },
-  { id: 2, name: "Doar",        emoji: "💝", color: "#ff6b9d" },
+  { id: 1, name: "Pagar-se",    emoji: "💆", color: "#8b85ff" },
+  { id: 2, name: "Doar",        emoji: "💝", color: "#b44fff" },
   { id: 3, name: "Investir",    emoji: "📈", color: "#00d68f" },
-  { id: 4, name: "Contas",      emoji: "📋", color: "#ffb703" },
-  { id: 5, name: "Objetivo",    emoji: "🎯", color: "#8b5cf6" },
-  { id: 6, name: "Sonho",       emoji: "✨", color: "#06b6d4" },
-  { id: 7, name: "Abundar",     emoji: "🌟", color: "#f97316" },
-  { id: 8, name: "Variáveis",   emoji: "🛒", color: "#ef4444" },
+  { id: 4, name: "Contas",      emoji: "📋", color: "#6c63ff" },
+  { id: 5, name: "Objetivo",    emoji: "🎯", color: "#a78bfa" },
+  { id: 6, name: "Sonho",       emoji: "✨", color: "#22c7e6" },
+  { id: 7, name: "Abundar",     emoji: "🌟", color: "#d6a8ff" },
+  { id: 8, name: "Variáveis",   emoji: "🛒", color: "#5a6190" },
 ];
 // ── POTES: padrão "Criação de Riqueza" ou personalizado (nome, %, definição) ──
 const POT_IDS = [1,2,3,4,6,7]; // Pagar-se, Doar, Investir, Contas, Sonho, Abundar (Objetivo=5 e Variáveis=8 ficam fora da %)
@@ -182,17 +237,17 @@ function LevelUpModal({ levelNum, tier, onClose }: { levelNum:number; tier:strin
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:20 }} onClick={onClose}>
       <div style={{ background:"var(--bg2)", borderRadius:24, padding:"32px 24px", maxWidth:380, width:"100%", textAlign:"center", border:`2px solid ${info.color}44` }} onClick={e=>e.stopPropagation()}>
-        <div style={{ fontSize:64, marginBottom:12 }}>{info.emoji}</div>
+        <div style={{ fontSize:64, marginBottom:12 }}><Em e={info.emoji}/></div>
         <div style={{ fontSize:22, fontWeight:900, color:info.color, marginBottom:10 }}>{info.title}</div>
-        {isMax && <div style={{ fontSize:13, color:"#ffd700", fontWeight:700, letterSpacing:2, marginBottom:10, textTransform:"uppercase" }}>🏆 TOP 1% • NV.100</div>}
+        {isMax && <div style={{ fontSize:13, color:"#ffd700", fontWeight:700, letterSpacing:2, marginBottom:10, textTransform:"uppercase" }}><Em e="🏆"/> TOP 1% • NV.100</div>}
         <div style={{ fontSize:14, color:"var(--text2)", lineHeight:1.7, whiteSpace:"pre-line", marginBottom:24 }}>{info.msg}</div>
         {isMax && (
           <div style={{ background:"rgba(255,215,0,0.08)", border:"1px solid rgba(255,215,0,0.3)", borderRadius:14, padding:"12px 16px", marginBottom:20, fontSize:13, color:"#ffd700", lineHeight:1.6 }}>
-            ✨ Continue usando o app para manter seus registros e inspirar novos investidores!
+            <Em e="✨"/> Continue usando o app para manter seus registros e inspirar novos investidores!
           </div>
         )}
         <button onClick={onClose} style={{ background:info.color, color:"#000", border:"none", borderRadius:14, padding:"14px 32px", fontSize:15, fontWeight:800, cursor:"pointer", width:"100%" }}>
-          {isMax ? "🎉 Eu superei o app!" : isNewTier ? "🚀 Vamos nessa!" : "⚔️ Continuar!"}
+          {isMax ? "Eu superei o app!" : isNewTier ? "Vamos nessa!" : "Continuar!"}
         </button>
       </div>
     </div>
@@ -212,11 +267,11 @@ function XPLevel({ xp }: { xp:number; level?:string; levelNum?:number }) {
     <div style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 16px", marginBottom:14, border:`1px solid ${isMax?"rgba(255,215,0,0.3)":"var(--border)"}` }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
         <span style={{ fontSize:12, fontWeight:800, color:info.color, letterSpacing:1 }}>
-          {isMax ? "👑" : "⚔️"} {info.label} NV.{info.levelNum}
+          <Em e={isMax ? "👑" : "⚔️"}/>{info.label} NV.{info.levelNum}
           {isMax && <span style={{ fontSize:10, marginLeft:6, color:"#ffd700" }}>MAX</span>}
         </span>
         <span style={{ fontSize:11, color:"var(--text2)", fontVariantNumeric:"tabular-nums" }}>
-          {isMax ? "ZERADO 🏆" : `${info.xpInLevel}/${XP_PER_LEVEL} XP`}
+          {isMax ? "ZERADO" : `${info.xpInLevel}/${XP_PER_LEVEL} XP`}
         </span>
       </div>
       <div className="xp-bar-wrap">
@@ -226,7 +281,7 @@ function XPLevel({ xp }: { xp:number; level?:string; levelNum?:number }) {
         <span style={{ fontSize:10, color:"var(--text2)" }}>{xp.toLocaleString("pt-BR")} XP total</span>
         {!isMax && nextTierLv && (
           <span style={{ fontSize:10, color:info.color }}>
-            🔓 {info.tier==="iniciante" ? "Investidor" : "Avançado"} no NV.{nextTierLv} · faltam {(nextTierLv - info.levelNum)} níveis
+            <Em e="🔓"/> {info.tier==="iniciante" ? "Investidor" : "Avançado"} no NV.{nextTierLv} · faltam {(nextTierLv - info.levelNum)} níveis
           </span>
         )}
       </div>
@@ -245,7 +300,7 @@ function Modal({ title, onClose, children }: { title:string; onClose?:()=>void; 
       <div style={{ background:"var(--bg2)", borderRadius:20, width:"100%", maxWidth:480, maxHeight:"88vh", overflowY:"auto", padding:"20px 20px 28px" }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
           <h3 style={{ fontSize:17, fontWeight:800 }}>{title}</h3>
-          {onClose && <button onClick={onClose} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:32, height:32, borderRadius:8, fontSize:16 }}>✕</button>}
+          {onClose && <button onClick={onClose} style={{ background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:32, height:32, borderRadius:8, fontSize:16 }}><Em e="✕"/></button>}
         </div>
         {children}
       </div>
@@ -270,16 +325,16 @@ function StreakMilestoneModal({ days, xpGained, onClose }: { days:number; xpGain
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:20 }} onClick={onClose}>
       <div style={{ background:"var(--bg2)", borderRadius:24, padding:"32px 24px", maxWidth:380, width:"100%", textAlign:"center", border:`2px solid ${info.color}55` }} onClick={e=>e.stopPropagation()}>
-        <div style={{ fontSize:64, marginBottom:8 }}>{info.emoji}</div>
-        <div style={{ fontSize:11, fontWeight:800, color:info.color, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>🏆 CONQUISTA DESBLOQUEADA</div>
+        <div style={{ fontSize:64, marginBottom:8 }}><Em e={info.emoji}/></div>
+        <div style={{ fontSize:11, fontWeight:800, color:info.color, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}><Em e="🏆"/> CONQUISTA DESBLOQUEADA</div>
         <div style={{ fontSize:22, fontWeight:900, color:info.color, marginBottom:12 }}>{info.title}</div>
         <div style={{ fontSize:14, color:"var(--text2)", lineHeight:1.7, marginBottom:14 }}>{info.msg}</div>
         <div style={{ background:`${info.color}10`, border:`1px solid ${info.color}30`, borderRadius:12, padding:"12px 16px", marginBottom:20, fontSize:13, color:"var(--text2)", fontStyle:"italic", lineHeight:1.6 }}>
           {info.quote}
         </div>
-        <div style={{ fontSize:20, fontWeight:900, color:"#ffd700", marginBottom:16 }}>+{xpGained} XP 🔥</div>
+        <div style={{ fontSize:20, fontWeight:900, color:"#ffd700", marginBottom:16 }}>+{xpGained} XP <Em e="🔥"/></div>
         <button onClick={onClose} style={{ background:info.color, color:"#000", border:"none", borderRadius:14, padding:"14px 32px", fontSize:15, fontWeight:800, cursor:"pointer", width:"100%" }}>
-          🚀 Continuar a jornada!
+          <Em e="🚀"/> Continuar a jornada!
         </button>
       </div>
     </div>
@@ -338,15 +393,15 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:16 }} onClick={onClose}>
       <div style={{ background:"var(--bg2)", borderRadius:24, width:"100%", maxWidth:400, padding:"28px 24px 32px", position:"relative", border:"1px solid rgba(108,99,255,0.25)" }} onClick={e=>e.stopPropagation()}>
-        <button onClick={onClose} style={{ position:"absolute", top:14, right:14, background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:30, height:30, borderRadius:8, fontSize:13 }}>✕</button>
+        <button onClick={onClose} style={{ position:"absolute", top:14, right:14, background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:30, height:30, borderRadius:8, fontSize:13 }}><Em e="✕"/></button>
 
         <div style={{ textAlign:"center", marginBottom:20 }}>
           {streakBroken && (
             <div style={{ background:"rgba(255,77,106,0.1)", border:"1px solid rgba(255,77,106,0.3)", borderRadius:10, padding:"8px 12px", marginBottom:12, fontSize:12, color:"#ff4d6a" }}>
-              💔 Sua streak foi resetada — você perdeu um dia. Comece de novo!
+              <Em e="💔"/> Sua streak foi resetada — você perdeu um dia. Comece de novo!
             </div>
           )}
-          <div style={{ fontSize:52, marginBottom:8 }}>{streakDays >= 30 ? "👑" : streakDays >= 14 ? "💎" : streakDays >= 7 ? "⚡" : "🔥"}</div>
+          <div style={{ fontSize:52, marginBottom:8 }}><Em e={streakDays >= 30 ? "👑" : streakDays >= 14 ? "💎" : streakDays >= 7 ? "⚡" : "🔥"} size={44}/></div>
           <div style={{ fontSize:72, fontWeight:900, color:accent, lineHeight:1, letterSpacing:"-3px", fontVariantNumeric:"tabular-nums" }}>
             {claimed ? streakDays : streakDays === 0 ? 1 : streakDays + 1}
           </div>
@@ -362,7 +417,7 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
 
         {expiresIn && !claimed && (
           <div style={{ textAlign:"center", marginBottom:14 }}>
-            <span style={{ background:"rgba(255,183,3,0.1)", border:"1px solid rgba(255,183,3,0.2)", borderRadius:8, padding:"4px 10px", color:"#ffb703", fontSize:12 }}>⏱ Disponível por mais {expiresIn}</span>
+            <span style={{ background:"rgba(255,183,3,0.1)", border:"1px solid rgba(255,183,3,0.2)", borderRadius:8, padding:"4px 10px", color:"#ffb703", fontSize:12 }}>Disponível por mais {expiresIn}</span>
           </div>
         )}
 
@@ -384,7 +439,7 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
                 background: isCurrent ? "rgba(108,99,255,0.25)" : active ? "rgba(108,99,255,0.10)" : "var(--bg3)",
                 border: `1.5px solid ${isCurrent ? "#6c63ff" : active ? "rgba(108,99,255,0.3)" : "var(--border)"}`,
                 borderRadius:10, padding:"6px 4px" }}>
-                <span style={{ fontSize:16 }}>{m.emoji}</span>
+                <span style={{ fontSize:16 }}><Em e={m.emoji}/></span>
                 <span style={{ fontSize:10, fontWeight:800, color: active ? "var(--text)" : "var(--text2)" }}>{m.label}</span>
                 <span style={{ fontSize:9, color: active ? accent : "var(--text2)", fontWeight:700 }}>{m.xp}xp</span>
               </div>
@@ -396,13 +451,13 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
           <div style={{ width:"100%", padding:15, borderRadius:14, background:"var(--bg3)", textAlign:"center", color:"var(--text2)", fontSize:14 }}>Carregando...</div>
         ) : claimed ? (
           <div style={{ width:"100%", padding:16, borderRadius:14, background:"rgba(0,214,143,0.12)", border:"1px solid rgba(0,214,143,0.35)", textAlign:"center" }}>
-            <div style={{ fontSize:22, marginBottom:4 }}>✅</div>
+            <div style={{ fontSize:22, marginBottom:4 }}><Em e="✅"/></div>
             <div style={{ fontSize:16, fontWeight:800, color:"var(--green)" }}>Resgatado hoje! +{xpGained} XP</div>
-            <div style={{ fontSize:12, color:"var(--text2)", marginTop:3 }}>Volte amanhã para o dia {streakDays + 1} 🔥</div>
+            <div style={{ fontSize:12, color:"var(--text2)", marginTop:3 }}>Volte amanhã para o dia {streakDays + 1} <Em e="🔥"/></div>
           </div>
         ) : (
           <button onClick={handleClaim} disabled={loading} style={{ width:"100%", padding:16, border:"none", borderRadius:14, background:loading?"var(--bg3)":"linear-gradient(135deg,#6c63ff,#b44fff)", color:loading?"var(--text2)":"white", fontSize:16, fontWeight:800, cursor:loading?"default":"pointer", boxShadow:loading?"none":"0 4px 20px rgba(108,99,255,0.4)" }}>
-            {loading ? "⏳ Salvando..." : `🎁 Resgatar +${nextXP} XP`}
+            {loading ? "Salvando..." : `Resgatar +${nextXP} XP`}
           </button>
         )}
       </div>
@@ -420,7 +475,7 @@ function BarChart({ data }: { data:{label:string;value:number;color:string;emoji
         <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
           <div style={{ fontSize:9, color:"var(--text2)", fontWeight:700, whiteSpace:"nowrap", overflow:"hidden", maxWidth:"100%", textAlign:"center" }}>{d.value>0?fmt(d.value).replace("R$\u00a0","").replace(",00",""):""}</div>
           <div style={{ width:"100%", borderRadius:"4px 4px 0 0", background:d.value>0?d.color:"var(--bg3)", height:`${Math.max(d.value/max*85,d.value>0?6:2)}px`, transition:"height .6s ease", opacity:d.value>0?1:0.3 }}/>
-          <div style={{ fontSize:13 }}>{d.emoji}</div>
+          <div style={{ fontSize:13 }}><Em e={d.emoji}/></div>
         </div>
       ))}
     </div>
@@ -444,7 +499,7 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
     // STEP 0: Jornada de níveis — a tela que faz desejar chegar lá
     <div>
       <div style={{ textAlign:"center", marginBottom:20 }}>
-        <div style={{ fontSize:44, marginBottom:8 }}>⚔️</div>
+        <div style={{ fontSize:44, marginBottom:8 }}><Em e="⚔️"/></div>
         <h2 style={{ fontSize:22, fontWeight:900, background:"linear-gradient(135deg,#6c63ff,#b44fff,#ffd700)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:8 }}>
           Sua Jornada Começa Aqui
         </h2>
@@ -455,7 +510,7 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
 
       {/* Referência brasileira */}
       <div style={{ background:"linear-gradient(135deg,rgba(255,215,0,0.07),rgba(108,99,255,0.07))", border:"1px solid rgba(255,215,0,0.2)", borderRadius:16, padding:"14px 16px", marginBottom:16 }}>
-        <div style={{ fontSize:10, color:"#ffd700", fontWeight:800, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>💡 QUEM JÁ CHEGOU LÁ</div>
+        <div style={{ fontSize:10, color:"#ffd700", fontWeight:800, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}><Em e="💡"/> QUEM JÁ CHEGOU LÁ</div>
         <p style={{ fontSize:13, color:"var(--text)", lineHeight:1.65, margin:0 }}>
           Líderes como <strong style={{color:"var(--text)"}}>Flávio Augusto (Geração de Valor)</strong>, <strong style={{color:"var(--text)"}}>Thiago Nigro (Primo Rico)</strong> e grandes investidores brasileiros seguem exatamente esta lógica: <em style={{color:"var(--text2)"}}>pagar a si primeiro, investir consistentemente e viver dentro dos meios</em> — não importa o salário, o princípio é o mesmo.
         </p>
@@ -475,7 +530,7 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
       ].map((n,i)=>(
         <div key={i} style={{ background:n.bg, border:`1px solid ${n.color}33`, borderRadius:14, padding:"12px 14px", marginBottom:8 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-            <span style={{ fontSize:24 }}>{n.emoji}</span>
+            <span style={{ fontSize:24 }}><Em e={n.emoji}/></span>
             <div style={{ flex:1 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <span style={{ fontWeight:900, fontSize:13, color:n.color }}>{n.tier}</span>
@@ -489,14 +544,14 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
       ))}
 
       <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 14px", marginTop:4, fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>
-        🔥 <strong style={{color:"var(--text)"}}>Como ganhar XP:</strong> Ganhos (R$100 = 100 XP) · Gastos registrados (R$100 = 50 XP) · Pagar contas (+15 XP) · Streak diária (até +300 XP/dia)
+        <Em e="🔥"/> <strong style={{color:"var(--text)"}}>Como ganhar XP:</strong> Ganhos (R$100 = 100 XP) · Gastos registrados (R$100 = 50 XP) · Pagar contas (+15 XP) · Streak diária (até +300 XP/dia)
       </div>
     </div>,
 
     // STEP 1: Os 6 Potes
     <div>
       <div style={{ textAlign:"center", marginBottom:16 }}>
-        <div style={{ fontSize:38, marginBottom:6 }}>🏺</div>
+        <div style={{ fontSize:38, marginBottom:6 }}><Em e="🏺"/></div>
         <h2 style={{ fontSize:20, fontWeight:900, marginBottom:6 }}>Os 6 Potes da Riqueza</h2>
         <p style={{ fontSize:13, color:"var(--text2)", lineHeight:1.6 }}>
           Esta metodologia — usada por milionários ao redor do mundo — divide sua renda em 6 destinos. No NV.50 as porcentagens mudam para maximizar seu patrimônio.
@@ -504,12 +559,12 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
       </div>
 
       <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 14px", marginBottom:12, fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>
-        📊 <strong style={{color:"var(--text)"}}>Distribuição atual (Iniciante):</strong> Foco em criar o hábito. Quando você virar Investidor (NV.50), Investir sobe para 15% e Contas cai para 55%.
+        <Em e="📊"/> <strong style={{color:"var(--text)"}}>Distribuição atual (Iniciante):</strong> Foco em criar o hábito. Quando você virar Investidor (NV.50), Investir sobe para 15% e Contas cai para 55%.
       </div>
 
       {POTES.map((p,i)=>(
         <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${p.color}`, marginBottom:7 }}>
-          <span style={{ fontSize:22, flexShrink:0 }}>{p.emoji}</span>
+          <span style={{ fontSize:22, flexShrink:0 }}><Em e={p.emoji}/></span>
           <div style={{ flex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontWeight:700, fontSize:13 }}>{p.name}</span>
@@ -563,7 +618,7 @@ function OnboardingSalary({ user, onDone }: { user:User; onDone:()=>void }) {
       <h2 style={{ fontSize:19, fontWeight:900, marginBottom:8 }}>Qual é seu salário base?</h2>
       <p style={{ color:"var(--text2)", fontSize:13, marginBottom:20, lineHeight:1.5 }}>Isso ajuda a calcular seu saldo e saúde financeira.</p>
       <input type="number" placeholder="Ex: 3000" value={salary} onChange={e=>setSalary(e.target.value)} style={{ width:"100%", fontSize:18, textAlign:"center", marginBottom:14 }}/>
-      <button className="btn-primary" onClick={save} disabled={loading} style={{ width:"100%", padding:"15px", fontSize:15 }}>{loading?"Salvando...":"🚀 Começar minha jornada"}</button>
+      <button className="btn-primary" onClick={save} disabled={loading} style={{ width:"100%", padding:"15px", fontSize:15 }}>{loading?"Salvando...":"Começar minha jornada"}</button>
       <button className="btn-ghost" onClick={onDone} style={{ width:"100%", marginTop:8, fontSize:13 }}>Pular por agora</button>
     </div>
   );
@@ -575,14 +630,14 @@ const PIX_NAME = "João Paulo da Silva Saraiva";
 const PIX_BANK = "Nu Pagamentos S.A. (Nubank)";
 
 const DONATION_MSGS = [
-  ["Você também faz parte desse projeto ✨", "Criado por uma pessoa só, para quem quer superar sua situação financeira com método."],
-  ["Apoie um criador independente ☕", "O NaCarteira nasceu de uma necessidade real. Se ele está te ajudando, considere retribuir."],
-  ["Sua ajuda chega mais longe do que você imagina 🚀", "Com R$25 você mantém o servidor no ar por um mês inteiro."],
-  ["O dinheiro pode mudar de lado — comece aqui 💚", "Criado por alguém que também está nessa jornada. Juntos chegamos mais longe."],
-  ["Que tal um café para quem criou isso pra você? ☕", "Um gesto simples que mantém vivo um projeto feito com propósito."],
-  ["Há saída — e esse app prova isso todo dia 🌱", "Foi criado porque quem o fez também precisava de esperança financeira."],
-  ["Você merece clareza financeira. O criador merece seu apoio 💜", "Sem patrocínio, sem investidor. Só um projeto feito com método."],
-  ["Cada real aqui volta como funcionalidade pra você 🔄", "O apoio dos usuários financia melhorias e novas ferramentas."],
+  ["Você também faz parte desse projeto", "Criado por uma pessoa só, para quem quer superar sua situação financeira com método."],
+  ["Apoie um criador independente", "O NaCarteira nasceu de uma necessidade real. Se ele está te ajudando, considere retribuir."],
+  ["Sua ajuda chega mais longe do que você imagina", "Com R$25 você mantém o servidor no ar por um mês inteiro."],
+  ["O dinheiro pode mudar de lado — comece aqui", "Criado por alguém que também está nessa jornada. Juntos chegamos mais longe."],
+  ["Que tal um café para quem criou isso pra você?", "Um gesto simples que mantém vivo um projeto feito com propósito."],
+  ["Há saída — e esse app prova isso todo dia", "Foi criado porque quem o fez também precisava de esperança financeira."],
+  ["Você merece clareza financeira. O criador merece seu apoio", "Sem patrocínio, sem investidor. Só um projeto feito com método."],
+  ["Cada real aqui volta como funcionalidade pra você", "O apoio dos usuários financia melhorias e novas ferramentas."],
 ];
 
 function DonationPopup({ onClose }: { onClose: () => void }) {
@@ -616,7 +671,7 @@ function DonationPopup({ onClose }: { onClose: () => void }) {
         </div>
         {/* Header */}
         <div style={{ background:"linear-gradient(135deg,#820AD1,#5b0a96)", padding:"20px 24px 18px", position:"relative" }}>
-          <button onClick={onClose} style={{ position:"absolute", top:14, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"white", width:28, height:28, borderRadius:"50%", fontSize:14, cursor:"pointer" }}>✕</button>
+          <button onClick={onClose} style={{ position:"absolute", top:14, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"white", width:28, height:28, borderRadius:"50%", fontSize:14, cursor:"pointer" }}><Em e="✕"/></button>
           <div style={{ fontSize:10, fontWeight:700, letterSpacing:1.5, color:"rgba(255,255,255,0.6)", textTransform:"uppercase", marginBottom:8 }}>Apoie o NaCarteira</div>
           <div style={{ fontSize:18, fontWeight:700, color:"white", lineHeight:1.35, marginBottom:6, paddingRight:36 }}>{title}</div>
           <div style={{ fontSize:13, color:"rgba(255,255,255,0.7)", lineHeight:1.5 }}>{sub}</div>
@@ -629,7 +684,7 @@ function DonationPopup({ onClose }: { onClose: () => void }) {
               <div style={{ fontSize:26, fontWeight:700, color:"#c084fc", lineHeight:1 }}>R$ 25</div>
               <div style={{ fontSize:11, color:"rgba(192,132,252,0.6)", marginTop:3 }}>mantém o servidor por 1 mês</div>
             </div>
-            <div style={{ fontSize:32 }}>☕</div>
+            <div style={{ fontSize:32 }}><Em e="☕"/></div>
           </div>
           {/* QR Code via API pública */}
           <div style={{ background:"rgba(255,255,255,0.96)", borderRadius:14, padding:"16px", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
@@ -652,11 +707,11 @@ function DonationPopup({ onClose }: { onClose: () => void }) {
                 <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>{PIX_NAME}</div>
               </div>
               <button onClick={copyPix} style={{ flexShrink:0, background:copied?"#00d68f":"#820AD1", border:"none", color:"white", fontSize:12, fontWeight:600, padding:"8px 14px", borderRadius:8, cursor:"pointer", transition:"background .3s", whiteSpace:"nowrap" }}>
-                {copied ? "✓ Copiado!" : "Copiar chave"}
+                {copied ? "Copiado!" : "Copiar chave"}
               </button>
             </div>
           </div>
-          <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", textAlign:"center" }}>Sem assinatura. Você decide quanto e quando. 💜</div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", textAlign:"center" }}>Sem assinatura. Você decide quanto e quando. <Em e="💜"/></div>
         </div>
       </div>
     </div>
@@ -709,7 +764,7 @@ function AdminRanking() {
   if (!authed) return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)", padding:20 }}>
       <div style={{ width:"100%", maxWidth:340, background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:20, padding:"32px 24px", textAlign:"center" }}>
-        <div style={{ fontSize:40, marginBottom:12 }}>🔐</div>
+        <div style={{ fontSize:40, marginBottom:12 }}><Em e="🔐"/></div>
         <div style={{ fontSize:18, fontWeight:800, marginBottom:6 }}>Área Restrita</div>
         <div style={{ fontSize:13, color:"var(--text2)", marginBottom:20 }}>Acesso exclusivo ao administrador</div>
         <input type="password" placeholder="Senha de acesso" value={pwInput}
@@ -745,7 +800,7 @@ function AdminRanking() {
     if (!window.confirm(`Apagar histórico de meses de ${label}?`)) return;
     const res = await fetch(url, { method: "DELETE", headers: { "x-admin-secret": secret } });
     const data = await res.json();
-    setDelMsg(`✅ ${data.deleted} registros apagados de ${label}`);
+    setDelMsg(`${data.deleted} registros apagados de ${label}`);
     setTimeout(() => setDelMsg(""), 4000);
   };
 
@@ -755,10 +810,10 @@ function AdminRanking() {
     const data = await res.json();
     if (data.success) {
       setUsers(u => u.filter(x => String(x.id) !== String(userId)));
-      setDelMsg(`✅ Usuário #${userId} excluído com sucesso`);
+      setDelMsg(`Usuário #${userId} excluído com sucesso`);
       setTimeout(() => setDelMsg(""), 4000);
     } else {
-      setDelMsg(`❌ Erro: ${data.error}`);
+      setDelMsg(`Erro: ${data.error}`);
     }
   };
 
@@ -781,7 +836,7 @@ function AdminRanking() {
     <div style={{ minHeight:"100vh", background:"var(--bg)", padding:"24px 20px" }}>
       <div style={{ maxWidth:700, margin:"0 auto" }}>
         <div style={{ marginBottom:20 }}>
-          <h1 style={{ fontSize:22, fontWeight:900, color:"var(--text)" }}>📊 Painel Admin — NaCarteira</h1>
+          <h1 style={{ fontSize:22, fontWeight:900, color:"var(--text)" }}><Em e="📊"/> Painel Admin — NaCarteira</h1>
           <div style={{ fontSize:12, color:"var(--text2)", marginTop:4 }}>Apenas você vê esta página</div>
         </div>
 
@@ -801,7 +856,7 @@ function AdminRanking() {
 
         {/* Ações de limpeza */}
         <div style={{ background:"var(--bg2)", border:"1px solid rgba(255,77,106,0.3)", borderRadius:12, padding:"14px 16px", marginBottom:20 }}>
-          <div style={{ fontSize:13, fontWeight:700, marginBottom:10, color:"var(--red)" }}>🗑 Gerenciar Histórico de Meses</div>
+          <div style={{ fontSize:13, fontWeight:700, marginBottom:10, color:"var(--red)" }}><Em e="🗑"/> Gerenciar Histórico de Meses</div>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
             <input
               type="text"
@@ -843,7 +898,7 @@ function AdminRanking() {
                 <div style={{ fontSize:10, color:"var(--text2)" }}>NV.{u.levelNum}</div>
                 <button onClick={()=>deleteUser(String(u.id), u.name)}
                   style={{ fontSize:10, color:"var(--red)", background:"rgba(255,77,106,0.1)", border:"1px solid rgba(255,77,106,0.3)", borderRadius:6, padding:"3px 8px", cursor:"pointer" }}>
-                  🗑 Excluir
+                  <Em e="🗑"/> Excluir
                 </button>
               </div>
             </div>
@@ -962,13 +1017,13 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
       <div style={{ width:"100%", maxWidth:340, display:"flex", flexDirection:"column", gap:10, marginBottom:36 }}>
         {[{emoji:"⚔️",title:"Suba de Nível",desc:"Ganhe XP a cada ação financeira"},{emoji:"🔥",title:"Streak Diária",desc:"Apareça todo dia e acumule recompensas"},{emoji:"📊",title:"Controle Total",desc:"Despesas, cartão, renda extra e sonhos"}].map((f,i)=>(
           <div key={i} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 14px", display:"flex", alignItems:"center", gap:12, textAlign:"left" }}>
-            <span style={{ fontSize:26 }}>{f.emoji}</span>
+            <span style={{ fontSize:26 }}><Em e={f.emoji}/></span>
             <div><div style={{ fontWeight:700, fontSize:14 }}>{f.title}</div><div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}>{f.desc}</div></div>
           </div>
         ))}
       </div>
       <div style={{ width:"100%", maxWidth:340, display:"flex", flexDirection:"column", gap:10 }}>
-        <button className="btn-primary" onClick={()=>setMode("register")} style={{ width:"100%", fontSize:15, padding:"15px" }}>🚀 COMEÇAR MINHA JORNADA</button>
+        <button className="btn-primary" onClick={()=>setMode("register")} style={{ width:"100%", fontSize:15, padding:"15px" }}><Em e="🚀"/> COMEÇAR MINHA JORNADA</button>
         <button className="btn-ghost" onClick={()=>setMode("login")} style={{ width:"100%" }}>Já tenho conta</button>
       </div>
     </div>
@@ -983,14 +1038,14 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
         <div className="card">
           {forgotStep===3 ? (
             <div style={{ textAlign:"center", padding:"12px 0" }}>
-              <div style={{ fontSize:44, marginBottom:12 }}>✅</div>
+              <div style={{ fontSize:44, marginBottom:12 }}><Em e="✅"/></div>
               <div style={{ fontSize:16, fontWeight:800, color:"var(--green)", marginBottom:8 }}>Senha alterada!</div>
               <div style={{ fontSize:13, color:"var(--text2)", marginBottom:20 }}>Entre com sua nova senha.</div>
               <button className="btn-primary" onClick={()=>{setMode("login");setForgotStep(1);setForgotEmail("");setForgotAnswer("");setForgotNewPw("");}} style={{ width:"100%" }}>Ir para o login →</button>
             </div>
           ) : forgotStep===2 ? (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div style={{ fontSize:14, fontWeight:700 }}>🔐 Pergunta de segurança</div>
+              <div style={{ fontSize:14, fontWeight:700 }}><Em e="🔐"/> Pergunta de segurança</div>
               <div style={{ background:"var(--bg3)", borderRadius:10, padding:"10px 12px", fontSize:13, color:"var(--text2)" }}>{forgotQuestion}</div>
               <input placeholder="Sua resposta" value={forgotAnswer} onChange={e=>setForgotAnswer(e.target.value)}/>
               <input type="password" placeholder="Nova senha (mín. 6 caracteres)" value={forgotNewPw} onChange={e=>setForgotNewPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submitForgotStep2()}/>
@@ -1000,7 +1055,7 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
             </div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div style={{ fontSize:14, fontWeight:700 }}>🔑 Recuperar senha</div>
+              <div style={{ fontSize:14, fontWeight:700 }}><Em e="🔑"/> Recuperar senha</div>
               <div style={{ fontSize:13, color:"var(--text2)" }}>Digite seu e-mail e responda sua pergunta de segurança.</div>
               <input type="email" placeholder="Seu e-mail cadastrado" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submitForgotStep1()}/>
               {error&&<p style={{ color:"var(--red)", fontSize:13, margin:0 }}>{error}</p>}
@@ -1058,7 +1113,7 @@ function HealthCard({ score, salary }: { score:number; salary:number }) {
 
   if (needsSalary) return (
     <div style={{ background:"rgba(255,183,3,0.08)", border:"1px solid rgba(255,183,3,0.3)", borderRadius:14, padding:"14px 16px", marginBottom:14 }}>
-      <div style={{ fontSize:11, fontWeight:800, color:"#ffb703", textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>💡 CONFIGURE SEU PERFIL</div>
+      <div style={{ fontSize:11, fontWeight:800, color:"#ffb703", textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}><Em e="💡"/> CONFIGURE SEU PERFIL</div>
       <div style={{ fontSize:14, color:"var(--text2)", lineHeight:1.5 }}>Defina seu salário base em Configurações para ver sua saúde financeira.</div>
     </div>
   );
@@ -1115,13 +1170,13 @@ function fmtDateBR(iso?: string|null) {
 }
 
 // Mensagem do Vieira convidando a "pagar um café" ao desenvolvedor (uma vez, após ~10–15 registros)
-const COFFEE_MSG = (n:number) => `Posso te contar uma coisa? Você já fez **${n} registros** aqui, e isso é um hábito se formando. 👏
+const COFFEE_MSG = (n:number) => `Posso te contar uma coisa? Você já fez **${n} registros** aqui, e isso é um hábito se formando.
 
 O NaCarteira é feito por **uma pessoa só**. Ele é gratuito de propósito: a ideia é espalhar o controle financeiro e uma visão de abundância para quem normalmente não teria acesso a isso.
 
 Manter o app no ar tem custos pequenos, que podem ser cobertos por quem usa, com uma contribuição simples. Se ele está te ajudando, que tal **pagar um café** ao desenvolvedor? Qualquer valor ajuda o projeto a continuar vivo e gratuito para mais gente.
 
-Sem pressão: você continua com tudo liberado de qualquer jeito. ☕`;
+Sem pressão: você continua com tudo liberado de qualquer jeito.`;
 
 function SmartChat({ userId, messages, setMessages, onDone, onDonate }: { userId:number; messages:{role:"user"|"assistant";text:string;action?:"donate"}[]; setMessages:React.Dispatch<React.SetStateAction<{role:"user"|"assistant";text:string;action?:"donate"}[]>>; onDone:(xpGain:number)=>Promise<void>|void; onDonate?:()=>void }) {
   const [input, setInput] = useState("");
@@ -1177,24 +1232,24 @@ function SmartChat({ userId, messages, setMessages, onDone, onDonate }: { userId
         if (it.type === "income") {
           await fetch(`${API}/users/${userId}/extra-income`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ description: it.name||"Renda extra", amount: amt, date: it.date||null }) });
           totalXp += calcXpIncome(amt);
-          done.push(`💵 ${it.name||"Renda"} — ${fmt(amt)} (${dataStr})`);
+          done.push(`${it.name||"Renda"} — ${fmt(amt)} (${dataStr})`);
         } else if (it.type === "credit") {
           const inst = Math.max(1, parseInt(it.installments) || 1);
           const parcelAmt = Math.round(amt/inst*100)/100;
           await fetch(`${API}/users/${userId}/credit-card`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ description: it.name||"Compra no crédito", subcategory: it.subcategory||"Outros", amount: amt, installments: inst, dueDay: it.dueDay||null, recurring: it.recurring?1:0, expenseDate: it.date||null }) });
           totalXp += calcXpExpense(parcelAmt);
-          const modo = it.recurring ? " (recorrente 🔄)" : inst>1 ? ` em ${inst}x de ${fmt(parcelAmt)}` : "";
-          done.push(`💳 ${it.name||"Compra"} — ${fmt(amt)}${modo} (${dataStr})`);
+          const modo = it.recurring ? " (recorrente)" : inst>1 ? ` em ${inst}x de ${fmt(parcelAmt)}` : "";
+          done.push(`${it.name||"Compra"} — ${fmt(amt)}${modo} (${dataStr})`);
         } else {
           const catId = CATS.some((c:any)=>c.id===it.categoryId) ? it.categoryId : 8;
           await fetch(`${API}/users/${userId}/expenses`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ categoryId:catId, name: it.name||"Gasto", amount: amt, subcategory: it.subcategory||null, dueDate: it.dueDate||null, recurring: it.recurring?1:0, expenseDate: it.date||null }) });
           totalXp += calcXpExpense(amt);
-          const catEmoji = CATS.find((c:any)=>c.id===catId)?.emoji||"💸";
-          done.push(`${catEmoji} ${it.name||"Gasto"} — ${fmt(amt)} (${dataStr})${it.recurring?" · recorrente 🔄":""}${vencStr}`);
+          const catEmoji = CATS.find((c:any)=>c.id===catId)?.name||"";
+          done.push(`${catEmoji} ${it.name||"Gasto"} — ${fmt(amt)} (${dataStr})${it.recurring?" · recorrente":""}${vencStr}`);
         }
       }
       await onDone(totalXp);
-      push("assistant", done.length ? `Prontinho, registrei:\n${done.join("\n")}${totalXp>0?`\n\n+${totalXp} XP ⚔️`:""}` : "Não consegui confirmar os valores. Pode tentar de novo?");
+      push("assistant", done.length ? `Prontinho, registrei:\n${done.join("\n")}${totalXp>0?`\n\n+${totalXp} XP`:""}` : "Não consegui confirmar os valores. Pode tentar de novo?");
       // Convite do café: uma única vez, entre 10 e 15 registros (fixo por usuário), contados neste aparelho
       if (done.length) {
         try {
@@ -1227,7 +1282,7 @@ function SmartChat({ userId, messages, setMessages, onDone, onDonate }: { userId
           <React.Fragment key={i}>
           <div style={{ alignSelf: m.role==="user"?"flex-end":"flex-start", background: m.role==="user"?"var(--primary)":"var(--bg3)", color: m.role==="user"?"#fff":"var(--text)", padding:"8px 12px", borderRadius:12, fontSize:13, maxWidth:"88%", whiteSpace:"pre-line", lineHeight:1.45 }}><Bold text={m.text}/></div>
           {m.action==="donate" && onDonate && (
-            <button onClick={onDonate} className="btn-primary" style={{ alignSelf:"flex-start", padding:"8px 16px", fontSize:13 }}>☕ Pagar um café</button>
+            <button onClick={onDonate} className="btn-primary" style={{ alignSelf:"flex-start", padding:"8px 16px", fontSize:13 }}><Em e="☕"/> Pagar um café</button>
           )}
           </React.Fragment>
         ))}
@@ -1416,10 +1471,10 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
         const collapsed = isCollapsed("capital");
 
         return (
-          <div style={{ background:"linear-gradient(135deg,rgba(0,214,143,0.07),rgba(0,214,143,0.03))", border:"1px solid rgba(0,214,143,0.28)", borderRadius:12, padding:"8px 12px", marginBottom:0 }}>
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:16, padding:"10px 14px", marginBottom:0 }}>
             <CollapseHeader id="capital">
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:18 }}>📈</span>
+                <span style={{ fontSize:18 }}><Em e="📈"/></span>
                 <div>
                   <div style={{ fontSize:10, color:"#00d68f", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>Capital Alocado este Mês</div>
                   <div style={{ fontSize:15, fontWeight:800, color:"#00d68f", fontVariantNumeric:"tabular-nums" }}>{fmt(investTotal)}</div>
@@ -1447,7 +1502,7 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
                 )}
                 <div style={{ background:"rgba(0,0,0,0.18)", borderRadius:10, padding:"9px 12px" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
-                    <span style={{ fontSize:16 }}>{riskProfile.icon}</span>
+                    <span style={{ fontSize:16 }}><Em e={riskProfile.icon}/></span>
                     <span style={{ fontSize:11, fontWeight:800, color:riskProfile.color }}>{riskProfile.label}</span>
                   </div>
                   <div style={{ fontSize:11, color:"var(--text2)", lineHeight:1.5 }}>{aiTip || riskProfile.tip}</div>
@@ -1467,15 +1522,15 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
 
       {/* FATURA DO CARTÃO — COLAPSÁVEL */}
       {totalCC>0&&(
-        <div style={{ background:"var(--bg2)", border:"1px solid rgba(255,183,3,0.3)", borderRadius:14, padding:"12px 16px", marginBottom:14, borderTop:"3px solid var(--yellow)" }}>
+        <div style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:16, padding:"12px 16px", marginBottom:14 }}>
           <CollapseHeader id="fatura">
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div>
-                <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4, marginBottom:3 }}>💳 Fatura do Cartão</div>
-                <div style={{ fontSize:20, fontWeight:900, fontVariantNumeric:"tabular-nums", color:"var(--yellow)" }}>{fmt(totalCC)}</div>
+                <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4, marginBottom:3 }}><Em e="💳"/> Fatura do Cartão</div>
+                <div style={{ fontSize:20, fontWeight:900, fontVariantNumeric:"tabular-nums", color:"var(--text)" }}>{fmt(totalCC)}</div>
                 <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{cc.length} lançamento{cc.length!==1?"s":""}</div>
               </div>
-              <div style={{ fontSize:34 }}>💳</div>
+              <div style={{ fontSize:34 }}><Em e="💳"/></div>
             </div>
           </CollapseHeader>
           {!isCollapsed("fatura") && (
@@ -1491,14 +1546,14 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
 
                 {/* STATUS PAGAMENTO */}
                 <div className="card">
-                  <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📊 Status de Pagamento</div>
+                  <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}><Em e="📊"/> Status de Pagamento</div>
                   <div style={{ display:"flex", gap:10, marginBottom:10 }}>
-                    <div style={{ flex:1, background:"rgba(0,214,143,.1)", border:"1px solid rgba(0,214,143,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
-                      <div style={{ color:"var(--green)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPaid)}</div>
+                    <div style={{ flex:1, background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:12, padding:"10px", textAlign:"center" }}>
+                      <div style={{ color:"var(--text)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPaid)}</div>
                       <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pago</div>
                     </div>
-                    <div style={{ flex:1, background:"rgba(255,183,3,.1)", border:"1px solid rgba(255,183,3,.2)", borderRadius:10, padding:"10px", textAlign:"center" }}>
-                      <div style={{ color:"var(--yellow)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPending)}</div>
+                    <div style={{ flex:1, background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:12, padding:"10px", textAlign:"center" }}>
+                      <div style={{ color:"var(--text)", fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums" }}>{fmt(totalPending)}</div>
                       <div style={{ color:"var(--text2)", fontSize:10, marginTop:2 }}>Pendente</div>
                     </div>
                   </div>
@@ -1507,7 +1562,7 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
                 {/* META RENDA */}
                 {extraNeeded>0&&(
                   <div className="card">
-                    <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>🎯 Meta de Renda Extra</div>
+                    <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}><Em e="🎯"/> Meta de Renda Extra</div>
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:6 }}>
                       <span>Necessário: {fmt(extraNeeded)}</span><span>Ganhou: {fmt(totalIncome)}</span>
                     </div>
@@ -1516,10 +1571,10 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
                 )}
                 {/* POR CATEGORIA */}
                 <div className="card">
-                  <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📂 Por Categoria</div>
+                  <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}><Em e="📂"/> Por Categoria</div>
                   {byCategory.map((cat:any)=>(
                     <div key={cat.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-                      <span style={{ fontSize:15, width:22 }}>{cat.emoji}</span>
+                      <span style={{ fontSize:15, width:22 }}><Em e={cat.emoji}/></span>
                       <div style={{ flex:1 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, fontWeight:600 }}>
                           <span>{cat.name}</span>
@@ -1596,10 +1651,10 @@ export default function App() {
         if (lv === TIER_BREAK || lv === MAX_LEVEL || lv % 10 === 0) {
           setLevelUpInfo({ levelNum: lv, tier: newInfo.tier });
         } else {
-          showToast(`⚔️ LEVEL UP! ${newInfo.label} NV.${lv}`);
+          showToast(`LEVEL UP! ${newInfo.label} NV.${lv}`);
         }
       } else {
-        showToast(`+${xpGain} XP ⚔️`);
+        showToast(`+${xpGain} XP`);
       }
     } catch {}
   },[user, xp]);
@@ -1671,7 +1726,7 @@ export default function App() {
   useEffect(()=>{
     if (!expenses.length) return;
     const dueSoon = expenses.filter(e=>{ if (!e.dueDate||e.paid) return false; const d=new Date(e.dueDate); const now=new Date(); const adjusted=new Date(now.getFullYear(),now.getMonth(),d.getDate()); const diff=Math.ceil((adjusted.getTime()-now.getTime())/86400000); return diff>=0&&diff<=3; });
-    if (dueSoon.length>0) setTimeout(()=>showToast(`⚠️ ${dueSoon.length} conta(s) vencem em breve!`),1500);
+    if (dueSoon.length>0) setTimeout(()=>showToast(`${dueSoon.length} conta(s) vencem em breve!`),1500);
   },[expenses]);
 
   if (!user) return <Auth onLogin={login}/>;
@@ -1716,7 +1771,7 @@ export default function App() {
 
   const NAV = [{id:"dashboard",icon:"home",label:"Início"},{id:"expenses",icon:"list",label:"Despesas"},{id:"credit",icon:"card",label:"Cartão"},{id:"income",icon:"cash",label:"Renda"},{id:"reports",icon:"chart",label:"Raio-X"}];
 
-  const onStreakClaim = (data:any) => { setXp(data.xp); setLevelNum(data.levelNum); setLevel(data.level); setStreakDays(data.streakDays); setStreakClaimed(true); showToast(`+${data.xpGained} XP 🔥 ${data.streakDays} dias!`); load(); };
+  const onStreakClaim = (data:any) => { setXp(data.xp); setLevelNum(data.levelNum); setLevel(data.level); setStreakDays(data.streakDays); setStreakClaimed(true); showToast(`+${data.xpGained} XP ${data.streakDays} dias!`); load(); };
 
   // FIX #2: reset-month não zera XP — atualiza state após reset
   const handleReset = async () => {
@@ -1731,7 +1786,7 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(`❌ Erro ao arquivar: ${data.error || "tente novamente"}`);
+        showToast(`Erro ao arquivar: ${data.error || "tente novamente"}`);
         return;
       }
       // XP preservado — só atualiza se o servidor retornar dados do usuário
@@ -1741,9 +1796,9 @@ export default function App() {
       }
       setShowReset(false);
       await load();
-      showToast("✅ Mês arquivado! Começando do zero.");
+      showToast("Mês arquivado! Começando do zero.");
     } catch(e) {
-      showToast("❌ Erro de conexão. Tente novamente.");
+      showToast("Erro de conexão. Tente novamente.");
     }
   };
 
@@ -1755,8 +1810,8 @@ export default function App() {
       {showAddExp&&<AddExpenseModal userId={user.id} onClose={()=>{setShowAddExp(false);load();}} onXp={gainXpRaw}/>}
       {showAddCC&&<AddCCModal userId={user.id} onClose={()=>{setShowAddCC(false);load();}} onXp={gainXpRaw}/>}
       {showAddIncome&&<AddIncomeModal userId={user.id} onClose={()=>{setShowAddIncome(false);load();}} onXp={gainXpRaw}/>}
-      {showSettings&&<SettingsModal user={user} salary={salary} onSave={(s:number)=>{setSalary(s);showToast("✅ Salário atualizado!");setShowSettings(false);}} onClose={()=>setShowSettings(false)} onReset={()=>{setShowSettings(false);setShowReset(true);}} onPots={()=>{setShowSettings(false);setShowPots(true);}} onLogout={logout}/>}
-      {showPots&&<Modal title="🏺 Meus Potes" onClose={()=>setShowPots(false)}><PotsEditor userId={user.id} levelNum={levelNum} current={potCfg} submitLabel="Salvar potes" onSaved={(cfg:PotCfgT)=>{applyPotConfig(cfg);setPotCfg(cfg);setShowPots(false);showToast("✅ Potes atualizados!");}}/></Modal>}
+      {showSettings&&<SettingsModal user={user} salary={salary} onSave={(s:number)=>{setSalary(s);showToast("Salário atualizado!");setShowSettings(false);}} onClose={()=>setShowSettings(false)} onReset={()=>{setShowSettings(false);setShowReset(true);}} onPots={()=>{setShowSettings(false);setShowPots(true);}} onLogout={logout}/>}
+      {showPots&&<Modal title="Meus Potes" onClose={()=>setShowPots(false)}><PotsEditor userId={user.id} levelNum={levelNum} current={potCfg} submitLabel="Salvar potes" onSaved={(cfg:PotCfgT)=>{applyPotConfig(cfg);setPotCfg(cfg);setShowPots(false);showToast("Potes atualizados!");}}/></Modal>}
       {showMethodology&&<MethodologyModal xp={xp} onClose={()=>setShowMethodology(false)}/>}
       {showReset&&<ResetModal onClose={()=>setShowReset(false)} onConfirm={handleReset}/>}
       {(showDonation||donation.show)&&<DonationPopup onClose={()=>{setShowDonation(false);donation.close();}}/>}
@@ -1785,7 +1840,7 @@ export default function App() {
           </div>
           <div style={{ padding:"12px 16px", borderBottom:"1px solid var(--border)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
-              <span style={{ fontSize:10, fontWeight:800, color:levelInfo.color }}>⚔️ {levelInfo.label} NV.{levelNum}</span>
+              <span style={{ fontSize:10, fontWeight:800, color:levelInfo.color }}><Em e="⚔️"/> {levelInfo.label} NV.{levelNum}</span>
               <span style={{ fontSize:10, color:"var(--text2)" }}>{xp%100}/100</span>
             </div>
             <div className="xp-bar-wrap"><div className="xp-bar-fill" style={{ width:`${xp%100}%` }}/></div>
@@ -1833,7 +1888,7 @@ export default function App() {
             {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
               onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
               onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-              onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); if(!r.ok) showToast("⚠️ Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
+              onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); if(!r.ok) showToast("Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
             />}
             {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
               onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -1888,7 +1943,7 @@ export default function App() {
         {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
           onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
           onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-          onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); if(!r.ok) showToast("⚠️ Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
+          onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); if(!r.ok) showToast("Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
         />}
         {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
           onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -1939,7 +1994,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-        <h2 style={{ fontSize:17, fontWeight:800 }}>💸 Despesas</h2>
+        <h2 style={{ fontSize:17, fontWeight:800 }}><Em e="💸"/> Despesas</h2>
         <button className="btn-primary" onClick={onAdd} style={{ padding:"9px 16px", fontSize:13 }}>+ Adicionar</button>
       </div>
       {byCategory.map((cat:any)=>{
@@ -1952,15 +2007,15 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
         <div key={cat.id} className="card" style={{ marginBottom:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:cat.items.length?4:0 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:17 }}>{cat.emoji}</span>
+              <span style={{ fontSize:17, color:"var(--primary-light)", display:"flex" }}><Em e={cat.emoji} size={18}/></span>
               <span style={{ fontWeight:700, fontSize:14 }}>{cat.name}</span>
               <span style={{ fontSize:10, background:"var(--bg3)", padding:"2px 7px", borderRadius:20, color:"var(--text2)" }}>{cat.items.length}</span>
             </div>
             <span style={{ fontWeight:800, fontSize:14, fontVariantNumeric:"tabular-nums" }}>{fmt(cat.total)}</span>
           </div>
           {goalItem && (
-            <div style={{ fontSize:11, color:"#06b6d4", fontWeight:600, marginBottom:10 }}>
-              🎯 Meta: {fmt(goalTotal)} · {fmt(goalPaid)} investido · faltam {parcelsLeft} parcela{parcelsLeft===1?"":"s"}
+            <div style={{ fontSize:11, color:"var(--primary-light)", fontWeight:600, marginBottom:10 }}>
+              <Em e="🎯"/> Meta: {fmt(goalTotal)} · {fmt(goalPaid)} investido · faltam {parcelsLeft} parcela{parcelsLeft===1?"":"s"}
             </div>
           )}
           {cat.items.map((exp:Expense)=>{
@@ -1986,13 +2041,13 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                     </div>
                     {!!exp.recurring && num(exp.recurringGoal)>0 && (
                       <div>
-                        <label style={{ fontSize:10, color:"#06b6d4", display:"block", marginBottom:2 }}>Total já investido antes deste mês</label>
+                        <label style={{ fontSize:10, color:"var(--primary-light)", display:"block", marginBottom:2 }}>Total já investido antes deste mês</label>
                         <input value={editInvestedTotal} onChange={e=>setEditInvestedTotal(e.target.value)} type="number" step="0.01" placeholder="Ex: 2000"
-                          style={{ width:"100%", background:"var(--bg2)", border:"1px solid rgba(6,182,212,0.3)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                          style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
                       </div>
                     )}
                     <div style={{ display:"flex", gap:7 }}>
-                      <button onClick={()=>{ onEdit(exp.id,editName,editAmount,editExpDate,editDueDate,editInvestedTotal); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
+                      <button onClick={()=>{ onEdit(exp.id,editName,editAmount,editExpDate,editDueDate,editInvestedTotal); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}><Em e="✅"/> Salvar</button>
                       <button onClick={()=>setEditId(null)} style={{ flex:1, padding:"7px", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer", fontSize:12 }}>Cancelar</button>
                     </div>
                   </div>
@@ -2002,19 +2057,19 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:600, textDecoration:exp.paid?"line-through":"none", color:exp.paid?"var(--text2)":isSonhoOrInvest?"var(--text)":"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         {exp.name}
-                        {isSonhoOrInvest && <span style={{ fontSize:10, color: Number(exp.categoryId)===INVESTIR_ID?"var(--green)":"#06b6d4", fontWeight:700, marginLeft:5 }}>{Number(exp.categoryId)===INVESTIR_ID?"📈 Patrimônio":`✨ ${CATS.find(c=>c.id===SONHO_ID)?.name||"Sonho"}`}</span>}
+                        {isSonhoOrInvest && <span style={{ fontSize:10, color:"var(--primary-light)", fontWeight:700, marginLeft:5 }}>{Number(exp.categoryId)===INVESTIR_ID?"Patrimônio":`${CATS.find(c=>c.id===SONHO_ID)?.name||"Sonho"}`}</span>}
                       </div>
                       <div style={{ fontSize:10, color:isDueSoon?"var(--yellow)":"var(--text2)" }}>
                         {exp.subcategory ? `${exp.subcategory} · ` : ""}
                         {fmtDateBR(exp.expenseDate || exp.createdAt) || new Date().toLocaleDateString("pt-BR")}
                         {exp.dueDate&&` · Vence: ${fmtDateBR(exp.dueDate)}`}
-                        {isDueSoon&&" ⚠️"}{exp.recurring?" 🔄":""}
+                        {isDueSoon&&<> <Em e="⚠️" size={12}/></>}{exp.recurring?<> <Em e="🔄" size={12}/></>:null}
                       </div>
                     </div>
-                    <span style={{ fontWeight:800, fontSize:12, fontVariantNumeric:"tabular-nums", color:exp.paid?"var(--green)":"var(--yellow)", flexShrink:0 }}>{fmt(num(exp.amount))}</span>
+                    <span style={{ fontWeight:800, fontSize:12, fontVariantNumeric:"tabular-nums", color:exp.paid?"var(--green)":"var(--text)", flexShrink:0 }}>{fmt(num(exp.amount))}</span>
                     <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); setEditExpDate(exp.expenseDate?String(exp.expenseDate).slice(0,10):""); setEditDueDate(exp.dueDate?String(exp.dueDate).slice(0,10):""); setEditInvestedTotal(exp.recurringGoalPaidTotal!=null?String(Math.max(0,num(exp.recurringGoalPaidTotal)-(exp.paid?num(exp.amount):0))):""); }}
-                      style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"4px 8px", fontSize:12, cursor:"pointer", flexShrink:0 }}>✏️</button>
-                    <button className="btn-danger" onClick={()=>onDelete(exp.id)} style={{ padding:"4px 8px", flexShrink:0 }}>🗑</button>
+                      style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"4px 8px", fontSize:12, cursor:"pointer", flexShrink:0 }}><Em e="✏️"/></button>
+                    <button onClick={()=>onDelete(exp.id)} aria-label="Excluir" style={{ padding:"4px 8px", flexShrink:0, background:"transparent", border:"1px solid var(--border)", color:"var(--text2)", borderRadius:7, cursor:"pointer" }}><Em e="🗑"/></button>
                   </div>
                 )}
               </div>
@@ -2053,11 +2108,11 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-        <h2 style={{ fontSize:17, fontWeight:800 }}>💳 Cartão</h2>
+        <h2 style={{ fontSize:17, fontWeight:800 }}><Em e="💳"/> Cartão</h2>
         <div style={{ display:"flex", gap:7 }}>
           {cc.some((c:any)=>!c.paid) && (
-            <button onClick={onPayAll} style={{ padding:"9px 13px", fontSize:12, background:"rgba(0,214,143,0.12)", border:"1px solid rgba(0,214,143,0.3)", color:"var(--green)", borderRadius:10, fontWeight:700, cursor:"pointer" }}>
-              ✅ Pagar Fatura
+            <button onClick={onPayAll} style={{ padding:"9px 13px", fontSize:12, background:"rgba(108,99,255,0.14)", border:"1px solid var(--border)", color:"var(--primary-light)", borderRadius:10, fontWeight:700, cursor:"pointer" }}>
+              <Em e="✅"/> Pagar Fatura
             </button>
           )}
           <button className="btn-primary" onClick={onAdd} style={{ padding:"9px 16px", fontSize:13 }}>+ Adicionar</button>
@@ -2065,34 +2120,34 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
       </div>
 
       {/* Resumo fatura */}
-      <div className="card" style={{ marginBottom:14, borderTop:"3px solid var(--yellow)" }}>
+      <div className="card" style={{ marginBottom:14 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
           <div>
             <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase" }}>Total da Fatura</div>
-            <div style={{ fontSize:28, fontWeight:900, fontVariantNumeric:"tabular-nums", color:"var(--yellow)" }}>{fmt(totalCC)}</div>
+            <div style={{ fontSize:28, fontWeight:900, fontVariantNumeric:"tabular-nums", color:"var(--text)" }}>{fmt(totalCC)}</div>
           </div>
           <div style={{ textAlign:"right" }}>
-            <span style={{ fontSize:32 }}>💳</span>
+            <span style={{ fontSize:32, color:"var(--primary-light)", display:"inline-flex" }}><Em e="💳" size={30}/></span>
             {dueInfo && (
               <div style={{ fontSize:11, fontWeight:700, color: dueInfo.diff <= 3 ? "var(--red)" : dueInfo.diff <= 7 ? "var(--yellow)" : "var(--text2)", marginTop:2 }}>
-                {dueInfo.diff <= 0 ? "⚠️ Vence hoje!" : `📅 Vence em ${dueInfo.diff}d (dia ${dueInfo.day})`}
+                {dueInfo.diff <= 0 ? "Vence hoje!" : `Vence em ${dueInfo.diff}d (dia ${dueInfo.day})`}
               </div>
             )}
           </div>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
-          <div style={{ background:"rgba(0,214,143,0.08)", border:"1px solid rgba(0,214,143,0.2)", borderRadius:10, padding:"8px 12px" }}>
-            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700 }}>✅ PAGO</div>
-            <div style={{ fontSize:16, fontWeight:800, color:"var(--green)", fontVariantNumeric:"tabular-nums" }}>{fmt(totalPago)}</div>
+          <div style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 12px" }}>
+            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700 }}>PAGO</div>
+            <div style={{ fontSize:16, fontWeight:800, color:"var(--text)", fontVariantNumeric:"tabular-nums" }}>{fmt(totalPago)}</div>
           </div>
-          <div style={{ background:"rgba(255,183,3,0.08)", border:"1px solid rgba(255,183,3,0.2)", borderRadius:10, padding:"8px 12px" }}>
-            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700 }}>⏳ PENDENTE</div>
-            <div style={{ fontSize:16, fontWeight:800, color:"var(--yellow)", fontVariantNumeric:"tabular-nums" }}>{fmt(totalPendente)}</div>
+          <div style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 12px" }}>
+            <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700 }}>PENDENTE</div>
+            <div style={{ fontSize:16, fontWeight:800, color:"var(--text)", fontVariantNumeric:"tabular-nums" }}>{fmt(totalPendente)}</div>
           </div>
         </div>
         {totalCC > 0 && (
           <div className="progress-bar">
-            <div className="progress-fill" style={{ width:`${Math.min(totalPago/totalCC*100,100)}%`, background:"var(--green)" }}/>
+            <div className="progress-fill" style={{ width:`${Math.min(totalPago/totalCC*100,100)}%`, background:"linear-gradient(90deg,#6c63ff,#b44fff)" }}/>
           </div>
         )}
       </div>
@@ -2109,7 +2164,7 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
         const restantes = parcTotal - parcPagas;
 
         return (
-          <div key={c.id} className="card" style={{ marginBottom:10, padding:"12px 14px", opacity:c.paid&&!isParcelado?0.75:1, borderLeft:`3px solid ${c.paid?"var(--green)":isParcelado?"var(--primary)":"var(--border)"}` }}>
+          <div key={c.id} className="card" style={{ marginBottom:10, padding:"12px 14px", opacity:c.paid&&!isParcelado?0.75:1 }}>
             {editId===c.id ? (
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 <input value={editDesc} onChange={e=>setEditDesc(e.target.value)} placeholder="Descrição"
@@ -2125,11 +2180,11 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
                   type="number" min="1" max="31" style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:13 }}/>
                 <label style={{ display:"flex", alignItems:"center", gap:7, fontSize:12, color:"var(--text2)", cursor:"pointer" }}>
                   <input type="checkbox" checked={editRecurring} onChange={e=>setEditRecurring(e.target.checked)}/>
-                  🔄 Recorrente (repete todo mês, indefinidamente)
+                  <Em e="🔄"/> Recorrente (repete todo mês, indefinidamente)
                 </label>
                 <div style={{ display:"flex", gap:8 }}>
                   <button onClick={()=>{ onEdit(c.id, editDesc, editVal, editDueDay, editRecurring, editExpenseDate); setEditId(null); }}
-                    className="btn-primary" style={{ flex:1, padding:"8px" }}>✅ Salvar</button>
+                    className="btn-primary" style={{ flex:1, padding:"8px" }}><Em e="✅"/> Salvar</button>
                   <button onClick={()=>setEditId(null)}
                     style={{ flex:1, padding:"8px", background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer" }}>Cancelar</button>
                 </div>
@@ -2145,16 +2200,16 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
                     <div style={{ fontSize:11, color:"var(--text2)", marginTop:1, display:"flex", gap:6, flexWrap:"wrap" }}>
                       {c.subcategory && <span>{c.subcategory}</span>}
                       <span>· {fmtDateBR(c.expenseDate || c.createdAt) || new Date().toLocaleDateString("pt-BR")}</span>
-                      {c.recurring ? <span style={{ color:"var(--primary)", fontWeight:700 }}>· 🔄 Recorrente</span> : null}
+                      {c.recurring ? <span style={{ color:"var(--primary)", fontWeight:700 }}>· <Em e="🔄"/> Recorrente</span> : null}
                     </div>
                     {isParcelado && (
-                      <div style={{ fontSize:11, color: c.paid ? "var(--green)" : "var(--primary)", fontWeight:700, marginTop:3 }}>
-                        📦 Parcela {parcAtual}/{parcTotal} {c.paid ? "✅" : ""} · Total: {fmt(totalCompra)}
+                      <div style={{ fontSize:11, color:"var(--primary-light)", fontWeight:700, marginTop:3 }}>
+                        <Em e="📦"/> Parcela {parcAtual}/{parcTotal} {c.paid ? <Em e="✅" size={12}/> : null} · Total: {fmt(totalCompra)}
                       </div>
                     )}
                   </div>
                   <div style={{ textAlign:"right", flexShrink:0 }}>
-                    <div style={{ fontWeight:900, fontSize:16, fontVariantNumeric:"tabular-nums", color:c.paid?"var(--green)":"var(--yellow)" }}>
+                    <div style={{ fontWeight:900, fontSize:16, fontVariantNumeric:"tabular-nums", color:c.paid?"var(--green)":"var(--text)" }}>
                       {fmt(num(c.amount))}
                     </div>
                     {(isParcelado || !!c.recurring) && <div style={{ fontSize:10, color:"var(--text2)" }}>por mês</div>}
@@ -2165,27 +2220,27 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
                 {isParcelado && (
                   <div style={{ marginTop:8 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"var(--text2)", marginBottom:3 }}>
-                      <span style={{ color: parcPagas > 0 ? "var(--green)" : "var(--text2)" }}>{parcPagas} {parcPagas===1?"parcela paga":"parcelas pagas"}</span>
+                      <span style={{ color: parcPagas > 0 ? "var(--primary-light)" : "var(--text2)" }}>{parcPagas} {parcPagas===1?"parcela paga":"parcelas pagas"}</span>
                       <span>{restantes} {restantes===1?"restante":"restantes"}</span>
                     </div>
                     <div style={{ display:"flex", gap:2 }}>
                       {Array.from({length:parcTotal}).map((_,i)=>(
                         <div key={i} style={{
                           flex:1, height:5, borderRadius:3,
-                          background: i < parcPagas ? "var(--green)" : i === parcAtual-1 ? (c.paid ? "var(--green)" : "var(--primary)") : "var(--bg3)"
+                          background: (i < parcPagas || (i === parcAtual-1 && c.paid)) ? "var(--primary)" : i === parcAtual-1 ? "var(--primary-light)" : "var(--bg)"
                         }}/>
                       ))}
                     </div>
                     {/* Botão avançar parcela — só aparece quando pago */}
                     {c.paid && parcAtual < parcTotal && (
                       <button onClick={()=>onAdvance(c)}
-                        style={{ marginTop:8, width:"100%", padding:"7px", background:"rgba(0,214,143,0.08)", border:"1px solid rgba(0,214,143,0.25)", color:"var(--green)", borderRadius:9, fontSize:12, fontWeight:700, cursor:"pointer" }}>
-                        ➡️ Avançar para Parcela {parcAtual+1}/{parcTotal}
+                        style={{ marginTop:8, width:"100%", padding:"7px", background:"rgba(108,99,255,0.12)", border:"1px solid var(--border)", color:"var(--primary-light)", borderRadius:9, fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                        <Em e="➡️"/> Avançar para Parcela {parcAtual+1}/{parcTotal}
                       </button>
                     )}
                     {c.paid && parcAtual >= parcTotal && (
-                      <div style={{ marginTop:8, fontSize:11, color:"var(--green)", fontWeight:700, textAlign:"center" }}>
-                        🎉 Última parcela — pode excluir após confirmação
+                      <div style={{ marginTop:8, fontSize:11, color:"var(--primary-light)", fontWeight:700, textAlign:"center" }}>
+                        <Em e="🎉"/> Última parcela — pode excluir após confirmação
                       </div>
                     )}
                   </div>
@@ -2194,12 +2249,12 @@ function CreditContent({ cc, totalCC, onAdd, onDelete, onPay, onEdit, onPayAll, 
                 {/* Ações */}
                 <div style={{ display:"flex", gap:7, marginTop:10, justifyContent:"flex-end" }}>
                   <button onClick={()=>onPay(c)} title={c.paid?"Desmarcar":"Marcar pago"}
-                    style={{ background:c.paid?"rgba(0,214,143,0.12)":"rgba(0,214,143,0.18)", border:`1px solid ${c.paid?"rgba(0,214,143,0.25)":"rgba(0,214,143,0.45)"}`, color:"var(--green)", borderRadius:8, padding:"5px 10px", fontSize:13, cursor:"pointer" }}>
-                    {c.paid ? "↩️ Desmarcar" : "✅ Pagar"}
+                    style={{ background:c.paid?"transparent":"rgba(108,99,255,0.16)", border:"1px solid var(--border)", color:c.paid?"var(--text2)":"var(--primary-light)", borderRadius:8, padding:"5px 10px", fontSize:13, cursor:"pointer" }}>
+                    {c.paid ? "Desmarcar" : "Pagar"}
                   </button>
                   <button onClick={()=>{ setEditId(c.id); setEditVal(String(num(c.amount))); setEditDesc(c.description); setEditDueDay(c.dueDay ? String(c.dueDay) : ""); }}
-                    style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:8, padding:"5px 10px", fontSize:13, cursor:"pointer" }}>✏️</button>
-                  <button className="btn-danger" onClick={()=>onDelete(c.id)} style={{ padding:"5px 10px" }}>🗑</button>
+                    style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:8, padding:"5px 10px", fontSize:13, cursor:"pointer" }}><Em e="✏️"/></button>
+                  <button onClick={()=>onDelete(c.id)} aria-label="Excluir" style={{ padding:"5px 10px", background:"transparent", border:"1px solid var(--border)", color:"var(--text2)", borderRadius:8, cursor:"pointer" }}><Em e="🗑"/></button>
                 </div>
               </div>
             )}
@@ -2220,10 +2275,10 @@ function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete,onEdit }
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-        <h2 style={{ fontSize:17, fontWeight:800 }}>💵 Renda Extra</h2>
+        <h2 style={{ fontSize:17, fontWeight:800 }}><Em e="💵"/> Renda Extra</h2>
         <button className="btn-primary" onClick={onAdd} style={{ padding:"9px 16px", fontSize:13 }}>+ Registrar</button>
       </div>
-      <div className="card" style={{ marginBottom:14, borderTop:"3px solid var(--green)" }}>
+      <div className="card" style={{ marginBottom:14 }}>
         <div style={{ display:"flex", justifyContent:"space-between" }}>
           <div>
             <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase" }}>Total Ganho</div>
@@ -2231,10 +2286,10 @@ function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete,onEdit }
           </div>
           {extraNeeded>0&&<div style={{ textAlign:"right" }}>
             <div style={{ fontSize:10, color:"var(--text2)" }}>Meta necessária</div>
-            <div style={{ fontSize:17, fontWeight:700, fontVariantNumeric:"tabular-nums", color:"var(--yellow)" }}>{fmt(extraNeeded)}</div>
+            <div style={{ fontSize:17, fontWeight:700, fontVariantNumeric:"tabular-nums", color:"var(--text)" }}>{fmt(extraNeeded)}</div>
           </div>}
         </div>
-        {extraNeeded>0&&<div className="progress-bar" style={{ marginTop:10 }}><div className="progress-fill" style={{ width:`${Math.min(totalIncome/extraNeeded*100,100)}%`, background:"linear-gradient(90deg,var(--green),var(--primary))" }}/></div>}
+        {extraNeeded>0&&<div className="progress-bar" style={{ marginTop:10 }}><div className="progress-fill" style={{ width:`${Math.min(totalIncome/extraNeeded*100,100)}%`, background:"linear-gradient(90deg,#6c63ff,#b44fff)" }}/></div>}
       </div>
       {incomes.length===0&&<div className="card" style={{ textAlign:"center", color:"var(--text2)", padding:38 }}>Nenhuma renda extra registrada</div>}
       {incomes.map((inc:Income)=>(
@@ -2248,7 +2303,7 @@ function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete,onEdit }
               <input value={editIncDate} onChange={e=>setEditIncDate(e.target.value)} type="date"
                 style={{ background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
               <div style={{ display:"flex", gap:7 }}>
-                <button onClick={()=>{ onEdit(inc.id,editDesc,editAmt,editIncDate); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}>✅ Salvar</button>
+                <button onClick={()=>{ onEdit(inc.id,editDesc,editAmt,editIncDate); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}><Em e="✅"/> Salvar</button>
                 <button onClick={()=>setEditId(null)} style={{ flex:1, padding:"7px", background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer", fontSize:12 }}>Cancelar</button>
               </div>
             </div>
@@ -2260,8 +2315,8 @@ function IncomeContent({ incomes,totalIncome,extraNeeded,onAdd,onDelete,onEdit }
               </div>
               <span style={{ fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--green)" }}>+{fmt(num(inc.amount))}</span>
               <button onClick={()=>{ setEditId(inc.id); setEditDesc(inc.description); setEditAmt(String(num(inc.amount))); setEditIncDate(inc.date?String(inc.date).slice(0,10):""); }}
-                style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"5px 9px", fontSize:12, cursor:"pointer" }}>✏️</button>
-              <button className="btn-danger" onClick={()=>onDelete(inc.id)}>🗑</button>
+                style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"5px 9px", fontSize:12, cursor:"pointer" }}><Em e="✏️"/></button>
+              <button className="btn-danger" onClick={()=>onDelete(inc.id)}><Em e="🗑"/></button>
             </div>
           )}
         </div>
@@ -2310,7 +2365,7 @@ function PieChart({ data }: { data:{label:string;value:number;color:string;emoji
         {slices.map((s,i)=>(
           <div key={i} style={{ display:"flex", alignItems:"center", gap:8 }}>
             <div style={{ width:11, height:11, borderRadius:3, background:s.color, flexShrink:0 }}/>
-            <div style={{ flex:1, fontSize:12 }}>{s.emoji} {s.label}</div>
+            <div style={{ flex:1, fontSize:12 }}><Em e={s.emoji}/> {s.label}</div>
             <div style={{ fontSize:12, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(s.value)}</div>
             <div style={{ fontSize:11, color:s.color, fontWeight:700, minWidth:34, textAlign:"right" }}>{Math.round(s.pct*100)}%</div>
           </div>
@@ -2325,7 +2380,7 @@ function HBarChart({ data }: { data:{label:string;expenses:number;income:number;
   if (!data.length) return (
     <div style={{ textAlign:"center", padding:"28px 0", color:"var(--text2)", fontSize:13 }}>
       Nenhum mês arquivado ainda.<br/>
-      <span style={{ fontSize:11 }}>Use "Virar Mês" em ⚙️ Configurações ao fechar cada mês.</span>
+      <span style={{ fontSize:11 }}>Use "Virar Mês" em <Em e="⚙️"/> Configurações ao fechar cada mês.</span>
     </div>
   );
   const maxVal = Math.max(...data.flatMap(d=>[d.expenses, d.salary, d.extraIncome]), 1);
@@ -2457,7 +2512,7 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
         const pct = totalGasto > 0 ? Math.round(c.total / totalGasto * 100) : 0;
         const barW = Math.round(pct * 2.8); // max ~280px
         return `<tr>
-          <td style="padding:6px 8px;font-size:12px;width:130px;white-space:nowrap">${c.emoji} ${c.name}</td>
+          <td style="padding:6px 8px;font-size:12px;width:130px;white-space:nowrap">$<Em e={c.emoji}/> ${c.name}</td>
           <td style="padding:6px 8px">
             <div style="background:#f0f0f5;border-radius:4px;height:14px;width:280px">
               <div style="background:${c.color};border-radius:4px;height:14px;width:${barW}px"></div>
@@ -2509,7 +2564,7 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
   .legend-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:middle}
 </style></head><body><div class="page">
 <div class="header">
-  <div><div class="logo">💜 NACARTEIRA</div><div class="subtitle">Relatório Financeiro Mensal · Confidencial</div></div>
+  <div><div class="logo"> NACARTEIRA</div><div class="subtitle">Relatório Financeiro Mensal · Confidencial</div></div>
   <div><div style="font-size:13px;font-weight:700">${monthLabel}</div><div style="font-size:11px;color:#888;margin-top:3px">${userName || "Usuário"}</div><div class="badge" style="margin-top:6px;display:inline-block">${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}</div></div>
 </div>
 
@@ -2536,10 +2591,10 @@ ${histRows.length > 0 ? `
 <div class="section-title">ANÁLISE IA — INSIGHTS DO MÊS</div>
 ${insights.map((ins:any)=>{
   const colors: Record<string,{bg:string;border:string;label:string}> = {
-    alert:{bg:"#fff5f5",border:"#ff4d6a",label:"⚠️ ALERTA"},
-    tip:  {bg:"#f0fff8",border:"#00d68f",label:"✅ PONTO FORTE"},
-    info: {bg:"#f5f3ff",border:"#6c63ff",label:"💡 INSIGHT"},
-    gold: {bg:"#fffbeb",border:"#ffd700",label:"📊 PROJEÇÃO"},
+    alert:{bg:"#fff5f5",border:"#ff4d6a",label:"ALERTA"},
+    tip:  {bg:"#f0fff8",border:"#00d68f",label:"PONTO FORTE"},
+    info: {bg:"#f5f3ff",border:"#6c63ff",label:"INSIGHT"},
+    gold: {bg:"#fffbeb",border:"#ffd700",label:"PROJEÇÃO"},
   };
   const s = colors[ins.type] || colors.info;
   return `<div class="insight" style="background:${s.bg};border-left-color:${s.border}">
@@ -2560,9 +2615,9 @@ ${insights.map((ins:any)=>{
 
   const typeStyle: Record<string,{bg:string;border:string;labelColor:string;barColor:string}> = {
     alert: { bg:"rgba(255,77,106,0.07)",   border:"rgba(255,77,106,0.22)",   labelColor:"#ff4d6a", barColor:"#ff4d6a" },
-    tip:   { bg:"rgba(0,214,143,0.06)",    border:"rgba(0,214,143,0.2)",     labelColor:"#00d68f", barColor:"#00d68f" },
+    tip:   { bg:"rgba(108,99,255,0.07)",   border:"rgba(108,99,255,0.22)",   labelColor:"#a78bfa", barColor:"#6c63ff" },
     info:  { bg:"rgba(108,99,255,0.07)",   border:"rgba(108,99,255,0.22)",   labelColor:"#a78bfa", barColor:"#6c63ff" },
-    gold:  { bg:"rgba(255,215,0,0.06)",    border:"rgba(255,215,0,0.2)",     labelColor:"#ffd700", barColor:"#ffd700" },
+    gold:  { bg:"rgba(108,99,255,0.07)",   border:"rgba(108,99,255,0.22)",   labelColor:"#a78bfa", barColor:"#8b85ff" },
   };
 
   // Info da grade de 15 dias
@@ -2573,15 +2628,15 @@ ${insights.map((ins:any)=>{
     <div style={{ marginBottom:14 }}>
       {blocked && (
         <div style={{ background:"rgba(255,183,3,0.08)", border:"1px solid rgba(255,183,3,0.3)", borderRadius:12, padding:"12px 14px", marginBottom:10, fontSize:12, color:"#ffb703", lineHeight:1.6 }}>
-          ⏳ <strong>Limite da grade atingido.</strong> {blocked}<br/>
+          <strong>Limite da grade atingido.</strong> {blocked}<br/>
           <span style={{ fontSize:11, color:"var(--text2)" }}>Próxima análise disponível a partir do {nextWindowLabel}.</span>
         </div>
       )}
 
       {!insights && !blocked && (
         <button onClick={generate} disabled={loading}
-          style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,214,143,0.06))", border:"1px solid rgba(108,99,255,0.25)", borderRadius:16, padding:"18px 16px", cursor:loading?"default":"pointer", textAlign:"center", opacity:loading?0.8:1 }}>
-          <div style={{ fontSize:28, marginBottom:6 }}>{loading ? "⏳" : "🤖"}</div>
+          style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.14),rgba(180,79,255,0.08))", border:"1px solid var(--border)", borderRadius:20, padding:"18px 16px", cursor:loading?"default":"pointer", textAlign:"center", opacity:loading?0.8:1 }}>
+          <div style={{ fontSize:28, marginBottom:6 }}><Em e={loading ? "⏳" : "🤖"} size={28}/></div>
           <div style={{ fontSize:15, fontWeight:900, color:"var(--text)", marginBottom:4 }}>
             {loading ? "Analisando seus dados..." : `Análise IA — ${monthLabel}`}
           </div>
@@ -2599,15 +2654,15 @@ ${insights.map((ins:any)=>{
       {insights && (
         <div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-            <div style={{ fontSize:13, fontWeight:700 }}>🤖 Análise IA — {monthLabel}</div>
+            <div style={{ fontSize:13, fontWeight:700 }}><Em e="🤖"/> Análise IA — {monthLabel}</div>
             <div style={{ display:"flex", gap:6 }}>
               <button onClick={generatePDF}
                 style={{ fontSize:11, color:"#6c63ff", background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", borderRadius:7, padding:"3px 9px", cursor:"pointer" }}>
-                📄 PDF
+                <Em e="📄"/> PDF
               </button>
               <button onClick={()=>{ setInsights(null); try{localStorage.removeItem(cacheKey);}catch{} }}
                 style={{ fontSize:11, color:"var(--text2)", background:"none", border:"1px solid var(--border)", borderRadius:7, padding:"3px 9px", cursor:"pointer" }}>
-                🔄
+                <Em e="🔄"/>
               </button>
             </div>
           </div>
@@ -2616,7 +2671,7 @@ ${insights.map((ins:any)=>{
             return (
               <div key={i} style={{ background:s.bg, border:`1px solid ${s.border}`, borderRadius:13, padding:"12px 14px", marginBottom:8, borderLeft:`3px solid ${s.barColor}` }}>
                 <div style={{ fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1, color:s.labelColor, marginBottom:5 }}>
-                  {ins.type==="alert"?"⚠️":ins.type==="tip"?"✅":ins.type==="gold"?"📊":"💡"} {ins.label}
+                  <Em e={ins.type==="alert"?"⚠️":ins.type==="tip"?"✅":ins.type==="gold"?"📊":"💡"}/>{ins.label}
                 </div>
                 <div style={{ fontSize:13, color:"var(--text)", lineHeight:1.6 }}>{ins.text}</div>
                 {ins.sub && <div style={{ fontSize:11, color:"var(--text2)", marginTop:5, fontStyle:"italic" }}>{ins.sub}</div>}
@@ -2668,7 +2723,7 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
 
   return (
     <div>
-      <h2 style={{ fontSize:17, fontWeight:800, marginBottom:14 }}>📈 Relatórios</h2>
+      <h2 style={{ fontSize:17, fontWeight:800, marginBottom:14 }}>Raio-X</h2>
 
       {goals.length>0 && (
         <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:14 }}>
@@ -2677,13 +2732,13 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
             const target = num(g.goal.recurringGoal);
             const pct = target>0 ? Math.min(invested/target*100,100) : 0;
             return (
-              <div key={g.label} className="card" style={{ borderTop:`3px solid ${g.color}` }}>
+              <div key={g.label} className="card">
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                  <span style={{ fontSize:12, fontWeight:800, color:g.color }}>{g.emoji} Já investido no {g.label}</span>
+                  <span style={{ fontSize:12, fontWeight:800, color:"var(--primary-light)" }}>Já investido no {g.label}</span>
                   <span style={{ fontSize:11, color:"var(--text2)" }}>{Math.round(pct)}%</span>
                 </div>
                 <div style={{ fontSize:19, fontWeight:900, color:"var(--text)", marginBottom:6 }}>{fmt(invested)} <span style={{ fontSize:12, color:"var(--text2)", fontWeight:600 }}>de {fmt(target)}</span></div>
-                <div className="progress-bar"><div className="progress-fill" style={{ width:`${pct}%`, background:g.color }}/></div>
+                <div className="progress-bar"><div className="progress-fill" style={{ width:`${pct}%`, background:"linear-gradient(90deg,#6c63ff,#b44fff)" }}/></div>
               </div>
             );
           })}
@@ -2691,28 +2746,28 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
       )}
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
-        <div className="card" style={{ borderTop:"3px solid var(--red)" }}>
+        <div className="card">
           <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Gastos</div>
-          <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--red)" }}>{fmt(totalGasto)}</div>
+          <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--text)" }}>{fmt(totalGasto)}</div>
         </div>
-        <div className="card" style={{ borderTop:"3px solid var(--green)" }}>
+        <div className="card">
           <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Produzido</div>
-          <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--green)" }}>{fmt(totalProduzido)}</div>
+          <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:"var(--text)" }}>{fmt(totalProduzido)}</div>
           <div style={{ fontSize:9, color:"var(--text2)", marginTop:2 }}>salário + extras</div>
         </div>
-        <div className="card" style={{ borderTop:"3px solid var(--primary)" }}>
+        <div className="card">
           <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Registros</div>
-          <div style={{ fontSize:15, fontWeight:800, color:"var(--primary)" }}>{totalRegistros}</div>
+          <div style={{ fontSize:15, fontWeight:800, color:"var(--text)" }}>{totalRegistros}</div>
           <div style={{ fontSize:9, color:"var(--text2)", marginTop:2 }}>{expenses.length} despesas · {cc.length} cartão</div>
         </div>
-        <div className="card" style={{ borderTop:`3px solid ${(totalProduzido-totalGasto)>=0?"var(--green)":"var(--red)"}` }}>
+        <div className="card">
           <div style={{ fontSize:10, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Saldo</div>
           <div style={{ fontSize:15, fontWeight:800, fontVariantNumeric:"tabular-nums", color:(totalProduzido-totalGasto)>=0?"var(--green)":"var(--red)" }}>{fmt(totalProduzido-totalGasto)}</div>
         </div>
       </div>
 
       <div className="card" style={{ marginBottom:14 }}>
-        <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>💚 Saúde Financeira — {monthLabel}</div>
+        <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>Saúde Financeira — {monthLabel}</div>
         <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:10 }}>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:32, fontWeight:900, color:band.color, fontVariantNumeric:"tabular-nums" }}>{healthScore}<span style={{ fontSize:14, color:"var(--text2)" }}>/100</span></div>
@@ -2734,12 +2789,12 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
       </div>
 
       <div className="card" style={{ marginBottom:14 }}>
-        <div style={{ fontSize:13, fontWeight:700, marginBottom:14 }}>🥧 Gastos por Pote — {monthLabel}</div>
+        <div style={{ fontSize:13, fontWeight:700, marginBottom:14 }}>Gastos por Pote — {monthLabel}</div>
         <PieChart data={pieData}/>
       </div>
 
       <div className="card" style={{ marginBottom:14 }}>
-        <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>📅 Histórico de Meses</div>
+        <div style={{ fontSize:13, fontWeight:700, marginBottom:12 }}>Histórico de Meses</div>
         {loadingH ? (
           <div style={{ textAlign:"center", color:"var(--text2)", padding:16 }}>Carregando...</div>
         ) : (
@@ -2750,7 +2805,7 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
                 {history.map((h:any,i:number)=>{
                   const saldo = (h.totalIncome||0) - (h.totalExpenses||0);
                   return (
-                    <div key={i} style={{ padding:"9px 12px", background:"var(--bg3)", borderRadius:10, borderLeft:`3px solid ${saldo>=0?"var(--green)":"var(--red)"}` }}>
+                    <div key={i} style={{ padding:"9px 12px", background:"var(--bg3)", borderRadius:12 }}>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                         <span style={{ fontWeight:700, fontSize:13, textTransform:"capitalize" }}>
                           {new Date(h.month+"-02").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}
@@ -2760,9 +2815,9 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
                         </span>
                       </div>
                       <div style={{ display:"flex", gap:14, fontSize:11, color:"var(--text2)", marginTop:3 }}>
-                        <span style={{ color:"#378ADD" }}>💼 {fmt(h.totalSalary||0)}</span>
-                        <span style={{ color:"var(--green)" }}>💵 {fmt(h.totalExtraIncome||0)}</span>
-                        <span style={{ color:"var(--red)" }}>💸 {fmt(h.totalExpenses||0)}</span>
+                        <span>Salário {fmt(h.totalSalary||0)}</span>
+                        <span>Extra {fmt(h.totalExtraIncome||0)}</span>
+                        <span>Gastos {fmt(h.totalExpenses||0)}</span>
                       </div>
                     </div>
                   );
@@ -2772,7 +2827,7 @@ function ReportsContent({ byCategory,totalExpSemSonho,totalCC,totalIncome,expens
             {history.length===0 && (
               <div style={{ textAlign:"center", color:"var(--text2)", padding:20, fontSize:13, lineHeight:1.6 }}>
                 Nenhum mês arquivado ainda.<br/>
-                <span style={{ fontSize:11 }}>Use "Virar Mês" em ⚙️ ao fechar cada mês.</span>
+                <span style={{ fontSize:11 }}>Use "Virar Mês" em <Em e="⚙️"/> ao fechar cada mês.</span>
               </div>
             )}
           </>
@@ -2861,10 +2916,10 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
     : null;
 
   return (
-    <Modal title="💸 Nova Despesa" onClose={onClose}>
+    <Modal title="Nova Despesa" onClose={onClose}>
       <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
         <select value={form.categoryId} onChange={e=>setForm(f=>({...f,categoryId:e.target.value}))}>
-          {CATS.map(c=><option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+          {CATS.map(c=><option key={c.id} value={c.id}><Em e={c.emoji}/> {c.name}</option>)}
         </select>
         <input placeholder="Nome da despesa *" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
         <input type="number" placeholder={isGoalCat&&form.recurring?"Valor mensal (deixe em branco p/ calcular)":"Valor (R$) *"} value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/>
@@ -2877,12 +2932,12 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
 
         <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--text2)", cursor:"pointer", userSelect:"none" as any }}>
           <input type="checkbox" checked={form.recurring} onChange={e=>setForm(f=>({...f,recurring:e.target.checked}))} style={{ width:16, height:16, accentColor:"var(--primary)", flexShrink:0 }}/>
-          <span>Recorrente 🔄</span>
+          <span>Recorrente <Em e="🔄"/></span>
         </label>
 
         <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--text2)", cursor:"pointer", userSelect:"none" as any }}>
           <input type="checkbox" checked={form.hasDueDate} onChange={e=>setForm(f=>({...f,hasDueDate:e.target.checked}))} style={{ width:16, height:16, accentColor:"var(--yellow)", flexShrink:0 }}/>
-          <span>Tem vencimento? ⏰</span>
+          <span>Tem vencimento? </span>
         </label>
         {form.hasDueDate && (
           <div>
@@ -2894,12 +2949,12 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
         {/* Bloco de meta aparece quando categoria=Sonho OU Objetivo + recorrente */}
         {isGoalCat && form.recurring && (
           <div style={{ background:"rgba(6,182,212,0.07)", border:"1px solid rgba(6,182,212,0.22)", borderRadius:12, padding:"12px 14px", display:"flex", flexDirection:"column", gap:9 }}>
-            <div style={{ fontSize:10, color:"#06b6d4", fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>{isSonho ? "✨ META DO SONHO" : "🎯 META DO OBJETIVO"}</div>
+            <div style={{ fontSize:10, color:"#06b6d4", fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>{isSonho ? "META DO SONHO" : "META DO OBJETIVO"}</div>
             <input type="number" placeholder={isSonho?"Valor total do sonho (R$)":"Valor total do objetivo (R$)"} value={form.recurringGoal} onChange={e=>setForm(f=>({...f,recurringGoal:e.target.value}))}/>
             <input type="number" placeholder="Em quantos meses?" value={form.recurringMonths} onChange={e=>setForm(f=>({...f,recurringMonths:e.target.value}))}/>
             {monthlyCalc !== null && (
               <div style={{ fontSize:12, color:"var(--green)", fontWeight:600 }}>
-                📅 {fmt(monthlyCalc)}/mês durante {form.recurringMonths} meses
+                <Em e="📅"/> {fmt(monthlyCalc)}/mês durante {form.recurringMonths} meses
               </div>
             )}
           </div>
@@ -2915,7 +2970,7 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
               (!form.amount || parseFloat(form.amount) <= 0)
             )}
             style={{ flex:1 }}
-          >{loading ? "⏳ Salvando..." : "Adicionar"}</button>
+          >{loading ? "Salvando..." : "Adicionar"}</button>
         </div>
       </div>
     </Modal>
@@ -2957,7 +3012,7 @@ function AddCCModal({ userId, onClose, onXp }: any) {
   };
 
   return (
-    <Modal title="💳 Gasto no Cartão" onClose={onClose}>
+    <Modal title="Gasto no Cartão" onClose={onClose}>
       <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
         <select value={form.subcategory} onChange={e=>setForm(f=>({...f,subcategory:e.target.value}))}>
           {CC_CATS.map(c=><option key={c}>{c}</option>)}
@@ -2970,7 +3025,7 @@ function AddCCModal({ userId, onClose, onXp }: any) {
             <button key={m} onClick={()=>setMode(m)}
               style={{ flex:1, padding:"8px", borderRadius:9, border:`1.5px solid ${mode===m?"var(--primary)":"var(--border)"}`,
                 background:mode===m?"var(--primary)":"var(--bg3)", color:mode===m?"white":"var(--text2)", fontSize:12, fontWeight:700, cursor:"pointer" }}>
-              {m==="parcela" ? "💳 Valor da parcela" : "🏷️ Valor total"}
+              {m==="parcela" ? "Valor da parcela" : "Valor total"}
             </button>
           ))}
         </div>
@@ -3008,7 +3063,7 @@ function AddCCModal({ userId, onClose, onXp }: any) {
             ) : (
               <div style={{ fontSize:16, fontWeight:800, color:"var(--primary)" }}>À vista: {fmt(rawAmt)}</div>
             )}
-            <div style={{ fontSize:11, color:"#00d68f", marginTop:4 }}>⚔️ +{calcXpExpense(parcelAmt)} XP por parcela registrada</div>
+            <div style={{ fontSize:11, color:"#00d68f", marginTop:4 }}><Em e="⚔️"/> +{calcXpExpense(parcelAmt)} XP por parcela registrada</div>
           </div>
         )}
 
@@ -3027,7 +3082,7 @@ function AddCCModal({ userId, onClose, onXp }: any) {
 
         <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"var(--text2)", cursor:"pointer" }}>
           <input type="checkbox" checked={form.recurring} onChange={e=>setForm(f=>({...f,recurring:e.target.checked}))} style={{ width:16, height:16, accentColor:"var(--primary)", flexShrink:0 }}/>
-          <span>🔄 Recorrente (repete todo mês, indefinidamente)</span>
+          <span><Em e="🔄"/> Recorrente (repete todo mês, indefinidamente)</span>
         </label>
 
         <div style={{ display:"flex", gap:8 }}>
@@ -3054,7 +3109,7 @@ function AddIncomeModal({ userId, onClose, onXp }: any) {
     setLoading(false);
   };
   return (
-    <Modal title="💵 Renda Extra" onClose={onClose}>
+    <Modal title="Renda Extra" onClose={onClose}>
       <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
         <input placeholder="Descrição (ex: Freelance, Venda...) *" value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}/>
         <input type="number" placeholder="Valor (R$) *" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/>
@@ -3064,7 +3119,7 @@ function AddIncomeModal({ userId, onClose, onXp }: any) {
         </div>
         {form.amount&&parseFloat(form.amount)>0&&(
           <div style={{ fontSize:12, color:"var(--green)", fontWeight:600, padding:"8px 12px", background:"rgba(0,214,143,0.08)", borderRadius:8 }}>
-            ⚔️ +{calcXpIncome(parseFloat(form.amount))} XP com esse registro!
+            <Em e="⚔️"/> +{calcXpIncome(parseFloat(form.amount))} XP com esse registro!
           </div>
         )}
         <div style={{ display:"flex", gap:8 }}>
@@ -3102,11 +3157,11 @@ function ChangePasswordModal({ user, onClose }: { user: any; onClose: () => void
   };
 
   return (
-    <Modal title="🔑 Alterar Senha" onClose={onClose}>
+    <Modal title="Alterar Senha" onClose={onClose}>
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
         {success ? (
           <div style={{ textAlign:"center", padding:"20px 0" }}>
-            <div style={{ fontSize:40, marginBottom:8 }}>✅</div>
+            <div style={{ fontSize:40, marginBottom:8 }}><Em e="✅"/></div>
             <div style={{ fontSize:16, fontWeight:800, color:"var(--green)" }}>Senha alterada com sucesso!</div>
           </div>
         ) : (
@@ -3123,11 +3178,11 @@ function ChangePasswordModal({ user, onClose }: { user: any; onClose: () => void
               <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:5, letterSpacing:1 }}>CONFIRMAR NOVA SENHA</label>
               <input type="password" placeholder="Repita a nova senha" value={form.confirm} onChange={e=>setForm(f=>({...f,confirm:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submit()}/>
             </div>
-            {error && <div style={{ fontSize:12, color:"var(--red)", padding:"8px 12px", background:"rgba(255,77,106,0.08)", borderRadius:8 }}>⚠️ {error}</div>}
+            {error && <div style={{ fontSize:12, color:"var(--red)", padding:"8px 12px", background:"rgba(255,77,106,0.08)", borderRadius:8 }}><Em e="⚠️"/> {error}</div>}
             <div style={{ display:"flex", gap:8, marginTop:4 }}>
               <button className="btn-ghost" onClick={onClose} style={{ flex:1 }}>Cancelar</button>
               <button className="btn-primary" onClick={submit} disabled={loading} style={{ flex:1 }}>
-                {loading ? "Salvando..." : "🔑 Alterar Senha"}
+                {loading ? "Salvando..." : "Alterar Senha"}
               </button>
             </div>
           </>
@@ -3160,15 +3215,15 @@ function SettingsModal({ user, salary, onSave, onClose, onReset, onPots, onLogou
   };
 
   const saveSecQ = async () => {
-    if (!secA.trim()) { setSecMsg("❌ Digite sua resposta"); return; }
+    if (!secA.trim()) { setSecMsg("Digite sua resposta"); return; }
     const res = await fetch(`${API}/users/${user.id}/security-question`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:secQ,answer:secA})});
     const data = await res.json();
-    setSecMsg(data.success ? "✅ Salvo com sucesso!" : "❌ Erro ao salvar");
+    setSecMsg(data.success ? "Salvo com sucesso!" : "Erro ao salvar");
     setTimeout(()=>setSecMsg(""),3000);
   };
 
   const share = async () => {
-    const msg = "Depois desse app eu descobri para onde meu dinheiro vai todo mês 😅\n\nTá me ajudando a organizar tudo com método. Vale demais!\n\n👉 nacarteira.up.railway.app";
+    const msg = "Depois desse app eu descobri para onde meu dinheiro vai todo mês\n\nTá me ajudando a organizar tudo com método. Vale demais!\n\nnacarteira.up.railway.app";
     try {
       if (navigator.share) { await navigator.share({ title:"NaCarteira", text:msg, url:"https://nacarteira.up.railway.app" }); }
       else { await navigator.clipboard.writeText(msg); setShared(true); setTimeout(()=>setShared(false),2500); }
@@ -3178,7 +3233,7 @@ function SettingsModal({ user, salary, onSave, onClose, onReset, onPots, onLogou
   if (showChangePw) return <ChangePasswordModal user={user} onClose={()=>setShowChangePw(false)}/>;
 
   return (
-    <Modal title="⚙️ Configurações" onClose={onClose}>
+    <Modal title="Configurações" onClose={onClose}>
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
         <div>
           <label style={{ fontSize:11, color:"var(--text2)", fontWeight:700, display:"block", marginBottom:6, letterSpacing:1 }}>SALÁRIO BASE (R$)</label>
@@ -3190,7 +3245,7 @@ function SettingsModal({ user, salary, onSave, onClose, onReset, onPots, onLogou
           {/* Baixar Aplicativo */}
           {pwa.canInstall ? (
             <button onClick={pwa.install} style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(108,99,255,0.08))", color:"var(--primary)", padding:"13px", borderRadius:12, fontSize:14, fontWeight:800, border:"1px solid rgba(108,99,255,0.35)", cursor:"pointer", letterSpacing:0.3 }}>
-              📲 Baixar Aplicativo
+              <Em e="📲"/> Baixar Aplicativo
             </button>
           ) : (
             <button onClick={()=>{
@@ -3200,12 +3255,12 @@ function SettingsModal({ user, salary, onSave, onClose, onReset, onPots, onLogou
               const overlay = document.createElement('div');
               overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding:20px';
               overlay.innerHTML = `<div style="background:#1a1d2e;border-radius:20px 20px 20px 20px;padding:28px 24px;width:100%;max-width:400px;text-align:center;border:1px solid rgba(108,99,255,0.3)">
-                <div style="font-size:36px;margin-bottom:12px">📲</div>
+                <div style="font-size:36px;margin-bottom:12px"></div>
                 <div style="font-size:16px;font-weight:800;color:#eef0ff;margin-bottom:8px">Baixar Aplicativo</div>
                 <div style="font-size:13px;color:#9ca3af;margin-bottom:20px;line-height:1.6">No iPhone, toque no botão abaixo na barra do Safari:</div>
                 <div style="background:rgba(108,99,255,0.1);border:1px solid rgba(108,99,255,0.25);border-radius:12px;padding:14px;margin-bottom:20px">
                   <div style="font-size:13px;color:#eef0ff;line-height:1.8">
-                    1. Toque em <strong style="color:#a78bfa">⬆️ Compartilhar</strong><br/>
+                    1. Toque em <strong style="color:#a78bfa">Compartilhar</strong><br/>
                     2. Role e toque em <strong style="color:#a78bfa">Adicionar à Tela de Início</strong><br/>
                     3. Toque em <strong style="color:#a78bfa">Adicionar</strong>
                   </div>
@@ -3215,17 +3270,17 @@ function SettingsModal({ user, salary, onSave, onClose, onReset, onPots, onLogou
               document.body.appendChild(overlay);
               overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
             }} style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.15),rgba(108,99,255,0.08))", color:"var(--primary)", padding:"13px", borderRadius:12, fontSize:14, fontWeight:800, border:"1px solid rgba(108,99,255,0.35)", cursor:"pointer", letterSpacing:0.3 }}>
-              📲 Baixar Aplicativo
+              <Em e="📲"/> Baixar Aplicativo
             </button>
           )}
 
           <button onClick={onPots} style={{ width:"100%", background:"rgba(255,183,3,0.08)", color:"#ffb703", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(255,183,3,0.25)", cursor:"pointer" }}>
-            🏺 Meus potes · {POT_MODE==="custom" ? "personalizado" : "padrão Criação de Riqueza"}
+            <Em e="🏺"/> Meus potes · {POT_MODE==="custom" ? "personalizado" : "padrão Criação de Riqueza"}
           </button>
 
           {/* Pergunta de segurança */}
           <button onClick={()=>setShowSecQ(o=>!o)} style={{ width:"100%", background:"rgba(0,214,143,0.06)", color:"var(--green)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(0,214,143,0.2)", cursor:"pointer" }}>
-            🔐 {showSecQ ? "Fechar pergunta de segurança" : "Configurar pergunta de segurança"}
+            <Em e="🔐"/> {showSecQ ? "Fechar pergunta de segurança" : "Configurar pergunta de segurança"}
           </button>
           {showSecQ && (
             <div style={{ background:"var(--bg3)", borderRadius:12, padding:"12px", display:"flex", flexDirection:"column", gap:8 }}>
@@ -3239,19 +3294,19 @@ function SettingsModal({ user, salary, onSave, onClose, onReset, onPots, onLogou
           )}
 
           <button onClick={share} style={{ width:"100%", background:"rgba(0,214,143,0.08)", color:"var(--green)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(0,214,143,0.2)", cursor:"pointer" }}>
-            {shared ? "✅ Copiado!" : "🔗 Compartilhar com amigos"}
+            {shared ? "Copiado!" : "Compartilhar com amigos"}
           </button>
           <button onClick={()=>setShowChangePw(true)} style={{ width:"100%", background:"rgba(108,99,255,0.08)", color:"var(--primary)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(108,99,255,0.25)", cursor:"pointer" }}>
-            🔑 Alterar Senha
+            <Em e="🔑"/> Alterar Senha
           </button>
           {onLogout && (
             <button onClick={onLogout} style={{ width:"100%", background:"var(--bg3)", color:"var(--text2)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid var(--border)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
               <Icon name="logout" size={16}/> Sair da conta
             </button>
           )}
-          <div style={{ fontSize:12, color:"var(--text2)" }}>⚠️ Zona de perigo</div>
+          <div style={{ fontSize:12, color:"var(--text2)" }}><Em e="⚠️"/> Zona de perigo</div>
           <button onClick={onReset} style={{ width:"100%", background:"rgba(255,77,106,.15)", color:"var(--red)", padding:"11px", borderRadius:12, fontSize:13, fontWeight:700, border:"1px solid rgba(255,77,106,.3)", cursor:"pointer" }}>
-            🔄 Virar Mês — Arquivar e limpar
+            <Em e="🔄"/> Virar Mês — Arquivar e limpar
           </button>
         </div>
       </div>
@@ -3305,7 +3360,7 @@ function PotsEditor({ userId, levelNum, current, submitLabel, onSaved }: { userI
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
       <div style={{ textAlign:"center" }}>
-        <div style={{ fontSize:34 }}>🏺</div>
+        <div style={{ fontSize:34 }}><Em e="🏺"/></div>
         <h2 style={{ fontSize:18, fontWeight:900, margin:"4px 0" }}>Como você quer dividir seu dinheiro?</h2>
         <p style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5 }}>Você pode mudar isso a qualquer momento em Configurações.</p>
       </div>
@@ -3321,7 +3376,7 @@ function PotsEditor({ userId, levelNum, current, submitLabel, onSaved }: { userI
             const c:any = CATS.find(x=>x.id===id);
             return (
               <div key={id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${c.color}` }}>
-                <span style={{ fontSize:20 }}>{c.emoji}</span>
+                <span style={{ fontSize:20 }}><Em e={c.emoji}/></span>
                 <div style={{ flex:1 }}>
                   <div style={{ display:"flex", justifyContent:"space-between" }}>
                     <span style={{ fontWeight:700, fontSize:13 }}>{POT_DEFAULT_NAME[id]}</span>
@@ -3337,7 +3392,7 @@ function PotsEditor({ userId, levelNum, current, submitLabel, onSaved }: { userI
 
       {mode==="custom" && !ack && (
         <div style={{ background:"rgba(255,183,3,0.08)", border:"1px solid rgba(255,183,3,0.3)", borderRadius:12, padding:"12px 14px" }}>
-          <div style={{ fontSize:13, fontWeight:800, color:"#ffb703", marginBottom:6 }}>⚠️ Antes de personalizar</div>
+          <div style={{ fontSize:13, fontWeight:800, color:"#ffb703", marginBottom:6 }}><Em e="⚠️"/> Antes de personalizar</div>
           <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.6 }}>
             No modo personalizado, o sistema de níveis <strong style={{color:"var(--text)"}}>não altera a configuração dos seus potes</strong> (no padrão, as % mudam no NV.50 e no NV.100). Só você muda os potes, em Configurações.
             Você continua ganhando <strong style={{color:"var(--text)"}}>XP, streak e conquistas</strong> normalmente.
@@ -3353,7 +3408,7 @@ function PotsEditor({ userId, levelNum, current, submitLabel, onSaved }: { userI
             return (
               <div key={p.id} style={{ padding:"10px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${c.color}` }}>
                 <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:6 }}>
-                  <span style={{ fontSize:20 }}>{c.emoji}</span>
+                  <span style={{ fontSize:20 }}><Em e={c.emoji}/></span>
                   <input value={p.name} maxLength={24} onChange={e=>upd(p.id,{name:e.target.value})} placeholder="Nome do pote" style={{ flex:1, fontWeight:700 }}/>
                   <div style={{ display:"flex", alignItems:"center", gap:3 }}>
                     <input type="number" min={0} max={100} value={p.pct} onChange={e=>upd(p.id,{pct:e.target.value})} style={{ width:62, textAlign:"center" }}/>
@@ -3362,18 +3417,18 @@ function PotsEditor({ userId, levelNum, current, submitLabel, onSaved }: { userI
                 </div>
                 <textarea value={p.desc} maxLength={200} rows={2} onChange={e=>upd(p.id,{desc:e.target.value})} placeholder="O que entra neste pote? (o Vieira usa isso para lançar no pote certo)"
                   style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"7px 10px", color:"var(--text)", fontSize:12, resize:"vertical" }}/>
-                {typeLabel[p.id] && <div style={{ fontSize:10, color:c.color, marginTop:4 }}>🔒 Tipo fixo: {typeLabel[p.id]}</div>}
+                {typeLabel[p.id] && <div style={{ fontSize:10, color:c.color, marginTop:4 }}><Em e="🔒"/> Tipo fixo: {typeLabel[p.id]}</div>}
               </div>
             );
           })}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", borderRadius:10, background:total===100?"rgba(0,214,143,0.1)":"rgba(255,77,106,0.1)", border:`1px solid ${total===100?"rgba(0,214,143,0.3)":"rgba(255,77,106,0.3)"}` }}>
             <span style={{ fontSize:12, color:"var(--text2)" }}>Total dos potes</span>
-            <span style={{ fontSize:14, fontWeight:900, color:total===100?"var(--green)":"var(--red)" }}>{total}% {total===100?"✅":"(precisa ser 100%)"}</span>
+            <span style={{ fontSize:14, fontWeight:900, color:total===100?"var(--green)":"var(--red)" }}>{total}% {total===100?<Em e="✅"/>:"(precisa ser 100%)"}</span>
           </div>
         </div>
       )}
 
-      {error && <div style={{ fontSize:12, color:"var(--red)", textAlign:"center" }}>❌ {error}</div>}
+      {error && <div style={{ fontSize:12, color:"var(--red)", textAlign:"center" }}><Em e="❌"/> {error}</div>}
       <button className="btn-primary" onClick={save} disabled={saving || (mode==="custom" && !ack)} style={{ width:"100%", padding:"14px", fontSize:14 }}>
         {saving ? "Salvando..." : submitLabel}
       </button>
@@ -3390,7 +3445,7 @@ function ResetModal({ onClose, onConfirm }: any) {
     // setLoading(false) pode não executar se o componente desmontar — tudo bem
   };
   return (
-    <Modal title="🔄 Virar o Mês" onClose={loading ? undefined : onClose}>
+    <Modal title="Virar o Mês" onClose={loading ? undefined : onClose}>
       <p style={{ color:"var(--text2)", fontSize:14, marginBottom:8, lineHeight:1.6 }}>
         Os dados serão <strong style={{ color:"var(--green)" }}>arquivados</strong> e você começa o mês limpo.
       </p>
@@ -3400,7 +3455,7 @@ function ResetModal({ onClose, onConfirm }: any) {
       <div style={{ display:"flex", gap:8 }}>
         <button className="btn-ghost" onClick={onClose} disabled={loading} style={{ flex:1, opacity:loading?0.5:1 }}>Cancelar</button>
         <button onClick={confirm} disabled={loading} style={{ flex:1, background:loading?"var(--bg3)":"var(--primary)", color:loading?"var(--text2)":"white", padding:"12px", borderRadius:12, fontSize:14, fontWeight:700, border:"none", cursor:loading?"default":"pointer" }}>
-          {loading ? "⏳ Arquivando..." : "✅ Confirmar"}
+          {loading ? "Arquivando..." : "Confirmar"}
         </button>
       </div>
     </Modal>
@@ -3443,9 +3498,9 @@ function MethodologyModal({ onClose, xp }: any) {
   ];
 
   return (
-    <Modal title="📚 Metodologia do App" onClose={onClose}>
+    <Modal title="Metodologia do App" onClose={onClose}>
       <div style={{ display:"flex", gap:6, marginBottom:16 }}>
-        {([{id:"potes",label:"🏺 Potes"},{id:"niveis",label:"⚔️ Níveis"},{id:"saude",label:"💚 Saúde"}] as const).map(t=>(
+        {([{id:"potes",label:"Potes"},{id:"niveis",label:"Níveis"},{id:"saude",label:"Saúde"}] as const).map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{ flex:1, padding:"8px 4px", borderRadius:10, fontWeight:700, fontSize:11, background:tab===t.id?"var(--primary)":"var(--bg3)", color:tab===t.id?"white":"var(--text2)", border:`1.5px solid ${tab===t.id?"var(--primary)":"var(--border)"}` }}>{t.label}</button>
         ))}
       </div>
@@ -3454,7 +3509,7 @@ function MethodologyModal({ onClose, xp }: any) {
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {/* Badge nível atual */}
           <div style={{ background:`${levelInfo.color}18`, border:`1px solid ${levelInfo.color}44`, borderRadius:12, padding:"8px 12px", display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:18 }}>⚔️</span>
+            <span style={{ fontSize:18 }}><Em e="⚔️"/></span>
             <div>
               <div style={{ fontSize:11, fontWeight:800, color:levelInfo.color }}>{isCustomPots ? "Distribuição personalizada" : `Distribuição atual: ${levelInfo.label}`}</div>
               <div style={{ fontSize:11, color:"var(--text2)" }}>
@@ -3465,7 +3520,7 @@ function MethodologyModal({ onClose, xp }: any) {
           </div>
           {potes.map((p,i)=>(
             <div key={i} style={{ display:"flex", gap:12, padding:"10px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${p.color}` }}>
-              <span style={{ fontSize:20, flexShrink:0 }}>{p.emoji}</span>
+              <span style={{ fontSize:20, flexShrink:0 }}><Em e={p.emoji}/></span>
               <div style={{ flex:1 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
                   <span style={{ fontWeight:700, fontSize:13 }}>{p.cat}</span>
@@ -3482,13 +3537,13 @@ function MethodologyModal({ onClose, xp }: any) {
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {/* XP atual do usuário */}
           <div style={{ background:`${levelInfo.color}12`, border:`1px solid ${levelInfo.color}44`, borderRadius:12, padding:"12px 14px", display:"flex", alignItems:"center", gap:12 }}>
-            <span style={{ fontSize:28 }}>{levelInfo.tier==="avancado"?"👑":levelInfo.tier==="investidor"?"📈":"🌱"}</span>
+            <span style={{ fontSize:28 }}><Em e={levelInfo.tier==="avancado"?"👑":levelInfo.tier==="investidor"?"📈":"🌱"} size={28}/></span>
             <div style={{ flex:1 }}>
               <div style={{ fontWeight:800, fontSize:13, color:levelInfo.color }}>{levelInfo.label} NV.{levelInfo.levelNum}</div>
               <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>
                 {levelInfo.levelNum < MAX_LEVEL
                   ? `${(xp||0).toLocaleString("pt-BR")} XP total · ${XP_PER_LEVEL - levelInfo.xpInLevel} XP para o próximo nível`
-                  : "🏆 Nível máximo atingido — você superou o app!"}
+                  : "Nível máximo atingido — você superou o app!"}
               </div>
             </div>
           </div>
@@ -3509,27 +3564,27 @@ function MethodologyModal({ onClose, xp }: any) {
             { tier:"avancado"  as const, emoji:"👑", label:"Avançado",   range:"NV.100",        xpRange:"99.000+ XP",          color:"#ffd700",
               desc:"Fim de jogo. Você alcançou o que menos de 1% das pessoas conseguem. 25% do salário investido todo mês. Você superou o app.",
               pcts:"Pagar-se 10% · Doar 10% · Investir 25% · Contas 45% · Sonho 5% · Abundar 5%",
-              unlock:"🏆 Título TOP 1% + mensagem épica de conquista." },
+              unlock:"Título TOP 1% + mensagem épica de conquista." },
           ].map((n,i)=>{
             const isCurrent = n.tier === levelInfo.tier;
             const isPast = (n.tier==="iniciante") || (n.tier==="investidor" && levelInfo.tier!=="iniciante");
             return (
               <div key={i} style={{ background:isCurrent?`${n.color}10`:"var(--bg3)", border:`1.5px solid ${isCurrent?n.color:isPast?"rgba(0,214,143,0.25)":"var(--border)"}`, borderRadius:14, padding:"12px 14px" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-                  <span style={{ fontSize:24 }}>{n.emoji}</span>
+                  <span style={{ fontSize:24 }}><Em e={n.emoji}/></span>
                   <div style={{ flex:1 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
                       <span style={{ fontWeight:800, fontSize:14, color:n.color }}>{n.label}</span>
                       <span style={{ fontSize:10, color:"var(--text2)", background:"var(--bg2)", padding:"2px 7px", borderRadius:6 }}>{n.range}</span>
                       {isCurrent && <span style={{ fontSize:10, background:n.color, color:"#000", padding:"2px 7px", borderRadius:6, fontWeight:800 }}>VOCÊ ESTÁ AQUI</span>}
-                      {!isCurrent && isPast && <span style={{ fontSize:10, color:"var(--green)", fontWeight:700 }}>✅ Superado</span>}
+                      {!isCurrent && isPast && <span style={{ fontSize:10, color:"var(--green)", fontWeight:700 }}><Em e="✅"/> Superado</span>}
                     </div>
                     <div style={{ fontSize:10, color:"var(--text2)", marginTop:2 }}>{n.xpRange}</div>
                   </div>
                 </div>
                 <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5, marginBottom:6 }}>{n.desc}</div>
-                <div style={{ fontSize:11, color:n.color, background:`${n.color}10`, padding:"6px 10px", borderRadius:8, marginBottom:6 }}>📊 {n.pcts}</div>
-                <div style={{ fontSize:11, color:"var(--text2)", fontStyle:"italic" }}>🔓 {n.unlock}</div>
+                <div style={{ fontSize:11, color:n.color, background:`${n.color}10`, padding:"6px 10px", borderRadius:8, marginBottom:6 }}><Em e="📊"/> {n.pcts}</div>
+                <div style={{ fontSize:11, color:"var(--text2)", fontStyle:"italic" }}><Em e="🔓"/> {n.unlock}</div>
               </div>
             );
           })}
@@ -3542,7 +3597,7 @@ function MethodologyModal({ onClose, xp }: any) {
             A Saúde Financeira mede o equilíbrio entre sua receita total (salário + renda extra) e suas despesas (contas + cartão). Investimento não conta como despesa — é patrimônio sendo construído.
           </div>
           <div style={{ background:"rgba(108,99,255,0.07)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:12, padding:"10px 12px", fontSize:12, color:"var(--text2)", lineHeight:1.6 }}>
-            <div style={{ fontWeight:700, color:"#a78bfa", marginBottom:4 }}>📐 Como é calculada</div>
+            <div style={{ fontWeight:700, color:"#a78bfa", marginBottom:4 }}><Em e="📐"/> Como é calculada</div>
             <div>Receita = Salário Base + Renda Extra</div>
             <div>Despesas Reais = Contas + Cartão (sem Investir)</div>
             <div>Saldo = Receita − (Despesas Reais + Investimento)</div>
