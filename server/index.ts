@@ -132,6 +132,10 @@ async function runMigrations() {
     "ALTER TABLE users ADD COLUMN investTipDate DATE NULL",
     "ALTER TABLE expenses ADD COLUMN recurringGoalPaidTotal DECIMAL(10,2) DEFAULT 0",
     "ALTER TABLE users ADD COLUMN potConfig TEXT NULL",
+    "ALTER TABLE users ADD COLUMN bestStreak INT DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN lastCheckinDay DATE NULL",
+    "ALTER TABLE users ADD COLUMN graceDay DATE NULL",
+    "ALTER TABLE users ADD COLUMN graceWeek DATE NULL",
   ];
   for (const sql of alters) {
     try { await p.execute(sql); }
@@ -285,90 +289,123 @@ app.post("/api/users/:id/xp", async (req, res) => {
 });
 
 // ── STREAK ────────────────────────────────────────────────────────────────────
-// Regra: 1 checkin por dia (00:00–23:59). Streak zera se pular 1 dia.
-// Dia 30+ reinicia para 1. XP = dia * 10.
+// Regras (versão "sem punição pesada"):
+//  • 1 check-in por dia (dia = fuso America/Sao_Paulo).
+//  • Pular 1 dia na semana NÃO quebra a sequência (perdão semanal: 1 por semana, semana começa no domingo).
+//  • Pular mais que isso: sequência atual volta a 1, mas a MELHOR sequência fica guardada.
+//  • XP do dia = 10 × max(dia da sequência, melhor/3), no máximo 300 — um deslize não volta o XP para 10.
+const brDay = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(d);
+const dayMs = (day: string) => Date.parse(day + "T00:00:00Z");
+const addDays = (day: string, n: number) => new Date(dayMs(day) + n * 86400000).toISOString().slice(0, 10);
+const dayDiff = (a: string, b: string) => Math.round((dayMs(b) - dayMs(a)) / 86400000);
+const weekStart = (day: string) => addDays(day, -new Date(dayMs(day)).getUTCDay()); // domingo
+const dayXp = (n: number, best: number) => Math.min(300, 10 * Math.max(n, Math.floor((best || 0) / 3)));
+
+function lastDayOf(row: any): string | null {
+  if (row.lastCheckinDay) return String(row.lastCheckinDay).slice(0, 10);
+  if (row.lastCheckin) {
+    const str = String(row.lastCheckin);
+    const d = new Date(str.includes("T") ? str : str.replace(" ", "T") + "Z");
+    return isNaN(+d) ? null : brDay(d);
+  }
+  return null;
+}
+
+function streakState(row: any, today: string) {
+  const streak = row.streakDays || 0;
+  const best = Math.max(row.bestStreak || 0, streak);
+  const last = lastDayOf(row);
+  const graceDay = row.graceDay ? String(row.graceDay).slice(0, 10) : null;
+  const graceWeek = row.graceWeek ? String(row.graceWeek).slice(0, 10) : null;
+  const out = { streak, best, last, graceDay, claimedToday: false, broken: false, graceAvailable: false, gap: 0 };
+  if (!last || streak === 0) return out;
+  const gap = dayDiff(last, today);
+  out.gap = gap;
+  if (gap <= 0) { out.claimedToday = true; return out; }
+  if (gap === 1) return out;
+  if (gap === 2) {
+    const missed = addDays(today, -1);
+    if (graceWeek !== weekStart(missed)) { out.graceAvailable = true; return out; }
+  }
+  out.broken = true;
+  return out;
+}
+
+function buildWeek(today: string, st: { streak: number; last: string | null; graceDay: string | null; claimedToday: boolean; graceAvailable: boolean }) {
+  const done = new Set<string>(); const grace = new Set<string>();
+  if (st.last && st.streak > 0) {
+    let d = st.last, count = 0, guard = 0;
+    while (count < st.streak && guard++ < 400) {
+      if (st.graceDay && d === st.graceDay) grace.add(d); else { done.add(d); count++; }
+      d = addDays(d, -1);
+    }
+  }
+  if (st.graceAvailable) grace.add(addDays(today, -1));
+  const ws = weekStart(today);
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(ws, i);
+    let state = "empty";
+    if (done.has(day)) state = "done";
+    else if (grace.has(day)) state = "grace";
+    else if (day === today) state = "today";
+    else if (day > today) state = "future";
+    return { day, state };
+  });
+}
+
 app.get("/api/users/:id/streak", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const [rows] = await p.execute("SELECT streakDays, lastCheckin FROM users WHERE id=?", [req.params.id]) as any;
+    const [rows] = await p.execute("SELECT streakDays, bestStreak, lastCheckin, lastCheckinDay, graceDay, graceWeek FROM users WHERE id=?", [req.params.id]) as any;
     if (!rows.length) return res.status(404).json({ error: "Nao encontrado" });
-    let { streakDays, lastCheckin } = rows[0];
-
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
-
-    // Verifica se streak foi quebrado (mais de 1 dia sem checkin)
-    let streakBroken = false;
-    if (lastCheckin) {
-      const lc = new Date(lastCheckin);
-      const lcStart = new Date(lc.getFullYear(), lc.getMonth(), lc.getDate());
-      // Se o último checkin foi antes de ontem, streak quebrou
-      if (lcStart.getTime() < yesterdayStart.getTime()) {
-        streakBroken = true;
-      }
+    const now = new Date(); const today = brDay(now);
+    let st = streakState(rows[0], today);
+    if (st.broken) {
+      // guarda a melhor sequência e zera só a atual
+      await p.execute("UPDATE users SET bestStreak=GREATEST(IFNULL(bestStreak,0),?), streakDays=0, graceDay=NULL WHERE id=?", [st.best, req.params.id]);
+      st = { ...st, streak: 0, graceDay: null, broken: true };
     }
-
-    // Se streak quebrou, zera no banco imediatamente
-    if (streakBroken) {
-      await p.execute("UPDATE users SET streakDays=0 WHERE id=?", [req.params.id]);
-      streakDays = 0;
-    }
-
-    let claimedToday = false;
-    if (lastCheckin && !streakBroken) {
-      const lc = new Date(lastCheckin);
-      const lcStart = new Date(lc.getFullYear(), lc.getMonth(), lc.getDate());
-      claimedToday = lcStart.getTime() === todayStart.getTime();
-    }
-
-    const msLeft = new Date(todayStart.getTime() + 86400000).getTime() - now.getTime();
-    const h = Math.floor(msLeft / 3600000);
-    const m = Math.floor((msLeft % 3600000) / 60000);
-    res.json({ streakDays: streakDays || 0, claimedToday, expiresIn: `${h}h ${m}m`, streakBroken });
+    const nextStreak = st.broken ? 1 : st.streak + 1;
+    const hoursLeft = 24 - Number(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(now));
+    res.json({
+      streakDays: st.streak, bestStreak: st.best, claimedToday: st.claimedToday, streakBroken: st.broken,
+      graceAvailable: st.graceAvailable, nextXP: dayXp(nextStreak, st.best), expiresIn: `${Math.max(hoursLeft, 0)}h`,
+      week: buildWeek(today, st),
+    });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.post("/api/users/:id/streak/checkin", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const [rows] = await p.execute("SELECT xp, level, levelNum, streakDays, lastCheckin FROM users WHERE id=?", [req.params.id]) as any;
+    const [rows] = await p.execute("SELECT xp, level, levelNum, streakDays, bestStreak, lastCheckin, lastCheckinDay, graceDay, graceWeek FROM users WHERE id=?", [req.params.id]) as any;
     if (!rows.length) return res.status(404).json({ error: "Nao encontrado" });
-    let { xp, level, levelNum, streakDays, lastCheckin } = rows[0];
+    const { xp } = rows[0];
+    const today = brDay(new Date());
+    const st = streakState(rows[0], today);
+    if (st.claimedToday) return res.status(400).json({ error: "Checkin ja realizado hoje" });
 
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+    let newStreak = 1, usedGrace = false, wasBroken = false;
+    if (st.last && st.streak > 0) {
+      if (st.broken) wasBroken = true;
+      else { newStreak = st.streak + 1; usedGrace = st.graceAvailable; }
+    } else if (st.last) wasBroken = true;
 
-    // Já fez hoje?
-    if (lastCheckin) {
-      const lc = new Date(lastCheckin);
-      const lcStart = new Date(lc.getFullYear(), lc.getMonth(), lc.getDate());
-      if (lcStart.getTime() === todayStart.getTime()) {
-        return res.status(400).json({ error: "Checkin ja realizado hoje" });
-      }
-    }
-
-    // Streak quebrou se pulou um dia (último checkin foi antes de ontem)
-    let newStreak = (streakDays || 0) + 1;
-    if (lastCheckin) {
-      const lc = new Date(lastCheckin);
-      const lcStart = new Date(lc.getFullYear(), lc.getMonth(), lc.getDate());
-      if (lcStart.getTime() < yesterdayStart.getTime()) newStreak = 1; // streak quebrou
-    }
-    if (newStreak > 30) newStreak = 1; // reinicia após dia 30
-
-    const isMilestone = newStreak === 7 || newStreak === 15 || newStreak === 30;
-
-    // XP = dia * 10
-    const xpGain = newStreak * 10;
+    const best = Math.max(st.best, newStreak);
+    const xpGain = dayXp(newStreak, st.best);
     const newXp = (xp || 0) + xpGain;
     const { levelNum: newLevelNum, tier: newTier } = calcLevel(newXp);
+    const isMilestone = [7, 14, 30, 60, 100, 200, 365].includes(newStreak);
+    const missed = addDays(today, -1);
+    const newGraceDay = usedGrace ? missed : (wasBroken ? null : st.graceDay);
+    const newGraceWeek = usedGrace ? weekStart(missed) : (rows[0].graceWeek ? String(rows[0].graceWeek).slice(0, 10) : null);
 
-    await p.execute("UPDATE users SET streakDays=?, lastCheckin=NOW(), xp=?, levelNum=?, level=? WHERE id=?",
-      [newStreak, newXp, newLevelNum, newTier, req.params.id]);
+    await p.execute(
+      "UPDATE users SET streakDays=?, bestStreak=?, lastCheckin=NOW(), lastCheckinDay=?, graceDay=?, graceWeek=?, xp=?, levelNum=?, level=? WHERE id=?",
+      [newStreak, best, today, newGraceDay, newGraceWeek, newXp, newLevelNum, newTier, req.params.id]);
 
-    res.json({ streakDays:newStreak, xpGained:xpGain, xp:newXp, levelNum:newLevelNum, level:newTier, isMilestone });
+    const week = buildWeek(today, { streak: newStreak, last: today, graceDay: newGraceDay, claimedToday: true, graceAvailable: false });
+    res.json({ streakDays: newStreak, bestStreak: best, xpGained: xpGain, xp: newXp, levelNum: newLevelNum, level: newTier, isMilestone, usedGrace, wasBroken, week });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -522,11 +559,19 @@ app.post("/api/users/:userId/credit-card/pay-all", async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Define a META de um Sonho/Objetivo: guarda a meta, marca como recorrente (aporte mensal) e,
+// se ainda não houver prazo, calcula meses = meta ÷ valor mensal (mantém o card de progresso funcionando).
+async function applyGoal(p: mysql.Pool, expenseId: number | string, goal: number) {
+  await p.execute(
+    "UPDATE expenses SET recurringGoal=?, recurring=1, recurringMonths=IF(IFNULL(recurringMonths,0)>0, recurringMonths, IF(amount>0, GREATEST(1, CEIL(?/amount)), 12)) WHERE id=?",
+    [goal, goal, expenseId]);
+}
+
 // ── EDITAR DESPESA ────────────────────────────────────────────────────────────
 app.patch("/api/expenses/:id/edit", async (req, res) => {
   try {
     const p = getPool(); if (!p) return res.status(500).json({ error: "DB indisponivel" });
-    const { name, amount, expenseDate, dueDate, recurringGoalPaidTotal } = req.body;
+    const { name, amount, expenseDate, dueDate, recurringGoalPaidTotal, recurringGoal } = req.body;
     const errors: string[] = [];
     const safe = async (label: string, fn: () => Promise<any>) => {
       try { await fn(); } catch (e: any) { errors.push(label+": "+e.message); console.error("⚠️ Edit despesa ("+label+", id="+req.params.id+"):", e.message); }
@@ -541,6 +586,16 @@ app.patch("/api/expenses/:id/edit", async (req, res) => {
     }
     if (dueDate !== undefined) {
       await safe("dueDate", () => p.execute("UPDATE expenses SET dueDate=? WHERE id=?", [dueDate||null, req.params.id]));
+    }
+    if (recurringGoal !== undefined && recurringGoal !== null && recurringGoal !== "") {
+      // Meta opcional do Sonho/Objetivo (valor total). Só vale para categorias 5 e 6.
+      const g = parseFloat(recurringGoal);
+      if (!isNaN(g) && g > 0) {
+        await safe("recurringGoal", async () => {
+          const [cr] = await p.execute("SELECT categoryId FROM expenses WHERE id=?", [req.params.id]) as any;
+          if (cr.length && (Number(cr[0].categoryId) === 6 || Number(cr[0].categoryId) === 5)) await applyGoal(p, req.params.id, g);
+        });
+      }
     }
     if (recurringGoalPaidTotal !== undefined && recurringGoalPaidTotal !== null && recurringGoalPaidTotal !== "") {
       // O usuário informa "já investido ANTES deste mês". O total acumulado = esse valor + parcela do mês (se já paga).
@@ -792,7 +847,7 @@ app.post("/api/ai/insights", async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 600,
+        max_tokens: 900,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -990,6 +1045,7 @@ Para despesas, escolha o pote cuja DEFINIÇÃO melhor combina com o gasto (mesmo
 INTENÇÕES (campo "intent"):
 - "transaction": o usuário relatou gasto/ganho/compra no crédito. Preencha "transactions".
 - "update_salary": o usuário quer definir/mudar o SALÁRIO BASE (renda fixa mensal) — ex: "meu salário agora é 5000", "passei a ganhar 3000 por mês", ou respondeu com o valor depois de você ter perguntado do salário. Preencha "salary" com o número e deixe transactions vazio. O app guarda só o valor (não o dia de recebimento). Salário NÃO é renda extra e NÃO é lançamento.
+- "set_goal": o usuário informa ou muda a META TOTAL do Sonho (ex: "minha meta do sonho é 50 mil", "meta de R$50.000", "quero juntar 80 mil"). Preencha "goal" (número em reais), transactions:[] e confirme em "reply". Não é lançamento e não rende XP.
 - "guide": pergunta sobre como o app funciona, onde fica algo, para que serve, por que XP/níveis/streak/potes. Responda em "reply" usando o CONHECIMENTO abaixo. transactions vazio.
 - "other": conversa ou dúvida sem lançamento (inclui pedir o valor que faltou). transactions vazio; use "reply".
 Se o usuário disser algo como "ganho X todo mês/dia Y" e não estiver claro se é o salário base ou uma renda extra, NÃO assuma: pergunte em "reply" (intent "other"). Se ele pedir para mudar o salário mas não der o valor, pergunte o valor.
@@ -1006,7 +1062,7 @@ CONHECIMENTO DO APP (a única fonte para explicar o app; nunca invente menus, bo
 Estilo das respostas ("reply"): curtas (até ~5 linhas), cordiais, com os nomes reais dos botões; explique o porquê quando perguntarem. Não use respostas decoradas: adapte ao que foi perguntado.
 
 FORMATO DE SAÍDA (sempre um objeto):
-{"intent":"transaction"|"update_salary"|"guide"|"other","salary":number|null,"transactions":[{"type":"expense"|"income"|"credit","categoryId":number|null,"name":"string curta","amount":number,"dateExpr":"string"|null,"dueDateExpr":"string"|null,"subcategory":"string"|null,"recurring":boolean,"installments":number|null,"dueDay":number|null}],"reply":"string"|null}
+{"intent":"transaction"|"update_salary"|"set_goal"|"guide"|"other","salary":number|null,"goal":number|null,"transactions":[{"type":"expense"|"income"|"credit","categoryId":number|null,"name":"string curta","amount":number,"dateExpr":"string"|null,"dueDateExpr":"string"|null,"subcategory":"string"|null,"recurring":boolean,"installments":number|null,"dueDay":number|null,"goal":number|null}],"reply":"string"|null}
 
 Regras dos lançamentos:
 - "type":"income" = renda extra/ganho avulso. "type":"expense" = gasto normal (débito, dinheiro, pix, boleto). "type":"credit" = APENAS quando o usuário disser explicitamente "crédito"/"cartão de crédito"/"no cartão"/"parcelado no cartão". Parcelamento (ex: "em 2x") SEM forma de pagamento clara: NÃO assuma — transactions:[] e pergunte em "reply" a forma de pagamento.
@@ -1017,6 +1073,7 @@ Regras dos lançamentos:
 - "dateExpr": expressão da data do gasto/ganho; null se não houver (o servidor assume hoje).
 - "recurring": true se indicar gasto fixo/mensal/recorrente/indeterminado ("todo mês", "fixo"). Diferente de parcelamento.
 - Cada gasto mencionado separadamente vira um item.
+- "goal": só em expense do pote Sonho (ou Objetivo) quando o usuário disser a META TOTAL na mesma frase (ex: "investi 1000 no sonho da casa própria, meta de 50 mil" → amount:1000, goal:50000). Nunca invente; sem meta dita, null. A meta é sempre opcional.
 - "name" curto e descritivo.
 - "reply": use para dúvidas ou respostas de guia; null quando os lançamentos estão completos.
 - Use o histórico para interpretar respostas a perguntas que você mesmo fez.
@@ -1057,6 +1114,7 @@ Regras dos lançamentos:
     let reply: string | null = null;
     let intent = "transaction";
     let salaryValue: number | null = null;
+    let goalValue: number | null = null;
     try {
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed)) transactions = parsed;
@@ -1066,6 +1124,8 @@ Regras dos lançamentos:
         if (typeof parsed.intent === "string") intent = parsed.intent;
         const sv = parseFloat(parsed.salary);
         salaryValue = !isNaN(sv) && sv > 0 ? sv : null;
+        const gv = parseFloat(parsed.goal);
+        goalValue = !isNaN(gv) && gv > 0 ? gv : null;
       }
     } catch {
       return res.json({ transactions: [], reply: "Não consegui entender direito. Pode tentar reescrever com o valor em reais?" });
@@ -1085,7 +1145,25 @@ Regras dos lançamentos:
         return res.json({ intent, transactions: [], reply: "Não consegui atualizar o salário agora. Tenta em Configurações, ou me manda de novo em instantes." });
       }
     }
-    if (intent === "guide" || intent === "update_salary") transactions = [];
+    // Meta do Sonho pelo chat: aplica no lançamento mais recente do pote Sonho
+    if (intent === "set_goal" && userId) {
+      try {
+        const p = getPool();
+        if (p && goalValue) {
+          const [er] = await p.execute("SELECT id FROM expenses WHERE userId=? AND categoryId=6 ORDER BY (recurringGoal>0) DESC, id DESC LIMIT 1", [userId]) as any;
+          if (er.length) {
+            await applyGoal(p, er[0].id, goalValue);
+            const fmtG = goalValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            return res.json({ intent, transactions: [], goalUpdated: goalValue, reply: `Combinado! A meta do seu Sonho agora é ${fmtG}. Você acompanha o progresso no Dashboard.` });
+          }
+          return res.json({ intent, transactions: [], reply: "Ainda não tenho nenhum lançamento no seu Sonho. Me conta quanto você investe nele e, se quiser, a meta junto (ex: \"investi 1000 no sonho, meta de 50 mil\")." });
+        }
+      } catch (e: any) {
+        console.error("⚠️ Falha ao definir meta pelo chat:", e.message);
+        return res.json({ intent, transactions: [], reply: "Não consegui salvar a meta agora. Você também pode definir em Despesas, editando o item do Sonho." });
+      }
+    }
+    if (intent === "guide" || intent === "update_salary" || intent === "set_goal") transactions = [];
 
     // Resolve as datas em código — a IA só identificou a expressão usada
     for (const it of transactions) {
@@ -1106,7 +1184,18 @@ Regras dos lançamentos:
       }
     }
 
-    res.json({ intent, transactions, reply });
+    // Sonho sem meta: o Vieira pergunta (opcional) depois de registrar
+    let goalAsk = false;
+    try {
+      const needs = transactions.some((t: any) => t.type === "expense" && Number(t.categoryId) === 6 && !(parseFloat(t.goal) > 0));
+      const p = getPool();
+      if (needs && p && userId) {
+        const [gr] = await p.execute("SELECT id FROM expenses WHERE userId=? AND categoryId=6 AND recurringGoal>0 LIMIT 1", [userId]) as any;
+        goalAsk = gr.length === 0;
+      }
+    } catch {}
+
+    res.json({ intent, transactions, reply, goalAsk });
   } catch (e: any) {
     console.error("AI parse-transaction:", e.message);
     res.status(500).json({ error: e.message });
