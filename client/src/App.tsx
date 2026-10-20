@@ -1395,12 +1395,15 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
 
       {/* APOIE — abaixo do Vieira; o X esconde até a próxima sessão */}
       {!donateHidden && (
-        <div style={{ display:"flex", alignItems:"center", background:"rgba(130,10,209,0.08)", border:"1px solid rgba(130,10,209,0.28)", borderRadius:14, marginBottom:12, overflow:"hidden" }}>
-          <div onClick={onDonate} style={{ flex:1, padding:"10px 14px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
-            <span style={{ fontSize:12, color:"#c084fc", fontWeight:700 }}>Apoie quem criou o NaCarteira</span>
-            <span style={{ fontSize:11, color:"rgba(192,132,252,0.7)", fontWeight:600 }}>Pix rápido</span>
+        <div style={{ display:"flex", alignItems:"center", background:"linear-gradient(135deg, rgba(130,10,209,0.22), rgba(108,99,255,0.12))", border:"1.5px solid rgba(180,79,255,0.55)", borderRadius:16, marginBottom:12, overflow:"hidden" }}>
+          <div onClick={onDonate} style={{ flex:1, padding:"12px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+            <Tile e="☕" size={44}/>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:14, color:"#fff", fontWeight:800, letterSpacing:0.3, textTransform:"uppercase", lineHeight:1.2 }}>Pague um café ao criador</div>
+              <div style={{ fontSize:11.5, color:"rgba(216,180,254,0.85)", fontWeight:600, marginTop:3 }}>Apoie o NaCarteira · Pix rápido</div>
+            </div>
           </div>
-          <button onClick={hideDonate} aria-label="Fechar" style={{ background:"none", border:"none", color:"rgba(192,132,252,0.7)", padding:"10px 12px", cursor:"pointer", display:"flex" }}><Icon name="x" size={14}/></button>
+          <button onClick={hideDonate} aria-label="Fechar" style={{ background:"none", border:"none", color:"rgba(192,132,252,0.7)", padding:"10px 12px", cursor:"pointer", display:"flex", alignSelf:"flex-start" }}><Icon name="x" size={14}/></button>
         </div>
       )}
 
