@@ -130,13 +130,14 @@ button {
 button:active { transform: scale(0.96); }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--purple));
-  color: white;
+  background: linear-gradient(135deg, #5b52f0, #9333ea);
+  color: #ffffff;
   padding: 14px 24px;
   font-size: 15px;
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
   box-shadow: 0 4px 16px rgba(108,99,255,0.4);
 }
 .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
@@ -231,3 +232,21 @@ button:active { transform: scale(0.96); }
 
 /* ─── UTILITÁRIOS ──────────────────────────────────────────────────────────── */
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* ─── STREAK / CHAMA ANIMADA ───────────────────────────────────────────────── */
+@keyframes ncFlicker {
+  0%,100% { transform: scale(1,1) rotate(0deg); }
+  20%     { transform: scale(1.04,0.97) rotate(-2deg); }
+  45%     { transform: scale(0.97,1.06) rotate(1.5deg); }
+  70%     { transform: scale(1.03,0.99) rotate(-1deg); }
+}
+@keyframes ncGlow  { 0%,100% { opacity:.55; transform:scale(1); } 50% { opacity:.95; transform:scale(1.12); } }
+@keyframes ncPop   { 0% { transform:scale(1); } 30% { transform:scale(1.35) translateY(-10px); } 60% { transform:scale(.95); } 100% { transform:scale(1); } }
+@keyframes ncSpark { 0% { transform:translate(0,0) scale(1); opacity:1; } 100% { transform:translate(var(--dx),var(--dy)) scale(0); opacity:0; } }
+@keyframes ncPulse { 0%,100% { box-shadow:0 0 0 0 rgba(139,133,255,.5); } 50% { box-shadow:0 0 0 8px rgba(139,133,255,0); } }
+@keyframes ncRise  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+@keyframes ncDay   { 0% { transform:scale(.5); } 60% { transform:scale(1.25); } 100% { transform:scale(1); } }
+@keyframes ncShine { 0% { transform:translateX(-120%); } 100% { transform:translateX(220%); } }
+@media (prefers-reduced-motion: reduce) {
+  .nc-anim, .nc-anim * { animation: none !important; }
+}

@@ -9,7 +9,7 @@ function LogoWordmark({ height = 28 }: { height?: number }) {
 }
 
 // ── ÍCONES (SVG, sem emoji) ──────────────────────────────────────────────────
-function Icon({ name, size = 20, color = "currentColor", stroke = 2.2 }: { name: string; size?: number; color?: string; stroke?: number }) {
+function Icon({ name, size = 20, color = "currentColor", stroke = 2.2, soft = false }: { name: string; size?: number; color?: string; stroke?: number; soft?: boolean }) {
   const paths: Record<string, React.ReactNode> = {
     home:  <path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>,
     list:  <path d="M4 6h16M4 12h16M4 18h10"/>,
@@ -60,10 +60,27 @@ function Icon({ name, size = 20, color = "currentColor", stroke = 2.2 }: { name:
     clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></>,
     pie: <><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></>,
   };
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink:0 }}>{paths[name]}</svg>;
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={soft?"currentColor":"none"} fillOpacity={soft?0.28:undefined} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink:0 }}>{paths[name]}</svg>;
 }
-function FlameIcon({ size = 14, color = "#ffb703" }: { size?: number; color?: string }) {
-  return <svg width={size*0.86} height={size} viewBox="0 0 24 28" fill={color} aria-hidden="true" style={{ flexShrink:0 }}><path d="M12 0c1 5 6 8 6 15a6 6 0 0 1-12 0c0-2 1-4 2-5 0 2 1 3 2 3 0-5-1-8 2-13z"/></svg>;
+function FlameIcon({ size = 14, off = false, still = false, hot = false }: { size?: number; color?: string; off?: boolean; still?: boolean; hot?: boolean }) {
+  const id = React.useId().replace(/:/g,"");
+  const w = size*0.83;
+  return (
+    <span className={still||off?"":"nc-anim"} style={{ display:"inline-flex", width:w, height:size, flexShrink:0, transformOrigin:"50% 92%", animation:(still||off)?"none":`ncFlicker ${hot?1.1:1.7}s ease-in-out infinite` }}>
+      <svg width={w} height={size} viewBox="0 0 100 120" aria-hidden="true">
+        <defs>
+          <linearGradient id={`o${id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={off?"#6b7399":"#ffb21f"}/><stop offset="1" stopColor={off?"#454c70":"#ff5a1f"}/>
+          </linearGradient>
+          <linearGradient id={`i${id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={off?"#8b93b8":"#fff3a6"}/><stop offset="1" stopColor={off?"#6b7399":"#ffc83d"}/>
+          </linearGradient>
+        </defs>
+        <path d="M50 4C58 26 82 40 82 70C82 94 68 112 50 112C32 112 18 94 18 70C18 52 28 44 34 32C36 44 42 48 46 46C42 32 44 16 50 4Z" fill={`url(#o${id})`}/>
+        <path d="M50 56C56 68 68 74 68 90C68 102 60 110 50 110C40 110 32 102 32 90C32 78 42 72 50 56Z" fill={`url(#i${id})`}/>
+      </svg>
+    </span>
+  );
 }
 
 // Mapa emoji -> ícone (os dados antigos ainda guardam o emoji como "chave"; na tela só aparece o ícone)
@@ -76,13 +93,22 @@ const EMO_MAP: Record<string,string> = {
   "↩":"undo","🔐":"lock","🔒":"lock","🔓":"unlock","🔑":"key","🛡":"shield","📂":"folder","⏳":"clock","🥧":"pie",
   "📚":"book","⚙":"gear","🗑":"trash","✏":"edit",
 };
-function Em({ e, size = 16, color }: { e?: string; size?: number; color?: string }) {
+function Em({ e, size = 16, color, bare = false, soft = false }: { e?: string; size?: number; color?: string; bare?: boolean; soft?: boolean }) {
   if (!e) return null;
   const key = e.replace(/\uFE0F/g,"").trim();
-  if (key==="🔥") return <FlameIcon size={size} color={color||"currentColor"}/>;
+  if (key==="🔥") return <FlameIcon size={size}/>;
   const name = EMO_MAP[key];
   if (!name) return null;
-  return <span style={{ display:"inline-flex", verticalAlign:"-0.15em", marginRight:"0.3em", color }}><Icon name={name} size={size} stroke={2}/></span>;
+  return <span style={{ display:"inline-flex", verticalAlign:"-0.15em", marginRight:bare?0:"0.3em", color }}><Icon name={name} size={size} stroke={2} soft={soft}/></span>;
+}
+
+// Ícone dentro de quadradinho arredondado (estilo ícone de app do iOS), sempre em roxo
+function Tile({ e, size = 44 }: { e?: string; size?: number }) {
+  return (
+    <span style={{ width:size, height:size, flexShrink:0, borderRadius:Math.round(size*0.3), background:"linear-gradient(145deg,#8b85ff,#6c3fe0)", display:"inline-flex", alignItems:"center", justifyContent:"center", color:"#fff", boxShadow:"inset 0 1px 0 rgba(255,255,255,.28), 0 4px 12px rgba(108,63,224,.35)" }}>
+      <Em e={e} size={Math.round(size*0.52)} bare soft/>
+    </span>
+  );
 }
 
 const API = "/api";
@@ -314,13 +340,17 @@ function StreakMilestoneModal({ days, xpGained, onClose }: { days:number; xpGain
     ? { emoji:"⚡", title:"7 Dias Consecutivos!", color:"#6c63ff",
         quote:"\"A consistência é o que transforma a média em excelência.\" — Tony Robbins",
         msg:"Uma semana inteira controlando seu dinheiro. Você está construindo um hábito que menos de 10% das pessoas têm." }
-    : days === 15
-    ? { emoji:"💎", title:"15 Dias! Você é diferente.", color:"#a78bfa",
+    : days === 14
+    ? { emoji:"💎", title:"14 Dias! Você é diferente.", color:"#a78bfa",
         quote:"\"Quem não sabe para onde vai o dinheiro, sempre vai a lugar nenhum.\" — Primo Rico",
         msg:"Meio mês de disciplina financeira. Você já vê para onde vai cada real. Isso é poder." }
-    : { emoji:"👑", title:"30 Dias! Missão do Mês Concluída.", color:"#ffd700",
+    : days === 30
+    ? { emoji:"👑", title:"30 Dias! Missão do Mês Concluída.", color:"#ffd700",
         quote:"\"Riqueza nasce da constância, não do acaso.\" — Flávio Augusto",
-        msg:"Um mês completo. Isso é mentalidade de quem constrói patrimônio. O streak recomeça — e você já sabe que consegue." };
+        msg:"Um mês completo. Isso é mentalidade de quem constrói patrimônio. E a sequência continua." }
+    : { emoji:"👑", title:`${days} Dias seguidos!`, color:"#ffd700",
+        quote:"\"Riqueza nasce da constância, não do acaso.\" — Flávio Augusto",
+        msg:"Disciplina rara. Você está entre as pessoas que realmente acompanham o próprio dinheiro todos os dias." };
 
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.88)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:20 }} onClick={onClose}>
@@ -341,29 +371,49 @@ function StreakMilestoneModal({ days, xpGained, onClose }: { days:number; xpGain
   );
 }
 
-// ── STREAK MODAL ──────────────────────────────────────────────────────────────
+// ── STREAK MODAL (tela cheia, chama animada, semana, perdão semanal) ─────────
 function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; onClaim:(d:any)=>void }) {
   const [streakDays, setStreakDays] = useState(0);
+  const [shown, setShown] = useState(0);
+  const [best, setBest] = useState(0);
   const [claimed, setClaimed] = useState<boolean|null>(null);
   const [xpGained, setXpGained] = useState(0);
+  const [nextXP, setNextXP] = useState(10);
   const [loading, setLoading] = useState(false);
-  const [expiresIn, setExpiresIn] = useState("");
+  const [broken, setBroken] = useState(false);
+  const [grace, setGrace] = useState(false);
+  const [usedGrace, setUsedGrace] = useState(false);
+  const [week, setWeek] = useState<{day:string;state:string}[]>([]);
   const [milestone, setMilestone] = useState<number|null>(null);
-  const [streakBroken, setStreakBroken] = useState(false);
+  const [burst, setBurst] = useState(0);
 
   useEffect(() => {
     fetch(`${API}/users/${user.id}/streak`)
       .then(r => r.json())
       .then(d => {
         const days = d.streakDays || 0;
-        setStreakDays(days);
+        setStreakDays(days); setShown(days);
+        setBest(d.bestStreak || days);
         setClaimed(!!d.claimedToday);
-        setExpiresIn(d.expiresIn || "");
-        setStreakBroken(!!d.streakBroken);
-        if (d.claimedToday) setXpGained(days * 10);
+        setNextXP(d.nextXP || (days+1)*10);
+        setBroken(!!d.streakBroken);
+        setGrace(!!d.graceAvailable);
+        setWeek(Array.isArray(d.week) ? d.week : []);
       })
       .catch(() => setClaimed(false));
   }, []);
+
+  // contagem subindo (2 → 3) depois do resgate
+  const countTo = (from:number, to:number) => {
+    if (from >= to) { setShown(to); return; }
+    const t0 = performance.now(), dur = 700;
+    const step = (t:number) => {
+      const k = Math.min((t - t0) / dur, 1);
+      setShown(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
 
   const handleClaim = async () => {
     if (loading || claimed === true) return;
@@ -372,10 +422,15 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
       const res = await fetch(`${API}/users/${user.id}/streak/checkin`, { method:"POST", headers:{"Content-Type":"application/json"} });
       const data = await res.json();
       if (res.ok) {
-        setStreakDays(data.streakDays);
-        setXpGained(data.xpGained);
-        setClaimed(true);
-        if (data.isMilestone) setMilestone(data.streakDays);
+        const from = streakDays;
+        setStreakDays(data.streakDays); setBest(data.bestStreak || data.streakDays);
+        setXpGained(data.xpGained); setClaimed(true);
+        setUsedGrace(!!data.usedGrace); setGrace(false); setBroken(false);
+        if (Array.isArray(data.week)) setWeek(data.week);
+        setBurst(b => b + 1);
+        try { navigator.vibrate?.(30); } catch {}
+        countTo(data.wasBroken ? 0 : from, data.streakDays);
+        if (data.isMilestone) setTimeout(()=>setMilestone(data.streakDays), 1400);
         onClaim(data);
       } else if (data?.error?.includes("hoje")) {
         setClaimed(true);
@@ -386,77 +441,82 @@ function StreakModal({ user, onClose, onClaim }: { user:User; onClose:()=>void; 
 
   if (milestone) return <StreakMilestoneModal days={milestone} xpGained={xpGained} onClose={()=>{ setMilestone(null); onClose(); }}/>;
 
-  const nextDay = claimed ? streakDays : streakDays + 1;
-  const nextXP = nextDay * 10;
-  const accent = streakDays >= 30 ? "#ffd700" : streakDays >= 14 ? "#a78bfa" : streakDays >= 7 ? "#6c63ff" : "#f97316";
+  const LETTERS = ["D","S","T","Q","Q","S","S"];
+  const nextMark = [7,14,30,60,100,200,365].find(m => m > streakDays);
+  const off = streakDays === 0 && !claimed;
+  const message = claimed
+    ? (usedGrace ? "Você ficou 1 dia fora e a sequência foi mantida. Hoje já está registrado." : "Hoje está registrado. Quem olha o dinheiro todo dia, manda nele.")
+    : grace
+    ? "Você ficou 1 dia fora. Sua sequência continua, volte hoje para mantê-la."
+    : broken
+    ? `Recomeçar faz parte do processo. Sua melhor marca é ${best} ${best===1?"dia":"dias"}, vamos superar?`
+    : "Quem olha o dinheiro todo dia, manda nele.";
+  const sparks = Array.from({ length: 12 }, (_, i) => {
+    const ang = (i / 12) * Math.PI * 2 + (i % 2 ? 0.2 : 0), dist = 90 + (i % 3) * 30;
+    return { dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist - 30, d: (i % 4) * 0.04 };
+  });
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:16 }} onClick={onClose}>
-      <div style={{ background:"var(--bg2)", borderRadius:24, width:"100%", maxWidth:400, padding:"28px 24px 32px", position:"relative", border:"1px solid rgba(108,99,255,0.25)" }} onClick={e=>e.stopPropagation()}>
-        <button onClick={onClose} style={{ position:"absolute", top:14, right:14, background:"var(--bg3)", border:"1px solid var(--border)", color:"var(--text2)", width:30, height:30, borderRadius:8, fontSize:13 }}><Em e="✕"/></button>
+    <div style={{ position:"fixed", inset:0, zIndex:100, display:"flex", flexDirection:"column", background:"radial-gradient(120% 70% at 50% 18%, #3a1469 0%, #1a0f33 45%, #0e1018 100%)", overflowY:"auto" }}>
+      <div style={{ display:"flex", justifyContent:"flex-end", padding:"16px 16px 0" }}>
+        <button onClick={onClose} aria-label="Fechar" style={{ width:38, height:38, borderRadius:12, background:"rgba(255,255,255,0.08)", border:"1px solid var(--border)", color:"var(--text)", display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="x" size={18}/></button>
+      </div>
 
-        <div style={{ textAlign:"center", marginBottom:20 }}>
-          {streakBroken && (
-            <div style={{ background:"rgba(255,77,106,0.1)", border:"1px solid rgba(255,77,106,0.3)", borderRadius:10, padding:"8px 12px", marginBottom:12, fontSize:12, color:"#ff4d6a" }}>
-              <Em e="💔"/> Sua streak foi resetada — você perdeu um dia. Comece de novo!
-            </div>
-          )}
-          <div style={{ fontSize:52, marginBottom:8 }}><Em e={streakDays >= 30 ? "👑" : streakDays >= 14 ? "💎" : streakDays >= 7 ? "⚡" : "🔥"} size={44}/></div>
-          <div style={{ fontSize:72, fontWeight:900, color:accent, lineHeight:1, letterSpacing:"-3px", fontVariantNumeric:"tabular-nums" }}>
-            {claimed ? streakDays : streakDays === 0 ? 1 : streakDays + 1}
+      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 24px", textAlign:"center", maxWidth:420, width:"100%", margin:"0 auto" }}>
+        {/* chama + brilho + faíscas */}
+        <div style={{ position:"relative", width:190, height:190, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:4 }}>
+          {!off && <div className="nc-anim" style={{ position:"absolute", inset:10, borderRadius:"50%", background:"radial-gradient(circle, rgba(255,150,40,0.55) 0%, rgba(255,90,31,0.18) 45%, transparent 70%)", animation:"ncGlow 2.2s ease-in-out infinite" }}/>}
+          <div key={burst} className="nc-anim" style={{ position:"relative", animation:burst?"ncPop .8s cubic-bezier(.2,1.4,.4,1)":"none" }}>
+            <FlameIcon size={150} off={off} hot={claimed===false && !off}/>
           </div>
-          <div style={{ fontSize:12, color:"var(--text2)", textTransform:"uppercase", letterSpacing:2, marginTop:4 }}>DIAS SEGUIDOS</div>
+          {burst>0 && sparks.map((sp,i)=>(
+            <span key={`${burst}-${i}`} className="nc-anim" style={{ position:"absolute", left:"50%", top:"52%", width:8, height:8, borderRadius:"50%", background:i%3===0?"#fff3a6":"#ffb21f", ["--dx" as any]:`${sp.dx}px`, ["--dy" as any]:`${sp.dy}px`, animation:`ncSpark .9s ${sp.d}s ease-out forwards`, opacity:0 }}/>
+          ))}
         </div>
 
-        {!claimed && claimed !== null && (
-          <div style={{ textAlign:"center", marginBottom:16 }}>
-            <span style={{ fontSize:28, fontWeight:900, color:"#ffd700" }}>+{nextXP}</span>
-            <span style={{ fontSize:14, color:"var(--text2)", marginLeft:4 }}>XP ao resgatar</span>
-          </div>
-        )}
+        <div style={{ fontWeight:900, fontSize:96, lineHeight:0.95, letterSpacing:"-4px", fontVariantNumeric:"tabular-nums", background:off?"none":"linear-gradient(180deg,#ffc83d,#ff7a1f)", WebkitBackgroundClip:off?"initial":"text", WebkitTextFillColor:off?"#8b93b8":"transparent", color:"#8b93b8" }}>{shown}</div>
+        <div style={{ fontSize:14, fontWeight:700, letterSpacing:3, textTransform:"uppercase", color:"var(--text)", marginTop:8 }}>{shown===1?"dia seguido":"dias seguidos"}</div>
+        {best > 0 && <div style={{ marginTop:10, fontSize:12, color:"var(--text2)", background:"rgba(255,255,255,0.06)", border:"1px solid var(--border)", borderRadius:999, padding:"4px 12px" }}>Melhor sequência: <b style={{ color:"var(--text)" }}>{best} {best===1?"dia":"dias"}</b></div>}
 
-        {expiresIn && !claimed && (
-          <div style={{ textAlign:"center", marginBottom:14 }}>
-            <span style={{ background:"rgba(255,183,3,0.1)", border:"1px solid rgba(255,183,3,0.2)", borderRadius:8, padding:"4px 10px", color:"#ffb703", fontSize:12 }}>Disponível por mais {expiresIn}</span>
-          </div>
-        )}
-
-        {/* Milestones — sem emoji ao lado, só em cima */}
-        <div style={{ display:"flex", justifyContent:"space-between", gap:4, marginBottom:16, overflowX:"auto", paddingBottom:2 }}>
-          {[
-            { day:1,  xp:10,  emoji:"🔥", label:"1"  },
-            { day:2,  xp:20,  emoji:"🔥", label:"2"  },
-            { day:3,  xp:30,  emoji:"🔥", label:"3"  },
-            { day:5,  xp:50,  emoji:"🔥", label:"5"  },
-            { day:7,  xp:70,  emoji:"⚡",  label:"7"  },
-            { day:14, xp:140, emoji:"💎", label:"14" },
-            { day:30, xp:300, emoji:"👑", label:"30" },
-          ].map((m,i)=>{
-            const active = (claimed ? streakDays : streakDays+1) >= m.day;
-            const isCurrent = (claimed ? streakDays : streakDays+1) === m.day;
+        {/* semana */}
+        <div style={{ display:"flex", gap:8, marginTop:26, marginBottom:6 }}>
+          {(week.length ? week : Array.from({length:7},(_,i)=>({day:String(i),state:"empty"}))).map((w,i)=>{
+            const st = w.state;
             return (
-              <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2, minWidth:36,
-                background: isCurrent ? "rgba(108,99,255,0.25)" : active ? "rgba(108,99,255,0.10)" : "var(--bg3)",
-                border: `1.5px solid ${isCurrent ? "#6c63ff" : active ? "rgba(108,99,255,0.3)" : "var(--border)"}`,
-                borderRadius:10, padding:"6px 4px" }}>
-                <span style={{ fontSize:16 }}><Em e={m.emoji}/></span>
-                <span style={{ fontSize:10, fontWeight:800, color: active ? "var(--text)" : "var(--text2)" }}>{m.label}</span>
-                <span style={{ fontSize:9, color: active ? accent : "var(--text2)", fontWeight:700 }}>{m.xp}xp</span>
+              <div key={w.day} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+                <span style={{ fontSize:11, fontWeight:700, color: st==="today" ? "var(--primary-light)" : "var(--text2)" }}>{LETTERS[i]}</span>
+                <div className={st==="today"?"nc-anim":""} style={{
+                  width:34, height:34, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
+                  background: st==="done" ? "linear-gradient(180deg,#ffb21f,#ff6a1f)" : st==="grace" ? "rgba(139,147,184,0.18)" : "transparent",
+                  border: st==="done" ? "none" : st==="today" ? "2px solid #8b85ff" : st==="grace" ? "2px dashed #8b93b8" : "2px solid rgba(139,133,255,0.22)",
+                  opacity: st==="future" ? 0.45 : 1,
+                  animation: st==="today" ? "ncPulse 1.6s ease-in-out infinite" : (st==="done" && claimed && burst>0 && i===week.findIndex(x=>x.state==="today"||false) ? "ncDay .5s" : "none") }}>
+                  {st==="done" && <Icon name="check" size={18} color="#fff" stroke={3}/>}
+                  {st==="grace" && <svg width="14" height="14" viewBox="0 0 24 24" fill="#8b93b8" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1.5"/><rect x="14" y="4" width="5" height="16" rx="1.5"/></svg>}
+                </div>
               </div>
             );
           })}
         </div>
+        {week.some(w=>w.state==="grace") && <div style={{ fontSize:11, color:"var(--text2)" }}>Dia em pausa: não quebrou sua sequência</div>}
 
+        <div style={{ marginTop:22, fontSize:14, lineHeight:1.6, color:"var(--text)", maxWidth:320 }}>{message}</div>
+        {!claimed && claimed !== null && (
+          <div style={{ marginTop:12, fontSize:15, color:"var(--text2)" }}><b style={{ fontSize:26, color:"#ffc83d" }}>+{nextXP}</b> XP ao resgatar</div>
+        )}
+        {claimed && xpGained>0 && (
+          <div className="nc-anim" style={{ marginTop:12, fontSize:15, color:"var(--text2)", animation:"ncRise .5s .5s both" }}><b style={{ fontSize:26, color:"#ffc83d" }}>+{xpGained}</b> XP</div>
+        )}
+        {nextMark && claimed && <div style={{ marginTop:6, fontSize:12, color:"var(--text2)" }}>Faltam {nextMark - streakDays} {nextMark - streakDays===1?"dia":"dias"} para a marca de {nextMark}</div>}
+      </div>
+
+      <div style={{ padding:"16px 20px calc(20px + env(safe-area-inset-bottom))", maxWidth:420, width:"100%", margin:"0 auto" }}>
         {claimed === null ? (
-          <div style={{ width:"100%", padding:15, borderRadius:14, background:"var(--bg3)", textAlign:"center", color:"var(--text2)", fontSize:14 }}>Carregando...</div>
+          <div style={{ width:"100%", padding:16, borderRadius:16, background:"var(--bg3)", textAlign:"center", color:"var(--text2)", fontSize:15 }}>Carregando...</div>
         ) : claimed ? (
-          <div style={{ width:"100%", padding:16, borderRadius:14, background:"rgba(0,214,143,0.12)", border:"1px solid rgba(0,214,143,0.35)", textAlign:"center" }}>
-            <div style={{ fontSize:22, marginBottom:4 }}><Em e="✅"/></div>
-            <div style={{ fontSize:16, fontWeight:800, color:"var(--green)" }}>Resgatado hoje! +{xpGained} XP</div>
-            <div style={{ fontSize:12, color:"var(--text2)", marginTop:3 }}>Volte amanhã para o dia {streakDays + 1} <Em e="🔥"/></div>
-          </div>
+          <button onClick={onClose} style={{ width:"100%", padding:16, borderRadius:16, border:"1px solid var(--border)", background:"rgba(255,255,255,0.08)", color:"var(--text)", fontSize:16, fontWeight:800, cursor:"pointer" }}>Continuar</button>
         ) : (
-          <button onClick={handleClaim} disabled={loading} style={{ width:"100%", padding:16, border:"none", borderRadius:14, background:loading?"var(--bg3)":"linear-gradient(135deg,#6c63ff,#b44fff)", color:loading?"var(--text2)":"white", fontSize:16, fontWeight:800, cursor:loading?"default":"pointer", boxShadow:loading?"none":"0 4px 20px rgba(108,99,255,0.4)" }}>
+          <button onClick={handleClaim} disabled={loading} style={{ width:"100%", padding:16, border:"none", borderRadius:16, background:loading?"var(--bg3)":"linear-gradient(180deg,#ffb21f,#ff6a1f)", color:loading?"var(--text2)":"#2a1200", fontSize:17, fontWeight:900, cursor:"pointer", boxShadow:loading?"none":"0 6px 24px rgba(255,106,31,0.45)" }}>
             {loading ? "Salvando..." : `Resgatar +${nextXP} XP`}
           </button>
         )}
@@ -530,7 +590,7 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
       ].map((n,i)=>(
         <div key={i} style={{ background:n.bg, border:`1px solid ${n.color}33`, borderRadius:14, padding:"12px 14px", marginBottom:8 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-            <span style={{ fontSize:24 }}><Em e={n.emoji}/></span>
+            <Tile e={n.emoji} size={40}/>
             <div style={{ flex:1 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <span style={{ fontWeight:900, fontSize:13, color:n.color }}>{n.tier}</span>
@@ -564,7 +624,7 @@ function Onboarding({ user, onDone }: { user:User; onDone:()=>void }) {
 
       {POTES.map((p,i)=>(
         <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${p.color}`, marginBottom:7 }}>
-          <span style={{ fontSize:22, flexShrink:0 }}><Em e={p.emoji}/></span>
+          <Tile e={p.emoji} size={38}/>
           <div style={{ flex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontWeight:700, fontSize:13 }}>{p.name}</span>
@@ -1017,13 +1077,13 @@ function Auth({ onLogin }: { onLogin:(u:User)=>void }) {
       <div style={{ width:"100%", maxWidth:340, display:"flex", flexDirection:"column", gap:10, marginBottom:36 }}>
         {[{emoji:"⚔️",title:"Suba de Nível",desc:"Ganhe XP a cada ação financeira"},{emoji:"🔥",title:"Streak Diária",desc:"Apareça todo dia e acumule recompensas"},{emoji:"📊",title:"Controle Total",desc:"Despesas, cartão, renda extra e sonhos"}].map((f,i)=>(
           <div key={i} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 14px", display:"flex", alignItems:"center", gap:12, textAlign:"left" }}>
-            <span style={{ fontSize:26 }}><Em e={f.emoji}/></span>
+            <Tile e={f.emoji} size={46}/>
             <div><div style={{ fontWeight:700, fontSize:14 }}>{f.title}</div><div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}>{f.desc}</div></div>
           </div>
         ))}
       </div>
       <div style={{ width:"100%", maxWidth:340, display:"flex", flexDirection:"column", gap:10 }}>
-        <button className="btn-primary" onClick={()=>setMode("register")} style={{ width:"100%", fontSize:15, padding:"15px" }}><Em e="🚀"/> COMEÇAR MINHA JORNADA</button>
+        <button className="btn-primary" onClick={()=>setMode("register")} style={{ width:"100%", fontSize:15, padding:"15px", letterSpacing:0.5 }}>Começar minha jornada</button>
         <button className="btn-ghost" onClick={()=>setMode("login")} style={{ width:"100%" }}>Já tenho conta</button>
       </div>
     </div>
@@ -1213,9 +1273,9 @@ function SmartChat({ userId, messages, setMessages, onDone, onDonate }: { userId
         setLoading(false); return;
       }
       const items = Array.isArray(data.transactions) ? data.transactions : [];
-      if (data.salaryUpdated) {
+      if (data.salaryUpdated || data.goalUpdated) {
         await onDone(0); // recarrega o salário do servidor, sem XP
-        push("assistant", data.reply || "Salário atualizado.");
+        push("assistant", data.reply || (data.goalUpdated ? "Meta atualizada." : "Salário atualizado."));
         setLoading(false); return;
       }
       if (items.length === 0) {
@@ -1242,7 +1302,9 @@ function SmartChat({ userId, messages, setMessages, onDone, onDonate }: { userId
           done.push(`${it.name||"Compra"} — ${fmt(amt)}${modo} (${dataStr})`);
         } else {
           const catId = CATS.some((c:any)=>c.id===it.categoryId) ? it.categoryId : 8;
-          await fetch(`${API}/users/${userId}/expenses`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ categoryId:catId, name: it.name||"Gasto", amount: amt, subcategory: it.subcategory||null, dueDate: it.dueDate||null, recurring: it.recurring?1:0, expenseDate: it.date||null }) });
+          const goalV = parseFloat(it.goal);
+          const hasGoal = (catId===6 || catId===5) && goalV>0;
+          await fetch(`${API}/users/${userId}/expenses`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ categoryId:catId, name: it.name||"Gasto", amount: amt, subcategory: it.subcategory||null, dueDate: it.dueDate||null, recurring: (it.recurring||hasGoal)?1:0, recurringGoal: hasGoal?goalV:null, recurringMonths: hasGoal?Math.max(1,Math.ceil(goalV/amt)):null, expenseDate: it.date||null }) });
           totalXp += calcXpExpense(amt);
           const catEmoji = CATS.find((c:any)=>c.id===catId)?.name||"";
           done.push(`${catEmoji} ${it.name||"Gasto"} — ${fmt(amt)} (${dataStr})${it.recurring?" · recorrente":""}${vencStr}`);
@@ -1250,6 +1312,10 @@ function SmartChat({ userId, messages, setMessages, onDone, onDonate }: { userId
       }
       await onDone(totalXp);
       push("assistant", done.length ? `Prontinho, registrei:\n${done.join("\n")}${totalXp>0?`\n\n+${totalXp} XP`:""}` : "Não consegui confirmar os valores. Pode tentar de novo?");
+      // Sonho sem meta definida: pergunta opcional
+      if (data.goalAsk && done.length) {
+        push("assistant", "Quer definir uma meta para o seu Sonho? É opcional. Se quiser, me diga assim: \"minha meta é R$ 50.000\". Também dá para definir depois, em Despesas, editando o item do Sonho.");
+      }
       // Convite do café: uma única vez, entre 10 e 15 registros (fixo por usuário), contados neste aparelho
       if (done.length) {
         try {
@@ -1393,6 +1459,15 @@ function DashboardContent({ expenses,cc,incomes,salary,balance,totalExpSemSonho,
           </div>
         );
       })()}
+
+      {/* SONHO sem meta — convite opcional */}
+      {!sonhoRecorrente && sonhoTotal>0 && (
+        <div onClick={onExpenses} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:20, padding:"13px 14px", marginBottom:10, cursor:"pointer" }}>
+          <div style={{ fontSize:10, fontWeight:800, letterSpacing:0.7, textTransform:"uppercase", color:"#22c7e6" }}>{CATS.find(c=>c.id===SONHO_ID)?.name||"Sonho"}</div>
+          <div style={{ fontSize:15, fontWeight:800, marginTop:2 }}>{fmt(sonhoTotal)} <span style={{ fontSize:12, fontWeight:600, color:"var(--text2)" }}>este mês</span></div>
+          <div style={{ fontSize:11.5, color:"var(--text2)", marginTop:4, lineHeight:1.45 }}>Quer acompanhar o progresso? Defina uma meta (opcional) editando o item do Sonho em Despesas, ou diga ao Vieira: "minha meta é R$ 50.000".</div>
+        </div>
+      )}
 
       {/* OBJETIVO — barra */}
       {objetivoRecorrente&&(
@@ -1847,7 +1922,7 @@ export default function App() {
             <div style={{ fontSize:9, color:"var(--text2)", marginTop:3 }}>{xp} XP total</div>
           </div>
           <div onClick={()=>setShowStreak(true)} style={{ margin:"10px 10px 0", padding:"11px 13px", borderRadius:12, cursor:"pointer", background:streakClaimed?"rgba(0,214,143,0.06)":"rgba(108,99,255,0.08)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.22)":"rgba(108,99,255,0.28)"}`, display:"flex", alignItems:"center", gap:10 }}>
-            <FlameIcon size={26} color={streakClaimed?"#00d68f":"#ffb703"}/>
+            <FlameIcon size={28} off={streakDays===0} hot={!streakClaimed}/>
             <div>
               <div style={{ fontSize:9, color:"var(--text2)", fontWeight:700, textTransform:"uppercase", letterSpacing:0.5 }}>STREAK</div>
               <div style={{ fontSize:13, fontWeight:800, color:streakClaimed?"var(--green)":"#a78bfa" }}>{streakDays} dias {streakClaimed?"· resgatada":`· +${getStreakXP(streakDays+1)} XP`}</div>
@@ -1888,7 +1963,7 @@ export default function App() {
             {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
               onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
               onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-              onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); if(!r.ok) showToast("Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
+              onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string,goal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined,recurringGoal:goal?parseFloat(goal):undefined})}); if(!r.ok) showToast("Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
             />}
             {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
               onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -1931,9 +2006,9 @@ export default function App() {
           </div>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <button onClick={()=>setShowStreak(true)} aria-label="Streak diária" style={{ display:"flex", alignItems:"center", gap:5, background:streakClaimed?"rgba(0,214,143,0.12)":"rgba(255,183,3,0.14)", border:`1px solid ${streakClaimed?"rgba(0,214,143,0.4)":"rgba(255,183,3,0.4)"}`, borderRadius:999, padding:"6px 11px", cursor:"pointer" }}>
-            <FlameIcon size={14} color={streakClaimed?"#00d68f":"#ffb703"}/>
-            <span style={{ fontSize:12.5, fontWeight:800, color:streakClaimed?"#00d68f":"#ffc94d" }}>{streakDays} {streakDays===1?"dia":"dias"}</span>
+          <button onClick={()=>setShowStreak(true)} aria-label="Streak diária" style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,140,31,0.14)", border:"1px solid rgba(255,140,31,0.45)", borderRadius:999, padding:"5px 11px", cursor:"pointer" }}>
+            <FlameIcon size={16} off={streakDays===0} hot={!streakClaimed}/>
+            <span style={{ fontSize:13, fontWeight:800, color:"#ffb21f" }}>{streakDays}</span>
           </button>
           <button onClick={()=>setShowSettings(true)} aria-label="Configurações" style={{ width:34, height:34, borderRadius:"50%", background:"var(--bg2)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text2)", cursor:"pointer", padding:0 }}><Icon name="gear" size={16}/></button>
         </div>
@@ -1943,7 +2018,7 @@ export default function App() {
         {tab==="expenses"&&<ExpensesContent expenses={expenses} byCategory={byCategory} onAdd={()=>setShowAddExp(true)}
           onPay={async(exp:Expense)=>{ await fetch(`${API}/expenses/${exp.id}/paid`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({paid:!exp.paid})}); if(!exp.paid)gainXpRaw(XP_PAY_BILL); load(); }}
           onDelete={async(id:number)=>{ await fetch(`${API}/expenses/${id}`,{method:"DELETE"}); load(); }}
-          onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined})}); if(!r.ok) showToast("Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
+          onEdit={async(id:number,name:string,amount:string,expenseDate?:string,dueDate?:string,investedTotal?:string,goal?:string)=>{ const r=await fetch(`${API}/expenses/${id}/edit`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,amount:parseFloat(amount),expenseDate:expenseDate||null,dueDate:dueDate||null,recurringGoalPaidTotal:investedTotal?parseFloat(investedTotal):undefined,recurringGoal:goal?parseFloat(goal):undefined})}); if(!r.ok) showToast("Algum campo não foi salvo — tenta de novo ou avisa o suporte"); load(); }}
         />}
         {tab==="credit"&&<CreditContent cc={cc} totalCC={totalCC} onAdd={()=>setShowAddCC(true)}
           onDelete={async(id:number)=>{ await fetch(`${API}/credit-card/${id}`,{method:"DELETE"}); load(); }}
@@ -1969,13 +2044,13 @@ export default function App() {
       <nav style={{ position:"fixed", bottom:0, left:0, right:0, background:"rgba(22,26,43,0.97)", borderTop:"1px solid var(--border)", display:"flex", zIndex:50, padding:"8px 4px calc(10px + env(safe-area-inset-bottom))" }}>
         {NAV.map(n=>(
           <button key={n.id} onClick={()=>setTab(n.id)} style={{ flex:1, background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:4, color:tab===n.id?"#b9a8ff":"#6f7699", cursor:"pointer", padding:"2px 0" }}>
-            <Icon name={n.icon} size={20}/>
-            <span style={{ fontSize:10, fontWeight:tab===n.id?800:700 }}>{n.label}</span>
+            <Icon name={n.icon} size={24} soft={tab===n.id}/>
+            <span style={{ fontSize:10.5, fontWeight:tab===n.id?800:700 }}>{n.label}</span>
           </button>
         ))}
         <button onClick={()=>setShowMethodology(true)} style={{ flex:1, background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", gap:4, color:"#6f7699", cursor:"pointer", padding:"2px 0" }}>
-          <Icon name="book" size={20}/>
-          <span style={{ fontSize:10, fontWeight:700 }}>Método</span>
+          <Icon name="book" size={24}/>
+          <span style={{ fontSize:10.5, fontWeight:700 }}>Método</span>
         </button>
       </nav>
     </div>
@@ -1990,6 +2065,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
   const [editExpDate, setEditExpDate] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [editInvestedTotal, setEditInvestedTotal] = useState("");
+  const [editGoal, setEditGoal] = useState("");
 
   return (
     <div>
@@ -2007,7 +2083,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
         <div key={cat.id} className="card" style={{ marginBottom:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:cat.items.length?4:0 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:17, color:"var(--primary-light)", display:"flex" }}><Em e={cat.emoji} size={18}/></span>
+              <Tile e={cat.emoji} size={30}/>
               <span style={{ fontWeight:700, fontSize:14 }}>{cat.name}</span>
               <span style={{ fontSize:10, background:"var(--bg3)", padding:"2px 7px", borderRadius:20, color:"var(--text2)" }}>{cat.items.length}</span>
             </div>
@@ -2039,15 +2115,25 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                       <input value={editDueDate} onChange={e=>setEditDueDate(e.target.value)} type="date"
                         style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
                     </div>
-                    {!!exp.recurring && num(exp.recurringGoal)>0 && (
-                      <div>
-                        <label style={{ fontSize:10, color:"var(--primary-light)", display:"block", marginBottom:2 }}>Total já investido antes deste mês</label>
-                        <input value={editInvestedTotal} onChange={e=>setEditInvestedTotal(e.target.value)} type="number" step="0.01" placeholder="Ex: 2000"
-                          style={{ width:"100%", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                    {(Number(exp.categoryId)===SONHO_ID || Number(exp.categoryId)===OBJETIVO_ID) && (
+                      <div style={{ display:"flex", flexDirection:"column", gap:7, background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:12, padding:"10px" }}>
+                        <div>
+                          <label style={{ fontSize:10, color:"var(--primary-light)", display:"block", marginBottom:2 }}>Meta total (opcional)</label>
+                          <input value={editGoal} onChange={e=>setEditGoal(e.target.value)} type="number" step="0.01" placeholder="Ex: 50000"
+                            style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                        </div>
+                        {(num(exp.recurringGoal)>0 || !!editGoal) && (
+                          <div>
+                            <label style={{ fontSize:10, color:"var(--primary-light)", display:"block", marginBottom:2 }}>Total já investido antes deste mês</label>
+                            <input value={editInvestedTotal} onChange={e=>setEditInvestedTotal(e.target.value)} type="number" step="0.01" placeholder="Ex: 2000"
+                              style={{ width:"100%", background:"var(--bg3)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", color:"var(--text)", fontSize:13 }}/>
+                          </div>
+                        )}
+                        <div style={{ fontSize:10, color:"var(--text2)", lineHeight:1.4 }}>Com meta, o Dashboard mostra o progresso. Ela marca este item como aporte mensal recorrente.</div>
                       </div>
                     )}
                     <div style={{ display:"flex", gap:7 }}>
-                      <button onClick={()=>{ onEdit(exp.id,editName,editAmount,editExpDate,editDueDate,editInvestedTotal); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}><Em e="✅"/> Salvar</button>
+                      <button onClick={()=>{ onEdit(exp.id,editName,editAmount,editExpDate,editDueDate,editInvestedTotal,editGoal); setEditId(null); }} className="btn-primary" style={{ flex:1, padding:"7px", fontSize:12 }}><Em e="✅"/> Salvar</button>
                       <button onClick={()=>setEditId(null)} style={{ flex:1, padding:"7px", background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text2)", cursor:"pointer", fontSize:12 }}>Cancelar</button>
                     </div>
                   </div>
@@ -2067,7 +2153,7 @@ function ExpensesContent({ expenses,byCategory,onAdd,onPay,onDelete,onEdit }: an
                       </div>
                     </div>
                     <span style={{ fontWeight:800, fontSize:12, fontVariantNumeric:"tabular-nums", color:exp.paid?"var(--green)":"var(--text)", flexShrink:0 }}>{fmt(num(exp.amount))}</span>
-                    <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); setEditExpDate(exp.expenseDate?String(exp.expenseDate).slice(0,10):""); setEditDueDate(exp.dueDate?String(exp.dueDate).slice(0,10):""); setEditInvestedTotal(exp.recurringGoalPaidTotal!=null?String(Math.max(0,num(exp.recurringGoalPaidTotal)-(exp.paid?num(exp.amount):0))):""); }}
+                    <button onClick={()=>{ setEditId(exp.id); setEditName(exp.name); setEditAmount(String(num(exp.amount))); setEditExpDate(exp.expenseDate?String(exp.expenseDate).slice(0,10):""); setEditDueDate(exp.dueDate?String(exp.dueDate).slice(0,10):""); setEditGoal(exp.recurringGoal?String(num(exp.recurringGoal)):""); setEditInvestedTotal(exp.recurringGoalPaidTotal!=null?String(Math.max(0,num(exp.recurringGoalPaidTotal)-(exp.paid?num(exp.amount):0))):""); }}
                       style={{ background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", color:"#a78bfa", borderRadius:7, padding:"4px 8px", fontSize:12, cursor:"pointer", flexShrink:0 }}><Em e="✏️"/></button>
                     <button onClick={()=>onDelete(exp.id)} aria-label="Excluir" style={{ padding:"4px 8px", flexShrink:0, background:"transparent", border:"1px solid var(--border)", color:"var(--text2)", borderRadius:7, cursor:"pointer" }}><Em e="🗑"/></button>
                   </div>
@@ -2476,7 +2562,7 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
         ? parcelamentos.map((c:any)=>`${c.description}: ${c.installmentCurrent||1}/${c.installments}x de ${fmt(num(c.amount))}`).join("; ")
         : "nenhum";
 
-      const prompt = `Você é um consultor financeiro direto e amigável do app NaCarteira. Analise estes dados e gere de 2 a 4 insights financeiros úteis em JSON.\n\nDADOS DO MÊS (${monthLabel}):\n- Salário base: R$ ${salary}\n- Renda extra: R$ ${totalIncome}\n- Receita total: R$ ${totalReceita}\n- Total gasto: R$ ${totalGasto}\n- Cartão: R$ ${totalCC} (${pctCC}% da receita)\n- Investido: R$ ${totalInvestido} (${pctInvest}% — meta do nível: ${metaInvest}%)\n- Saldo: R$ ${saldo}\n- Saúde financeira: ${healthScore}/100\n- Nível: ${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}\n- Parcelamentos: ${parcStr}\n\nRetorne SOMENTE um array JSON válido (sem markdown, sem texto extra):\n[{"type":"tip|alert|info|gold","label":"Título curto","text":"1-2 frases com números reais","sub":"dica curta opcional"}]\n\ntip=positivo/verde, alert=atenção/vermelho, info=informativo/roxo, gold=projeção/dourado.`;
+      const prompt = `Você é o Vieira, coach financeiro do app NaCarteira. Tom: direto, profissional e motivador, no estilo de um coach de alta performance. Princípios: plantio x colheita (o que se planta hoje é o que se colhe depois), autorresponsabilidade (o resultado é consequência das escolhas do usuário) e zero vitimismo (nunca culpe economia, salário ou terceiros). Reconheça o que foi bem plantado, aponte com franqueza onde a colheita está em risco e termine cada insight com uma ação concreta para este mês. Sem sermão, sem humilhar, sem emojis. Gere de 2 a 4 insights em JSON, sempre com números reais dos dados.\n\nDADOS DO MÊS (${monthLabel}):\n- Salário base: R$ ${salary}\n- Renda extra: R$ ${totalIncome}\n- Receita total: R$ ${totalReceita}\n- Total gasto: R$ ${totalGasto}\n- Cartão: R$ ${totalCC} (${pctCC}% da receita)\n- Investido: R$ ${totalInvestido} (${pctInvest}% — meta do nível: ${metaInvest}%)\n- Saldo: R$ ${saldo}\n- Saúde financeira: ${healthScore}/100\n- Nível: ${levelInfo?.label||"Iniciante"} NV.${levelInfo?.levelNum||1}\n- Parcelamentos: ${parcStr}\n\nRetorne SOMENTE um array JSON válido (sem markdown, sem texto extra):\n[{"type":"tip|alert|info|gold","label":"Título curto","text":"1-2 frases de coach com números reais","sub":"ação prática para este mês"}]\n\ntip=positivo/verde, alert=atenção/vermelho, info=informativo/roxo, gold=projeção/dourado.`;
 
       const res = await fetch(`${API}/ai/insights`, {
         method: "POST",
@@ -2512,7 +2598,7 @@ function AiInsightButton({ salary, totalGasto, totalIncome, totalCC, totalInvest
         const pct = totalGasto > 0 ? Math.round(c.total / totalGasto * 100) : 0;
         const barW = Math.round(pct * 2.8); // max ~280px
         return `<tr>
-          <td style="padding:6px 8px;font-size:12px;width:130px;white-space:nowrap">$<Em e={c.emoji}/> ${c.name}</td>
+          <td style="padding:6px 8px;font-size:12px;width:130px;white-space:nowrap">${c.name}</td>
           <td style="padding:6px 8px">
             <div style="background:#f0f0f5;border-radius:4px;height:14px;width:280px">
               <div style="background:${c.color};border-radius:4px;height:14px;width:${barW}px"></div>
@@ -2635,26 +2721,27 @@ ${insights.map((ins:any)=>{
 
       {!insights && !blocked && (
         <button onClick={generate} disabled={loading}
-          style={{ width:"100%", background:"linear-gradient(135deg,rgba(108,99,255,0.14),rgba(180,79,255,0.08))", border:"1px solid var(--border)", borderRadius:20, padding:"18px 16px", cursor:loading?"default":"pointer", textAlign:"center", opacity:loading?0.8:1 }}>
-          <div style={{ fontSize:28, marginBottom:6 }}><Em e={loading ? "⏳" : "🤖"} size={28}/></div>
-          <div style={{ fontSize:15, fontWeight:900, color:"var(--text)", marginBottom:4 }}>
-            {loading ? "Analisando seus dados..." : `Análise IA — ${monthLabel}`}
-          </div>
-          <div style={{ fontSize:12, color:"var(--text2)" }}>
-            {loading ? "Isso pode levar alguns segundos" : `Disponível neste período: ${windowLabel}`}
-          </div>
-          {loading && (
-            <div style={{ marginTop:10, height:3, background:"var(--bg3)", borderRadius:2, overflow:"hidden", position:"relative" }}>
-              <div style={{ position:"absolute", top:0, left:0, width:"50%", height:"100%", background:"linear-gradient(90deg,transparent,#6c63ff,#00d68f,transparent)", animation:"shimmer 1.5s infinite" }}/>
-            </div>
-          )}
+          style={{ width:"100%", position:"relative", overflow:"hidden", background:"linear-gradient(135deg,#5b52f0,#9333ea)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:20, padding:"16px", cursor:loading?"default":"pointer", textAlign:"left", boxShadow:"0 8px 26px rgba(108,63,224,0.45)", display:"flex", alignItems:"center", gap:14 }}>
+          <span style={{ width:52, height:52, borderRadius:16, background:"rgba(255,255,255,0.18)", border:"1px solid rgba(255,255,255,0.28)", display:"inline-flex", alignItems:"center", justifyContent:"center", flexShrink:0, color:"#fff" }}>
+            <Icon name="sparkle" size={28} color="#ffffff" soft stroke={2}/>
+          </span>
+          <span style={{ flex:1, minWidth:0 }}>
+            <span style={{ display:"block", fontSize:16, fontWeight:900, color:"#ffffff", textShadow:"0 1px 2px rgba(0,0,0,0.3)" }}>
+              {loading ? "Analisando seus dados..." : "Gerar análise do mês"}
+            </span>
+            <span style={{ display:"block", fontSize:12, color:"rgba(255,255,255,0.85)", marginTop:3 }}>
+              {loading ? "Isso pode levar alguns segundos" : `Raio-X de ${monthLabel} · ${windowLabel}`}
+            </span>
+          </span>
+          {!loading && <Icon name="send" size={20} color="#ffffff" stroke={2.6}/>}
+          {loading && <span className="nc-anim" style={{ position:"absolute", top:0, bottom:0, left:0, width:"40%", background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.28),transparent)", animation:"ncShine 1.4s infinite" }}/>}
         </button>
       )}
 
       {insights && (
         <div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-            <div style={{ fontSize:13, fontWeight:700 }}><Em e="🤖"/> Análise IA — {monthLabel}</div>
+            <div style={{ fontSize:13, fontWeight:700 }}><Em e="✨"/> Raio-X — {monthLabel}</div>
             <div style={{ display:"flex", gap:6 }}>
               <button onClick={generatePDF}
                 style={{ fontSize:11, color:"#6c63ff", background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", borderRadius:7, padding:"3px 9px", cursor:"pointer" }}>
@@ -2919,7 +3006,7 @@ function AddExpenseModal({ userId, onClose, onXp }: any) {
     <Modal title="Nova Despesa" onClose={onClose}>
       <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
         <select value={form.categoryId} onChange={e=>setForm(f=>({...f,categoryId:e.target.value}))}>
-          {CATS.map(c=><option key={c.id} value={c.id}><Em e={c.emoji}/> {c.name}</option>)}
+          {CATS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <input placeholder="Nome da despesa *" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
         <input type="number" placeholder={isGoalCat&&form.recurring?"Valor mensal (deixe em branco p/ calcular)":"Valor (R$) *"} value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/>
@@ -3376,7 +3463,7 @@ function PotsEditor({ userId, levelNum, current, submitLabel, onSaved }: { userI
             const c:any = CATS.find(x=>x.id===id);
             return (
               <div key={id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${c.color}` }}>
-                <span style={{ fontSize:20 }}><Em e={c.emoji}/></span>
+                <Tile e={c.emoji} size={34}/>
                 <div style={{ flex:1 }}>
                   <div style={{ display:"flex", justifyContent:"space-between" }}>
                     <span style={{ fontWeight:700, fontSize:13 }}>{POT_DEFAULT_NAME[id]}</span>
@@ -3408,7 +3495,7 @@ function PotsEditor({ userId, levelNum, current, submitLabel, onSaved }: { userI
             return (
               <div key={p.id} style={{ padding:"10px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${c.color}` }}>
                 <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:6 }}>
-                  <span style={{ fontSize:20 }}><Em e={c.emoji}/></span>
+                  <Tile e={c.emoji} size={34}/>
                   <input value={p.name} maxLength={24} onChange={e=>upd(p.id,{name:e.target.value})} placeholder="Nome do pote" style={{ flex:1, fontWeight:700 }}/>
                   <div style={{ display:"flex", alignItems:"center", gap:3 }}>
                     <input type="number" min={0} max={100} value={p.pct} onChange={e=>upd(p.id,{pct:e.target.value})} style={{ width:62, textAlign:"center" }}/>
@@ -3520,7 +3607,7 @@ function MethodologyModal({ onClose, xp }: any) {
           </div>
           {potes.map((p,i)=>(
             <div key={i} style={{ display:"flex", gap:12, padding:"10px 12px", background:"var(--bg3)", borderRadius:12, borderLeft:`3px solid ${p.color}` }}>
-              <span style={{ fontSize:20, flexShrink:0 }}><Em e={p.emoji}/></span>
+              <Tile e={p.emoji} size={36}/>
               <div style={{ flex:1 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
                   <span style={{ fontWeight:700, fontSize:13 }}>{p.cat}</span>
@@ -3571,7 +3658,7 @@ function MethodologyModal({ onClose, xp }: any) {
             return (
               <div key={i} style={{ background:isCurrent?`${n.color}10`:"var(--bg3)", border:`1.5px solid ${isCurrent?n.color:isPast?"rgba(0,214,143,0.25)":"var(--border)"}`, borderRadius:14, padding:"12px 14px" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-                  <span style={{ fontSize:24 }}><Em e={n.emoji}/></span>
+                  <Tile e={n.emoji} size={40}/>
                   <div style={{ flex:1 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
                       <span style={{ fontWeight:800, fontSize:14, color:n.color }}>{n.label}</span>
